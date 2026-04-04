@@ -30,7 +30,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     public override void _EnterTree()
     {
-        var dockScene = GD.Load<PackedScene>("res://addons/home_builder/HomeBuilderDock.tscn");
+        var dockScene = GD.Load<PackedScene>("res://addons/home_builder/src/HomeBuilderDock.tscn");
         _dock = dockScene.Instantiate<Control>();
         AddControlToDock(DockSlot.LeftUl, _dock);
 

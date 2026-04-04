@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="doorGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#A06B3F" />
+      <stop offset="100%" stop-color="#7A4B28" />
+    </linearGradient>
+    <radialGradient id="knobGrad" cx="40%" cy="50%">
+      <stop offset="0%" stop-color="#FFD966" />
+      <stop offset="100%" stop-color="#C98B1A" />
+    </radialGradient>
+  </defs>
+  <!-- Marco exterior -->
+  <rect x="6" y="4" width="20" height="24" rx="2" fill="#5C3A1E" />
+  <!-- Hoja de la puerta -->
+  <rect x="8" y="6" width="16" height="20" rx="1.5" fill="url(#doorGrad)" />
+  <!-- Paneles decorativos -->
+  <rect x="11" y="9" width="10" height="5" rx="1" fill="none" stroke="#5C3A1E" stroke-width="1" />
+  <rect x="11" y="17" width="10" height="6" rx="1" fill="none" stroke="#5C3A1E" stroke-width="1" />
+  <!-- Pomo -->
+  <circle cx="21" cy="16" r="2" fill="url(#knobGrad)" stroke="#A6701A" stroke-width="0.5" />
+  <!-- Brillo en la puerta -->
+  <rect x="8" y="6" width="16" height="6" rx="1.5" fill="white" opacity="0.15" />
+</svg>
