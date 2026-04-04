@@ -11,6 +11,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     // Floor ghost
     private CsgBox3D _ghostTile;
+    private Vector3? _floorDragStart;
 
     // Wall state
     private CsgBox3D _wallPointMarker;
@@ -69,19 +70,51 @@ public partial class HomeBuilderPlugin : EditorPlugin
         if (inputEvent is InputEventMouseMotion motionEvent)
         {
             var pos = RaycastToFloorPlane(camera, motionEvent.Position);
-            if (pos.HasValue && _ghostTile != null && IsInstanceValid(_ghostTile))
-                _ghostTile.Position = SnapToTileCenter(pos.Value);
+            if (!pos.HasValue) return (int)AfterGuiInput.Pass;
+
+            var cell = SnapToTileCenter(pos.Value);
+
+            if (_floorDragStart.HasValue)
+            {
+                // Dragging: resize ghost to cover the whole rectangle
+                UpdateGhostRect(_floorDragStart.Value, cell);
+            }
+            else
+            {
+                // Hovering: single tile ghost
+                if (_ghostTile != null && IsInstanceValid(_ghostTile))
+                {
+                    _ghostTile.Size     = new Vector3(1f, 0.1f, 1f);
+                    _ghostTile.Position = cell;
+                }
+            }
             return (int)AfterGuiInput.Pass;
         }
 
-        if (inputEvent is InputEventMouseButton mb
-            && mb.ButtonIndex == MouseButton.Left
-            && mb.Pressed)
+        if (inputEvent is InputEventMouseButton mb && mb.ButtonIndex == MouseButton.Left)
         {
             var pos = RaycastToFloorPlane(camera, mb.Position);
-            if (pos.HasValue)
+            if (!pos.HasValue) return (int)AfterGuiInput.Pass;
+
+            if (mb.Pressed)
             {
-                PlaceFloorTile(SnapToTileCenter(pos.Value));
+                // Mouse down: start drag
+                _floorDragStart = SnapToTileCenter(pos.Value);
+                return (int)AfterGuiInput.Stop;
+            }
+            else
+            {
+                // Mouse up: fill rectangle
+                if (_floorDragStart.HasValue)
+                {
+                    var endCell = SnapToTileCenter(pos.Value);
+                    FillFloorRect(_floorDragStart.Value, endCell);
+                    _floorDragStart = null;
+
+                    // Reset ghost to single tile
+                    if (_ghostTile != null && IsInstanceValid(_ghostTile))
+                        _ghostTile.Size = new Vector3(1f, 0.1f, 1f);
+                }
                 return (int)AfterGuiInput.Stop;
             }
         }
@@ -219,6 +252,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     {
         if (_ghostTile != null && IsInstanceValid(_ghostTile))            { _ghostTile.Free();        _ghostTile        = null; }
         if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)) { _wallPointMarker.Free(); _wallPointMarker = null; }
+        _floorDragStart = null;
         _wallStart = null;
     }
 
@@ -261,8 +295,41 @@ public partial class HomeBuilderPlugin : EditorPlugin
     // Floor tile placement
     // -------------------------------------------------------------------------
 
-    private void PlaceFloorTile(Vector3 position)
+    // Resize and reposition the ghost to cover the rectangle from a to b
+    private void UpdateGhostRect(Vector3 a, Vector3 b)
     {
+        if (_ghostTile == null || !IsInstanceValid(_ghostTile)) return;
+
+        int x0 = Mathf.RoundToInt(a.X - 0.5f);
+        int z0 = Mathf.RoundToInt(a.Z - 0.5f);
+        int x1 = Mathf.RoundToInt(b.X - 0.5f);
+        int z1 = Mathf.RoundToInt(b.Z - 0.5f);
+
+        int minX = Mathf.Min(x0, x1);
+        int maxX = Mathf.Max(x0, x1);
+        int minZ = Mathf.Min(z0, z1);
+        int maxZ = Mathf.Max(z0, z1);
+
+        int cols = maxX - minX + 1;
+        int rows = maxZ - minZ + 1;
+
+        _ghostTile.Size     = new Vector3(cols, 0.1f, rows);
+        _ghostTile.Position = new Vector3(minX + cols * 0.5f, -0.05f, minZ + rows * 0.5f);
+    }
+
+    // Fill every cell in the rectangle between a and b
+    private void FillFloorRect(Vector3 a, Vector3 b)
+    {
+        int x0 = Mathf.RoundToInt(a.X - 0.5f);
+        int z0 = Mathf.RoundToInt(a.Z - 0.5f);
+        int x1 = Mathf.RoundToInt(b.X - 0.5f);
+        int z1 = Mathf.RoundToInt(b.Z - 0.5f);
+
+        int minX = Mathf.Min(x0, x1);
+        int maxX = Mathf.Max(x0, x1);
+        int minZ = Mathf.Min(z0, z1);
+        int maxZ = Mathf.Max(z0, z1);
+
         var scene = GetEditorInterface().GetEditedSceneRoot();
         if (scene == null) return;
 
@@ -274,25 +341,38 @@ public partial class HomeBuilderPlugin : EditorPlugin
             floorParent.Owner = scene;
         }
 
+        // Collect existing positions to avoid duplicates
+        var occupied = new System.Collections.Generic.HashSet<(int, int)>();
         foreach (Node child in floorParent.GetChildren())
         {
-            if (child is Node3D n && n.Position.IsEqualApprox(position))
-                return;
+            if (child is Node3D n)
+                occupied.Add((Mathf.RoundToInt(n.Position.X - 0.5f), Mathf.RoundToInt(n.Position.Z - 0.5f)));
         }
 
-        var tile = new CsgBox3D
-        {
-            Name     = "FloorTile",
-            Size     = new Vector3(1f, 0.1f, 1f),
-            Position = position,
-        };
-        floorParent.AddChild(tile);
-        tile.Owner = scene;
-
         var undo = GetUndoRedo();
-        undo.CreateAction("Place Floor Tile");
-        undo.AddDoMethod(floorParent, Node.MethodName.AddChild, tile);
-        undo.AddUndoMethod(floorParent, Node.MethodName.RemoveChild, tile);
+        undo.CreateAction("Fill Floor Rect");
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                if (occupied.Contains((x, z))) continue;
+
+                var position = new Vector3(x + 0.5f, -0.05f, z + 0.5f);
+                var tile = new CsgBox3D
+                {
+                    Name     = "FloorTile",
+                    Size     = new Vector3(1f, 0.1f, 1f),
+                    Position = position,
+                };
+                floorParent.AddChild(tile);
+                tile.Owner = scene;
+
+                undo.AddDoMethod(floorParent, Node.MethodName.AddChild, tile);
+                undo.AddUndoMethod(floorParent, Node.MethodName.RemoveChild, tile);
+            }
+        }
+
         undo.CommitAction(false);
     }
 }
