@@ -69,7 +69,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         if (inputEvent is InputEventMouseMotion motionEvent)
         {
             var pos = RaycastToFloorPlane(camera, motionEvent.Position);
-            if (pos.HasValue && _ghostTile != null)
+            if (pos.HasValue && _ghostTile != null && IsInstanceValid(_ghostTile))
                 _ghostTile.Position = SnapToTileCenter(pos.Value);
             return (int)AfterGuiInput.Pass;
         }
@@ -96,7 +96,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         if (inputEvent is InputEventMouseMotion motionEvent)
         {
             var pos = RaycastToFloorPlane(camera, motionEvent.Position);
-            if (pos.HasValue && _wallPointMarker != null)
+            if (pos.HasValue && _wallPointMarker != null && IsInstanceValid(_wallPointMarker))
                 _wallPointMarker.Position = SnapToGridCorner(pos.Value);
             return (int)AfterGuiInput.Pass;
         }
@@ -217,8 +217,8 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     private void ClearAllPreviews()
     {
-        if (_ghostTile != null && IsInstanceValid(_ghostTile))        { _ghostTile.QueueFree();        _ghostTile        = null; }
-        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)) { _wallPointMarker.QueueFree(); _wallPointMarker = null; }
+        if (_ghostTile != null && IsInstanceValid(_ghostTile))            { _ghostTile.Free();        _ghostTile        = null; }
+        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)) { _wallPointMarker.Free(); _wallPointMarker = null; }
         _wallStart = null;
     }
 
