@@ -4,7 +4,10 @@ using Godot;
 public partial class HomeBuilderPlugin : EditorPlugin
 {
     private Control _dock;
-    private string _activeMode = "";
+    private string  _activeMode = "";
+
+    // Ghost tile shown while hovering in floor mode
+    private CsgBox3D _ghostTile;
 
     public override void _EnterTree()
     {
@@ -17,15 +20,19 @@ public partial class HomeBuilderPlugin : EditorPlugin
             Callable.From((string mode) =>
             {
                 _activeMode = mode;
-                GD.Print($"[HomeBuilder] _activeMode cambiado a: '{_activeMode}'");
+
+                if (_activeMode == "floor")
+                    CreateGhostTile();
+                else
+                    DestroyGhostTile();
             })
         );
-
-        GD.Print("[HomeBuilder] Plugin iniciado (_EnterTree)");
     }
 
     public override void _ExitTree()
     {
+        DestroyGhostTile();
+
         if (_dock != null)
         {
             RemoveControlFromDocks(_dock);
@@ -35,54 +42,95 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _activeMode = "";
     }
 
-    // Sin esto Godot no llama a _Forward3DGuiInput
     public override bool _Handles(GodotObject obj) => true;
+
+    // -------------------------------------------------------------------------
+    // Input
+    // -------------------------------------------------------------------------
 
     public override int _Forward3DGuiInput(Camera3D camera, InputEvent inputEvent)
     {
-        if (inputEvent is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
-        {
-            GD.Print($"[HomeBuilder] Clic recibido. _activeMode='{_activeMode}', Botón={mouseEvent.ButtonIndex}");
-        }
-
         if (_activeMode != "floor")
             return (int)AfterGuiInput.Pass;
 
+        // Move ghost on hover
+        if (inputEvent is InputEventMouseMotion motionEvent)
+        {
+            var pos = RaycastToGrid(camera, motionEvent.Position);
+            if (pos.HasValue && _ghostTile != null)
+                _ghostTile.Position = pos.Value;
+
+            return (int)AfterGuiInput.Pass; // don't consume motion events
+        }
+
+        // Place tile on left click
         if (inputEvent is InputEventMouseButton mb
             && mb.ButtonIndex == MouseButton.Left
             && mb.Pressed)
         {
-            GD.Print($"[HomeBuilder] Procesando clic en modo floor. ScreenPos={mb.Position}");
-
             var position = RaycastToGrid(camera, mb.Position);
-
             if (position.HasValue)
             {
-                GD.Print($"[HomeBuilder] Posición en grid: {position.Value}");
                 PlaceFloorTile(position.Value);
                 return (int)AfterGuiInput.Stop;
-            }
-            else
-            {
-                GD.Print("[HomeBuilder] RaycastToGrid devolvió null");
             }
         }
 
         return (int)AfterGuiInput.Pass;
     }
 
+    // -------------------------------------------------------------------------
+    // Ghost tile
+    // -------------------------------------------------------------------------
+
+    private void CreateGhostTile()
+    {
+        var scene = GetEditorInterface().GetEditedSceneRoot();
+        if (scene == null) return;
+
+        _ghostTile = new CsgBox3D
+        {
+            Name     = "__HomeBuilderGhost__",
+            Size     = new Vector3(1f, 0.1f, 1f),
+            Position = new Vector3(0f, -0.05f, 0f),
+        };
+
+        // Semi-transparent green material
+        var material = new StandardMaterial3D
+        {
+            Transparency      = BaseMaterial3D.TransparencyEnum.Alpha,
+            AlbedoColor       = new Color(0.2f, 0.9f, 0.3f, 0.4f),
+            ShadingMode       = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            CullMode          = BaseMaterial3D.CullModeEnum.Disabled,
+        };
+        _ghostTile.MaterialOverride = material;
+
+        scene.AddChild(_ghostTile);
+        // No asignamos Owner para que no se guarde en la escena
+    }
+
+    private void DestroyGhostTile()
+    {
+        if (_ghostTile != null && IsInstanceValid(_ghostTile))
+        {
+            _ghostTile.QueueFree();
+            _ghostTile = null;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Raycast → grid snap
+    // -------------------------------------------------------------------------
+
     private Vector3? RaycastToGrid(Camera3D camera, Vector2 screenPos)
     {
         var origin    = camera.ProjectRayOrigin(screenPos);
         var direction = camera.ProjectRayNormal(screenPos);
 
-        GD.Print($"[HomeBuilder] Ray origin={origin}, direction={direction}");
-
         if (Mathf.IsZeroApprox(direction.Y))
             return null;
 
         float t = -origin.Y / direction.Y;
-
         if (t < 0)
             return null;
 
@@ -93,6 +141,10 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
         return new Vector3(snappedX, -0.05f, snappedZ);
     }
+
+    // -------------------------------------------------------------------------
+    // Place real tile
+    // -------------------------------------------------------------------------
 
     private void PlaceFloorTile(Vector3 position)
     {
@@ -114,10 +166,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         foreach (Node child in floorParent.GetChildren())
         {
             if (child is Node3D node3D && node3D.Position.IsEqualApprox(position))
-            {
-                GD.Print($"[HomeBuilder] Ya existe una baldosa en {position}, ignorando.");
                 return;
-            }
         }
 
         var tile = new CsgBox3D
@@ -129,8 +178,6 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
         floorParent.AddChild(tile);
         tile.Owner = scene;
-
-        GD.Print($"[HomeBuilder] Baldosa colocada en {position}");
 
         var undo = GetUndoRedo();
         undo.CreateAction("Place Floor Tile");
