@@ -207,6 +207,9 @@ public partial class HomeBuilderPlugin : EditorPlugin
             Position = center,
         };
 
+        // Add collision to the wall
+        wall.UseCollision = true;
+
         // Build a basis where local X points from start to end.
         // local Y stays up, local Z is the cross product (thickness axis).
         var dirXZ  = (end - start).Normalized();
@@ -396,6 +399,10 @@ public partial class HomeBuilderPlugin : EditorPlugin
                     Size     = new Vector3(1f, 0.1f, 1f),
                     Position = position,
                 };
+
+                // Add collision to the tile
+                tile.UseCollision = true;
+
                 floorParent.AddChild(tile);
                 tile.Owner = floorParent.Owner;
 
