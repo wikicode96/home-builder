@@ -1,0 +1,65 @@
+[gd_scene load_steps=2 format=3 uid="uid://home_builder_dock"]
+
+[ext_resource type="Script" path="res://addons/home_builder/HomeBuilderDock.cs" id="1"]
+
+[node name="HomeBuilderDock" type="Control"]
+custom_minimum_size = Vector2(200, 0)
+script = ExtResource("1")
+
+[node name="MainContainer" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="MainContainer"]
+text = "Home Builder"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="HSeparator" type="HSeparator" parent="MainContainer"]
+
+[node name="ModeLabel" type="Label" parent="MainContainer"]
+text = "Modo de construcción:"
+theme_override_font_sizes/font_size = 12
+
+[node name="FloorButton" type="Button" parent="MainContainer"]
+text = "🪵  Suelos"
+toggle_mode = true
+button_group = ExtResource("1")
+
+[node name="WallButton" type="Button" parent="MainContainer"]
+text = "🧱  Paredes"
+toggle_mode = true
+button_group = ExtResource("1")
+
+[node name="CeilingButton" type="Button" parent="MainContainer"]
+text = "🔲  Techos"
+toggle_mode = true
+button_group = ExtResource("1")
+
+[node name="DoorButton" type="Button" parent="MainContainer"]
+text = "🚪  Puertas"
+toggle_mode = true
+button_group = ExtResource("1")
+
+[node name="WindowButton" type="Button" parent="MainContainer"]
+text = "🪟  Ventanas"
+toggle_mode = true
+button_group = ExtResource("1")
+
+[node name="StairsButton" type="Button" parent="MainContainer"]
+text = "🪜  Escaleras"
+toggle_mode = true
+button_group = ExtResource("1")
+
+[node name="HSeparator2" type="HSeparator" parent="MainContainer"]
+
+[node name="StatusLabel" type="Label" parent="MainContainer"]
+text = "Sin modo activo"
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
