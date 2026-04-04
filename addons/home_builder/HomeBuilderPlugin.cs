@@ -3,11 +3,18 @@ using Godot;
 [Tool]
 public partial class HomeBuilderPlugin : EditorPlugin
 {
+    private const float WallHeight    = 3.0f;
+    private const float WallThickness = 0.3f;
+
     private Control _dock;
     private string  _activeMode = "";
 
-    // Ghost tile shown while hovering in floor mode
+    // Floor ghost
     private CsgBox3D _ghostTile;
+
+    // Wall state
+    private CsgBox3D _wallPointMarker;
+    private Vector3? _wallStart;
 
     public override void _EnterTree()
     {
@@ -19,20 +26,17 @@ public partial class HomeBuilderPlugin : EditorPlugin
             HomeBuilderDock.SignalName.ModeChanged,
             Callable.From((string mode) =>
             {
+                ClearAllPreviews();
                 _activeMode = mode;
-
-                if (_activeMode == "floor")
-                    CreateGhostTile();
-                else
-                    DestroyGhostTile();
+                if (_activeMode == "floor") CreateGhostTile();
+                if (_activeMode == "walls") CreateWallPointMarker();
             })
         );
     }
 
     public override void _ExitTree()
     {
-        DestroyGhostTile();
-
+        ClearAllPreviews();
         if (_dock != null)
         {
             RemoveControlFromDocks(_dock);
@@ -50,28 +54,34 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     public override int _Forward3DGuiInput(Camera3D camera, InputEvent inputEvent)
     {
-        if (_activeMode != "floor")
-            return (int)AfterGuiInput.Pass;
+        return _activeMode switch
+        {
+            "floor" => HandleFloorInput(camera, inputEvent),
+            "walls" => HandleWallInput(camera, inputEvent),
+            _       => (int)AfterGuiInput.Pass,
+        };
+    }
 
-        // Move ghost on hover
+    // ── Floor ─────────────────────────────────────────────────────────────────
+
+    private int HandleFloorInput(Camera3D camera, InputEvent inputEvent)
+    {
         if (inputEvent is InputEventMouseMotion motionEvent)
         {
-            var pos = RaycastToGrid(camera, motionEvent.Position);
+            var pos = RaycastToFloorPlane(camera, motionEvent.Position);
             if (pos.HasValue && _ghostTile != null)
-                _ghostTile.Position = pos.Value;
-
-            return (int)AfterGuiInput.Pass; // don't consume motion events
+                _ghostTile.Position = SnapToTileCenter(pos.Value);
+            return (int)AfterGuiInput.Pass;
         }
 
-        // Place tile on left click
         if (inputEvent is InputEventMouseButton mb
             && mb.ButtonIndex == MouseButton.Left
             && mb.Pressed)
         {
-            var position = RaycastToGrid(camera, mb.Position);
-            if (position.HasValue)
+            var pos = RaycastToFloorPlane(camera, mb.Position);
+            if (pos.HasValue)
             {
-                PlaceFloorTile(position.Value);
+                PlaceFloorTile(SnapToTileCenter(pos.Value));
                 return (int)AfterGuiInput.Stop;
             }
         }
@@ -79,8 +89,100 @@ public partial class HomeBuilderPlugin : EditorPlugin
         return (int)AfterGuiInput.Pass;
     }
 
+    // ── Walls ─────────────────────────────────────────────────────────────────
+
+    private int HandleWallInput(Camera3D camera, InputEvent inputEvent)
+    {
+        if (inputEvent is InputEventMouseMotion motionEvent)
+        {
+            var pos = RaycastToFloorPlane(camera, motionEvent.Position);
+            if (pos.HasValue && _wallPointMarker != null)
+                _wallPointMarker.Position = SnapToGridCorner(pos.Value);
+            return (int)AfterGuiInput.Pass;
+        }
+
+        if (inputEvent is InputEventMouseButton mb
+            && mb.ButtonIndex == MouseButton.Left
+            && mb.Pressed)
+        {
+            var pos = RaycastToFloorPlane(camera, mb.Position);
+            if (!pos.HasValue) return (int)AfterGuiInput.Pass;
+
+            var corner = SnapToGridCorner(pos.Value);
+
+            if (_wallStart == null)
+            {
+                _wallStart = corner;
+            }
+            else
+            {
+                if (!_wallStart.Value.IsEqualApprox(corner))
+                    PlaceWall(_wallStart.Value, corner);
+                _wallStart = null;
+            }
+
+            return (int)AfterGuiInput.Stop;
+        }
+
+        return (int)AfterGuiInput.Pass;
+    }
+
     // -------------------------------------------------------------------------
-    // Ghost tile
+    // Wall placement
+    // -------------------------------------------------------------------------
+
+    private void PlaceWall(Vector3 start, Vector3 end)
+    {
+        var scene = GetEditorInterface().GetEditedSceneRoot();
+        if (scene == null) return;
+
+        // Reuse or create a parent "Walls" node
+        Node3D wallParent = scene.GetNodeOrNull<Node3D>("Walls");
+        if (wallParent == null)
+        {
+            wallParent = new Node3D { Name = "Walls" };
+            scene.AddChild(wallParent);
+            wallParent.Owner = scene;
+        }
+
+        // Length = horizontal distance between the two corners
+        float length = new Vector2(end.X - start.X, end.Z - start.Z).Length();
+        if (length < 0.01f) return;
+
+        // Centre of the wall sits halfway between start and end, vertically at half height
+        var center = new Vector3(
+            (start.X + end.X) * 0.5f,
+            WallHeight * 0.5f,
+            (start.Z + end.Z) * 0.5f
+        );
+
+        var wall = new CsgBox3D
+        {
+            Name     = "Wall",
+            Size     = new Vector3(length, WallHeight, WallThickness),
+            Position = center,
+        };
+
+        // Build a basis where local X points from start to end.
+        // local Y stays up, local Z is the cross product (thickness axis).
+        var dirXZ  = (end - start).Normalized();
+        var basisX = dirXZ;
+        var basisY = Vector3.Up;
+        var basisZ = basisY.Cross(basisX).Normalized();
+        wall.Basis = new Basis(basisX, basisY, basisZ);
+
+        wallParent.AddChild(wall);
+        wall.Owner = scene;
+
+        var undo = GetUndoRedo();
+        undo.CreateAction("Place Wall");
+        undo.AddDoMethod(wallParent, Node.MethodName.AddChild, wall);
+        undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, wall);
+        undo.CommitAction(false);
+    }
+
+    // -------------------------------------------------------------------------
+    // Previews
     // -------------------------------------------------------------------------
 
     private void CreateGhostTile()
@@ -90,70 +192,79 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
         _ghostTile = new CsgBox3D
         {
-            Name     = "__HomeBuilderGhost__",
+            Name     = "__HB_GhostFloor__",
             Size     = new Vector3(1f, 0.1f, 1f),
             Position = new Vector3(0f, -0.05f, 0f),
         };
-
-        // Semi-transparent green material
-        var material = new StandardMaterial3D
-        {
-            Transparency      = BaseMaterial3D.TransparencyEnum.Alpha,
-            AlbedoColor       = new Color(0.2f, 0.9f, 0.3f, 0.4f),
-            ShadingMode       = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            CullMode          = BaseMaterial3D.CullModeEnum.Disabled,
-        };
-        _ghostTile.MaterialOverride = material;
-
+        _ghostTile.MaterialOverride = MakeMaterial(new Color(0.2f, 0.9f, 0.3f, 0.4f));
         scene.AddChild(_ghostTile);
-        // No asignamos Owner para que no se guarde en la escena
     }
 
-    private void DestroyGhostTile()
+    private void CreateWallPointMarker()
     {
-        if (_ghostTile != null && IsInstanceValid(_ghostTile))
+        var scene = GetEditorInterface().GetEditedSceneRoot();
+        if (scene == null) return;
+
+        _wallPointMarker = new CsgBox3D
         {
-            _ghostTile.QueueFree();
-            _ghostTile = null;
-        }
+            Name     = "__HB_WallPoint__",
+            Size     = new Vector3(0.2f, 0.2f, 0.2f),
+            Position = Vector3.Zero,
+        };
+        _wallPointMarker.MaterialOverride = MakeMaterial(new Color(0.9f, 0.5f, 0.1f, 0.9f));
+        scene.AddChild(_wallPointMarker);
+    }
+
+    private void ClearAllPreviews()
+    {
+        if (_ghostTile != null && IsInstanceValid(_ghostTile))        { _ghostTile.QueueFree();        _ghostTile        = null; }
+        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)) { _wallPointMarker.QueueFree(); _wallPointMarker = null; }
+        _wallStart = null;
     }
 
     // -------------------------------------------------------------------------
-    // Raycast → grid snap
+    // Raycast + snap helpers
     // -------------------------------------------------------------------------
 
-    private Vector3? RaycastToGrid(Camera3D camera, Vector2 screenPos)
+    private Vector3? RaycastToFloorPlane(Camera3D camera, Vector2 screenPos)
     {
         var origin    = camera.ProjectRayOrigin(screenPos);
         var direction = camera.ProjectRayNormal(screenPos);
 
-        if (Mathf.IsZeroApprox(direction.Y))
-            return null;
+        if (Mathf.IsZeroApprox(direction.Y)) return null;
 
         float t = -origin.Y / direction.Y;
-        if (t < 0)
-            return null;
+        if (t < 0) return null;
 
-        var hit = origin + direction * t;
-
-        float snappedX = Mathf.Floor(hit.X) + 0.5f;
-        float snappedZ = Mathf.Floor(hit.Z) + 0.5f;
-
-        return new Vector3(snappedX, -0.05f, snappedZ);
+        return origin + direction * t;
     }
 
+    private static Vector3 SnapToTileCenter(Vector3 hit) =>
+        new(Mathf.Floor(hit.X) + 0.5f, -0.05f, Mathf.Floor(hit.Z) + 0.5f);
+
+    private static Vector3 SnapToGridCorner(Vector3 hit) =>
+        new(Mathf.Round(hit.X), 0f, Mathf.Round(hit.Z));
+
     // -------------------------------------------------------------------------
-    // Place real tile
+    // Material helper
+    // -------------------------------------------------------------------------
+
+    private static StandardMaterial3D MakeMaterial(Color color) => new()
+    {
+        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        AlbedoColor  = color,
+        ShadingMode  = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        CullMode     = BaseMaterial3D.CullModeEnum.Disabled,
+    };
+
+    // -------------------------------------------------------------------------
+    // Floor tile placement
     // -------------------------------------------------------------------------
 
     private void PlaceFloorTile(Vector3 position)
     {
         var scene = GetEditorInterface().GetEditedSceneRoot();
-        if (scene == null)
-        {
-            GD.PrintErr("[HomeBuilder] No hay una escena abierta.");
-            return;
-        }
+        if (scene == null) return;
 
         Node3D floorParent = scene.GetNodeOrNull<Node3D>("Floor");
         if (floorParent == null)
@@ -165,7 +276,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
         foreach (Node child in floorParent.GetChildren())
         {
-            if (child is Node3D node3D && node3D.Position.IsEqualApprox(position))
+            if (child is Node3D n && n.Position.IsEqualApprox(position))
                 return;
         }
 
@@ -173,9 +284,8 @@ public partial class HomeBuilderPlugin : EditorPlugin
         {
             Name     = "FloorTile",
             Size     = new Vector3(1f, 0.1f, 1f),
-            Position = position
+            Position = position,
         };
-
         floorParent.AddChild(tile);
         tile.Owner = scene;
 
