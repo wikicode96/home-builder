@@ -91,7 +91,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         float snappedX = Mathf.Floor(hit.X) + 0.5f;
         float snappedZ = Mathf.Floor(hit.Z) + 0.5f;
 
-        return new Vector3(snappedX, 0f, snappedZ);
+        return new Vector3(snappedX, -0.05f, snappedZ);
     }
 
     private void PlaceFloorTile(Vector3 position)
