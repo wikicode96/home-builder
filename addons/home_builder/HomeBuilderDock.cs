@@ -24,20 +24,22 @@ public partial class HomeBuilderDock : Control
         _stairsButton  = GetNode<Button>("MainContainer/StairsButton");
         _statusLabel   = GetNode<Label>("MainContainer/StatusLabel");
 
-        var group = new ButtonGroup();
-        _floorButton.ButtonGroup   = group;
-        _wallButton.ButtonGroup    = group;
-        _ceilingButton.ButtonGroup = group;
-        _doorButton.ButtonGroup    = group;
-        _windowButton.ButtonGroup  = group;
-        _stairsButton.ButtonGroup  = group;
+        var buttons = new System.Collections.Generic.Dictionary<Button, string>
+        {
+            { _floorButton, "floor" },
+            { _wallButton, "walls" },
+            { _ceilingButton, "ceiling" },
+            { _doorButton, "doors" },
+            { _windowButton, "windows" },
+            { _stairsButton, "stairs" }
+        };
 
-        _floorButton.Pressed   += () => OnModeSelected("floor");
-        _wallButton.Pressed    += () => OnModeSelected("walls");
-        _ceilingButton.Pressed += () => OnModeSelected("ceiling");
-        _doorButton.Pressed    += () => OnModeSelected("doors");
-        _windowButton.Pressed  += () => OnModeSelected("windows");
-        _stairsButton.Pressed  += () => OnModeSelected("stairs");
+        var group = new ButtonGroup();
+        foreach (var (button, mode) in buttons)
+        {
+            button.ButtonGroup = group;
+            button.Pressed += () => OnModeSelected(mode);
+        }
     }
 
     private void OnModeSelected(string mode)

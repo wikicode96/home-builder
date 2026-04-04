@@ -1,5 +1,16 @@
 using Godot;
 
+public enum BuildMode
+{
+    None,
+    Floor,
+    Walls,
+    Ceiling,
+    Doors,
+    Windows,
+    Stairs
+}
+
 [Tool]
 public partial class HomeBuilderPlugin : EditorPlugin
 {
@@ -7,7 +18,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private const float WallThickness = 0.3f;
 
     private Control _dock;
-    private string  _activeMode = "";
+    private BuildMode _activeMode = BuildMode.None;
 
     // Floor ghost
     private CsgBox3D _ghostTile;
@@ -28,9 +39,18 @@ public partial class HomeBuilderPlugin : EditorPlugin
             Callable.From((string mode) =>
             {
                 ClearAllPreviews();
-                _activeMode = mode;
-                if (_activeMode == "floor") CreateGhostTile();
-                if (_activeMode == "walls") CreateWallPointMarker();
+                _activeMode = mode switch
+                {
+                    "floor" => BuildMode.Floor,
+                    "walls" => BuildMode.Walls,
+                    "ceiling" => BuildMode.Ceiling,
+                    "doors" => BuildMode.Doors,
+                    "windows" => BuildMode.Windows,
+                    "stairs" => BuildMode.Stairs,
+                    _ => BuildMode.None
+                };
+                if (_activeMode == BuildMode.Floor) CreateGhostTile();
+                if (_activeMode == BuildMode.Walls) CreateWallPointMarker();
             })
         );
     }
@@ -44,7 +64,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             _dock.QueueFree();
             _dock = null;
         }
-        _activeMode = "";
+        _activeMode = BuildMode.None;
     }
 
     public override bool _Handles(GodotObject obj) => true;
@@ -57,9 +77,9 @@ public partial class HomeBuilderPlugin : EditorPlugin
     {
         return _activeMode switch
         {
-            "floor" => HandleFloorInput(camera, inputEvent),
-            "walls" => HandleWallInput(camera, inputEvent),
-            _       => (int)AfterGuiInput.Pass,
+            BuildMode.Floor => HandleFloorInput(camera, inputEvent),
+            BuildMode.Walls => HandleWallInput(camera, inputEvent),
+            _               => (int)AfterGuiInput.Pass,
         };
     }
 
@@ -166,17 +186,8 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     private void PlaceWall(Vector3 start, Vector3 end)
     {
-        var scene = GetEditorInterface().GetEditedSceneRoot();
-        if (scene == null) return;
-
-        // Reuse or create a parent "Walls" node
-        Node3D wallParent = scene.GetNodeOrNull<Node3D>("Walls");
-        if (wallParent == null)
-        {
-            wallParent = new Node3D { Name = "Walls" };
-            scene.AddChild(wallParent);
-            wallParent.Owner = scene;
-        }
+        var wallParent = GetOrCreateParentNode("Walls");
+        if (wallParent == null) return;
 
         // Length = horizontal distance between the two corners
         float length = new Vector2(end.X - start.X, end.Z - start.Z).Length();
@@ -205,7 +216,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         wall.Basis = new Basis(basisX, basisY, basisZ);
 
         wallParent.AddChild(wall);
-        wall.Owner = scene;
+        wall.Owner = wallParent.Owner;
 
         var undo = GetUndoRedo();
         undo.CreateAction("Place Wall");
@@ -218,34 +229,40 @@ public partial class HomeBuilderPlugin : EditorPlugin
     // Previews
     // -------------------------------------------------------------------------
 
-    private void CreateGhostTile()
+    private CsgBox3D CreatePreviewMarker(string name, Vector3 size, Color color, Vector3 position)
     {
         var scene = GetEditorInterface().GetEditedSceneRoot();
-        if (scene == null) return;
+        if (scene == null) return null;
 
-        _ghostTile = new CsgBox3D
+        var marker = new CsgBox3D
         {
-            Name     = "__HB_GhostFloor__",
-            Size     = new Vector3(1f, 0.1f, 1f),
-            Position = new Vector3(0f, -0.05f, 0f),
+            Name     = name,
+            Size     = size,
+            Position = position,
+            MaterialOverride = MakeMaterial(color)
         };
-        _ghostTile.MaterialOverride = MakeMaterial(new Color(0.2f, 0.9f, 0.3f, 0.4f));
-        scene.AddChild(_ghostTile);
+        scene.AddChild(marker);
+        return marker;
+    }
+
+    private void CreateGhostTile()
+    {
+        _ghostTile = CreatePreviewMarker(
+            "__HB_GhostFloor__",
+            new Vector3(1f, 0.1f, 1f),
+            new Color(0.2f, 0.9f, 0.3f, 0.4f),
+            new Vector3(0f, -0.05f, 0f)
+        );
     }
 
     private void CreateWallPointMarker()
     {
-        var scene = GetEditorInterface().GetEditedSceneRoot();
-        if (scene == null) return;
-
-        _wallPointMarker = new CsgBox3D
-        {
-            Name     = "__HB_WallPoint__",
-            Size     = new Vector3(0.2f, 0.2f, 0.2f),
-            Position = Vector3.Zero,
-        };
-        _wallPointMarker.MaterialOverride = MakeMaterial(new Color(0.9f, 0.5f, 0.1f, 0.9f));
-        scene.AddChild(_wallPointMarker);
+        _wallPointMarker = CreatePreviewMarker(
+            "__HB_WallPoint__",
+            new Vector3(0.2f, 0.2f, 0.2f),
+            new Color(0.9f, 0.5f, 0.1f, 0.9f),
+            Vector3.Zero
+        );
     }
 
     private void ClearAllPreviews()
@@ -292,6 +309,44 @@ public partial class HomeBuilderPlugin : EditorPlugin
     };
 
     // -------------------------------------------------------------------------
+    // Grid calculation helper
+    // -------------------------------------------------------------------------
+
+    private static (int minX, int maxX, int minZ, int maxZ) CalculateGridBounds(Vector3 a, Vector3 b)
+    {
+        int x0 = Mathf.RoundToInt(a.X - 0.5f);
+        int z0 = Mathf.RoundToInt(a.Z - 0.5f);
+        int x1 = Mathf.RoundToInt(b.X - 0.5f);
+        int z1 = Mathf.RoundToInt(b.Z - 0.5f);
+
+        return (
+            Mathf.Min(x0, x1),
+            Mathf.Max(x0, x1),
+            Mathf.Min(z0, z1),
+            Mathf.Max(z0, z1)
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Parent node helper
+    // -------------------------------------------------------------------------
+
+    private Node3D GetOrCreateParentNode(string parentName)
+    {
+        var scene = GetEditorInterface().GetEditedSceneRoot();
+        if (scene == null) return null;
+
+        var parent = scene.GetNodeOrNull<Node3D>(parentName);
+        if (parent == null)
+        {
+            parent = new Node3D { Name = parentName };
+            scene.AddChild(parent);
+            parent.Owner = scene;
+        }
+        return parent;
+    }
+
+    // -------------------------------------------------------------------------
     // Floor tile placement
     // -------------------------------------------------------------------------
 
@@ -300,15 +355,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     {
         if (_ghostTile == null || !IsInstanceValid(_ghostTile)) return;
 
-        int x0 = Mathf.RoundToInt(a.X - 0.5f);
-        int z0 = Mathf.RoundToInt(a.Z - 0.5f);
-        int x1 = Mathf.RoundToInt(b.X - 0.5f);
-        int z1 = Mathf.RoundToInt(b.Z - 0.5f);
-
-        int minX = Mathf.Min(x0, x1);
-        int maxX = Mathf.Max(x0, x1);
-        int minZ = Mathf.Min(z0, z1);
-        int maxZ = Mathf.Max(z0, z1);
+        var (minX, maxX, minZ, maxZ) = CalculateGridBounds(a, b);
 
         int cols = maxX - minX + 1;
         int rows = maxZ - minZ + 1;
@@ -320,26 +367,13 @@ public partial class HomeBuilderPlugin : EditorPlugin
     // Fill every cell in the rectangle between a and b
     private void FillFloorRect(Vector3 a, Vector3 b)
     {
-        int x0 = Mathf.RoundToInt(a.X - 0.5f);
-        int z0 = Mathf.RoundToInt(a.Z - 0.5f);
-        int x1 = Mathf.RoundToInt(b.X - 0.5f);
-        int z1 = Mathf.RoundToInt(b.Z - 0.5f);
+        var (minX, maxX, minZ, maxZ) = CalculateGridBounds(a, b);
 
-        int minX = Mathf.Min(x0, x1);
-        int maxX = Mathf.Max(x0, x1);
-        int minZ = Mathf.Min(z0, z1);
-        int maxZ = Mathf.Max(z0, z1);
+        var floorParent = GetOrCreateParentNode("Floor");
+        if (floorParent == null) return;
 
-        var scene = GetEditorInterface().GetEditedSceneRoot();
-        if (scene == null) return;
-
-        Node3D floorParent = scene.GetNodeOrNull<Node3D>("Floor");
-        if (floorParent == null)
-        {
-            floorParent = new Node3D { Name = "Floor" };
-            scene.AddChild(floorParent);
-            floorParent.Owner = scene;
-        }
+        var undo = GetUndoRedo();
+        undo.CreateAction("Fill Floor Rect");
 
         // Collect existing positions to avoid duplicates
         var occupied = new System.Collections.Generic.HashSet<(int, int)>();
@@ -348,9 +382,6 @@ public partial class HomeBuilderPlugin : EditorPlugin
             if (child is Node3D n)
                 occupied.Add((Mathf.RoundToInt(n.Position.X - 0.5f), Mathf.RoundToInt(n.Position.Z - 0.5f)));
         }
-
-        var undo = GetUndoRedo();
-        undo.CreateAction("Fill Floor Rect");
 
         for (int x = minX; x <= maxX; x++)
         {
@@ -366,7 +397,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                     Position = position,
                 };
                 floorParent.AddChild(tile);
-                tile.Owner = scene;
+                tile.Owner = floorParent.Owner;
 
                 undo.AddDoMethod(floorParent, Node.MethodName.AddChild, tile);
                 undo.AddUndoMethod(floorParent, Node.MethodName.RemoveChild, tile);
