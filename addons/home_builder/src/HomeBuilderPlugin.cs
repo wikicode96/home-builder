@@ -17,6 +17,13 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private const float WallHeight    = 3.0f;
     private const float WallThickness = 0.3f;
 
+    // Stair constants
+    private const int   StairCount     = 17;
+    private const float StairRise      = WallHeight / StairCount;   // ~0.176 m
+    private const float StairRun       = 0.28f;                     // horizontal depth per step
+    private const float StairWidth     = 1.0f;                      // fixed for now
+    private const float StairTotalRun  = StairCount * StairRun;     // ~4.76 m
+
     private Control   _dock;
     private BuildMode _activeMode  = BuildMode.None;
     private int       _activeFloor = 1;
@@ -40,6 +47,10 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private const float WinSill    = 0.9f;
 
     private CsgBox3D _openingMarker;
+
+    // Stairs state
+    private CsgBox3D _stairsGhost;   // preview box showing total stair footprint
+    private Vector3? _stairsStart;
 
     public override void _EnterTree()
     {
@@ -66,6 +77,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 if (_activeMode == BuildMode.Walls)   CreateWallPointMarker();
                 if (_activeMode == BuildMode.Doors)   CreateOpeningMarker(isDoor: true);
                 if (_activeMode == BuildMode.Windows) CreateOpeningMarker(isDoor: false);
+                if (_activeMode == BuildMode.Stairs)  CreateStairsGhost();
             })
         );
 
@@ -81,6 +93,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 if (_activeMode == BuildMode.Walls)   CreateWallPointMarker();
                 if (_activeMode == BuildMode.Doors)   CreateOpeningMarker(isDoor: true);
                 if (_activeMode == BuildMode.Windows) CreateOpeningMarker(isDoor: false);
+                if (_activeMode == BuildMode.Stairs)  CreateStairsGhost();
             })
         );
     }
@@ -112,6 +125,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             BuildMode.Walls   => HandleWallInput(camera, inputEvent),
             BuildMode.Doors   => HandleOpeningInput(camera, inputEvent, isDoor: true),
             BuildMode.Windows => HandleOpeningInput(camera, inputEvent, isDoor: false),
+            BuildMode.Stairs  => HandleStairsInput(camera, inputEvent),
             _                 => (int)AfterGuiInput.Pass,
         };
     }
@@ -213,6 +227,149 @@ public partial class HomeBuilderPlugin : EditorPlugin
         return (int)AfterGuiInput.Pass;
     }
 
+    // ── Stairs ────────────────────────────────────────────────────────────────
+
+    private int HandleStairsInput(Camera3D camera, InputEvent inputEvent)
+    {
+        if (inputEvent is InputEventMouseMotion motionEvent)
+        {
+            var pos = RaycastToFloorPlane(camera, motionEvent.Position);
+            if (!pos.HasValue) return (int)AfterGuiInput.Pass;
+
+            var snapped = SnapToTileCenter(pos.Value);
+
+            if (_stairsStart.HasValue)
+            {
+                // Show ghost oriented from start toward cursor
+                UpdateStairsGhost(_stairsStart.Value, snapped);
+            }
+            else
+            {
+                if (_stairsGhost != null && IsInstanceValid(_stairsGhost))
+                    _stairsGhost.Position = snapped;
+            }
+            return (int)AfterGuiInput.Pass;
+        }
+
+        if (inputEvent is InputEventMouseButton mb
+            && mb.ButtonIndex == MouseButton.Left
+            && mb.Pressed)
+        {
+            var pos = RaycastToFloorPlane(camera, mb.Position);
+            if (!pos.HasValue) return (int)AfterGuiInput.Pass;
+
+            var corner = SnapToTileCenter(pos.Value);
+
+            if (_stairsStart == null)
+            {
+                _stairsStart = corner;
+            }
+            else
+            {
+                if (!_stairsStart.Value.IsEqualApprox(corner))
+                    PlaceStairs(_stairsStart.Value, corner);
+                _stairsStart = null;
+
+                // Reset ghost
+                if (_stairsGhost != null && IsInstanceValid(_stairsGhost))
+                {
+                    _stairsGhost.Size  = new Vector3(StairWidth, StairRise, StairRun);
+                    _stairsGhost.Basis = Basis.Identity;
+                }
+            }
+
+            return (int)AfterGuiInput.Stop;
+        }
+
+        return (int)AfterGuiInput.Pass;
+    }
+
+    // -------------------------------------------------------------------------
+    // Stairs ghost helpers
+    // -------------------------------------------------------------------------
+
+    private void UpdateStairsGhost(Vector3 start, Vector3 cursor)
+    {
+        if (_stairsGhost == null || !IsInstanceValid(_stairsGhost)) return;
+
+        var dir = cursor - start;
+        if (dir.LengthSquared() < 0.001f) return;
+
+        var dirXZ  = new Vector3(dir.X, 0f, dir.Z).Normalized();
+        var basisX = Vector3.Up.Cross(dirXZ).Normalized();
+        var basisY = Vector3.Up;
+        var basisZ = dirXZ;
+
+        // Match the -0.5 offset used in PlaceStairs so ghost aligns with placed stairs
+        var center = start
+                   + dirXZ    * (StairTotalRun * 0.5f - 0.5f)
+                   + Vector3.Up * (FloorBaseY + WallHeight * 0.5f);
+
+        _stairsGhost.Size           = new Vector3(StairWidth, WallHeight, StairTotalRun);
+        _stairsGhost.GlobalPosition = center;
+        _stairsGhost.Basis          = new Basis(basisX, basisY, basisZ);
+    }
+
+    // -------------------------------------------------------------------------
+    // Stairs placement
+    // -------------------------------------------------------------------------
+
+    private void PlaceStairs(Vector3 start, Vector3 dirHint)
+    {
+        var stairsParent = GetOrCreateParentNode($"Stairs_{_activeFloor}");
+        if (stairsParent == null) return;
+
+        var scene = GetEditorInterface().GetEditedSceneRoot();
+        if (scene == null) return;
+
+        // Direction of travel (horizontal only)
+        var diff  = dirHint - start;
+        var dirXZ = new Vector3(diff.X, 0f, diff.Z).Normalized();
+
+        // Build basis: Z = run direction, X = width (perpendicular), Y = up
+        var basisZ = dirXZ;
+        var basisX = Vector3.Up.Cross(basisZ).Normalized();
+        var basisY = Vector3.Up;
+        var stepBasis = new Basis(basisX, basisY, basisZ);
+
+        var undo = GetUndoRedo();
+        undo.CreateAction("Place Stairs");
+
+        for (int i = 0; i < StairCount; i++)
+        {
+            // Each step sits on top of the previous one.
+            // Start point is the tile centre, so offset by -0.5 tiles so the
+            // first step's front edge aligns with the tile edge (grid-aligned).
+            // Centre of step i:
+            //   - along run direction: i * StairRun + StairRun * 0.5  from the tile edge
+            //   - vertically: FloorBaseY + (i + 0.5) * StairRise
+            float runOffset  = i * StairRun + StairRun * 0.5f - 0.5f;
+            float riseOffset = FloorBaseY + (i + 0.5f) * StairRise;
+
+            var stepPos = start
+                        + dirXZ    * runOffset
+                        + Vector3.Up * riseOffset;
+
+            var step = new CsgBox3D
+            {
+                Name         = $"Step_{i + 1}",
+                Size         = new Vector3(StairWidth, StairRise, StairRun),
+                UseCollision = true,
+            };
+
+            stairsParent.AddChild(step);
+            step.Owner = scene;
+
+            // Set transform after adding to tree
+            step.GlobalTransform = new Transform3D(stepBasis, stepPos);
+
+            undo.AddDoMethod(stairsParent,  Node.MethodName.AddChild,    step);
+            undo.AddUndoMethod(stairsParent, Node.MethodName.RemoveChild, step);
+        }
+
+        undo.CommitAction(false);
+    }
+
     // -------------------------------------------------------------------------
     // Wall placement
     // -------------------------------------------------------------------------
@@ -310,13 +467,25 @@ public partial class HomeBuilderPlugin : EditorPlugin
         );
     }
 
+    private void CreateStairsGhost()
+    {
+        _stairsGhost = CreatePreviewMarker(
+            "__HB_StairsGhost__",
+            new Vector3(StairWidth, StairRise, StairRun),
+            new Color(0.9f, 0.8f, 0.1f, 0.4f),
+            new Vector3(0f, FloorBaseY, 0f)
+        );
+    }
+
     private void ClearAllPreviews()
     {
         if (_ghostTile       != null && IsInstanceValid(_ghostTile))       { _ghostTile.Free();       _ghostTile       = null; }
-        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker))  { _wallPointMarker.Free(); _wallPointMarker = null; }
-        if (_openingMarker   != null && IsInstanceValid(_openingMarker))    { _openingMarker.Free();   _openingMarker   = null; }
+        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)) { _wallPointMarker.Free(); _wallPointMarker  = null; }
+        if (_openingMarker   != null && IsInstanceValid(_openingMarker))   { _openingMarker.Free();   _openingMarker   = null; }
+        if (_stairsGhost     != null && IsInstanceValid(_stairsGhost))     { _stairsGhost.Free();     _stairsGhost     = null; }
         _floorDragStart = null;
         _wallStart      = null;
+        _stairsStart    = null;
     }
 
     // -------------------------------------------------------------------------
@@ -328,11 +497,9 @@ public partial class HomeBuilderPlugin : EditorPlugin
         var origin    = camera.ProjectRayOrigin(screenPos);
         var direction = camera.ProjectRayNormal(screenPos);
 
-        // Intersect with Y = FloorBaseY plane
-        float targetY = FloorBaseY;
         if (Mathf.IsZeroApprox(direction.Y)) return null;
 
-        float t = (targetY - origin.Y) / direction.Y;
+        float t = -(origin.Y - FloorBaseY) / direction.Y;
         if (t < 0) return null;
 
         return origin + direction * t;
@@ -686,9 +853,8 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     private static int ParseFloorIndex(StringName name)
     {
-        // Matches "Floor_1", "Walls_1", "Floor_2", "Walls_2", etc.
         string s = name.ToString();
-        foreach (string prefix in new[] { "Floor_", "Walls_" })
+        foreach (string prefix in new[] { "Floor_", "Walls_", "Stairs_" })
         {
             if (s.StartsWith(prefix) && int.TryParse(s[prefix.Length..], out int idx))
                 return idx;
