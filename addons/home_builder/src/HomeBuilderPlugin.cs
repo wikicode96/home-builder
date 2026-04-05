@@ -17,8 +17,12 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private const float WallHeight    = 3.0f;
     private const float WallThickness = 0.3f;
 
-    private Control _dock;
-    private BuildMode _activeMode = BuildMode.None;
+    private Control   _dock;
+    private BuildMode _activeMode  = BuildMode.None;
+    private int       _activeFloor = 1;
+
+    // Floor Y offset for the current floor (bottom of the floor slab)
+    private float FloorBaseY => (_activeFloor - 1) * WallHeight;
 
     // Floor ghost
     private CsgBox3D _ghostTile;
@@ -64,6 +68,21 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 if (_activeMode == BuildMode.Windows) CreateOpeningMarker(isDoor: false);
             })
         );
+
+        _dock.Connect(
+            HomeBuilderDock.SignalName.FloorChanged,
+            Callable.From((int floor) =>
+            {
+                _activeFloor = floor;
+                UpdateFloorVisibility();
+                // Recreate active preview at new floor height
+                ClearAllPreviews();
+                if (_activeMode == BuildMode.Floor)   CreateGhostTile();
+                if (_activeMode == BuildMode.Walls)   CreateWallPointMarker();
+                if (_activeMode == BuildMode.Doors)   CreateOpeningMarker(isDoor: true);
+                if (_activeMode == BuildMode.Windows) CreateOpeningMarker(isDoor: false);
+            })
+        );
     }
 
     public override void _ExitTree()
@@ -75,7 +94,8 @@ public partial class HomeBuilderPlugin : EditorPlugin
             _dock.QueueFree();
             _dock = null;
         }
-        _activeMode = BuildMode.None;
+        _activeMode  = BuildMode.None;
+        _activeFloor = 1;
     }
 
     public override bool _Handles(GodotObject obj) => true;
@@ -199,7 +219,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     private void PlaceWall(Vector3 start, Vector3 end)
     {
-        var wallParent = GetOrCreateParentNode("Walls");
+        var wallParent = GetOrCreateParentNode($"Walls_{_activeFloor}");
         if (wallParent == null) return;
 
         // Length = horizontal distance between the two corners
@@ -209,7 +229,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         // Centre of the wall sits halfway between start and end, vertically at half height
         var center = new Vector3(
             (start.X + end.X) * 0.5f,
-            WallHeight * 0.5f,
+            FloorBaseY + WallHeight * 0.5f,
             (start.Z + end.Z) * 0.5f
         );
 
@@ -263,7 +283,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             "__HB_GhostFloor__",
             new Vector3(1f, 0.1f, 1f),
             new Color(0.2f, 0.9f, 0.3f, 0.4f),
-            new Vector3(0f, -0.05f, 0f)
+            new Vector3(0f, FloorBaseY - 0.05f, 0f)
         );
     }
 
@@ -273,7 +293,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             "__HB_WallPoint__",
             new Vector3(0.2f, 0.2f, 0.2f),
             new Color(0.9f, 0.5f, 0.1f, 0.9f),
-            Vector3.Zero
+            new Vector3(0f, FloorBaseY, 0f)
         );
     }
 
@@ -292,9 +312,9 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     private void ClearAllPreviews()
     {
-        if (_ghostTile       != null && IsInstanceValid(_ghostTile))      { _ghostTile.Free();      _ghostTile      = null; }
-        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)){ _wallPointMarker.Free(); _wallPointMarker = null; }
-        if (_openingMarker   != null && IsInstanceValid(_openingMarker))  { _openingMarker.Free();   _openingMarker   = null; }
+        if (_ghostTile       != null && IsInstanceValid(_ghostTile))       { _ghostTile.Free();       _ghostTile       = null; }
+        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker))  { _wallPointMarker.Free(); _wallPointMarker = null; }
+        if (_openingMarker   != null && IsInstanceValid(_openingMarker))    { _openingMarker.Free();   _openingMarker   = null; }
         _floorDragStart = null;
         _wallStart      = null;
     }
@@ -308,19 +328,21 @@ public partial class HomeBuilderPlugin : EditorPlugin
         var origin    = camera.ProjectRayOrigin(screenPos);
         var direction = camera.ProjectRayNormal(screenPos);
 
+        // Intersect with Y = FloorBaseY plane
+        float targetY = FloorBaseY;
         if (Mathf.IsZeroApprox(direction.Y)) return null;
 
-        float t = -origin.Y / direction.Y;
+        float t = (targetY - origin.Y) / direction.Y;
         if (t < 0) return null;
 
         return origin + direction * t;
     }
 
-    private static Vector3 SnapToTileCenter(Vector3 hit) =>
-        new(Mathf.Floor(hit.X) + 0.5f, -0.05f, Mathf.Floor(hit.Z) + 0.5f);
+    private Vector3 SnapToTileCenter(Vector3 hit) =>
+        new(Mathf.Floor(hit.X) + 0.5f, FloorBaseY - 0.05f, Mathf.Floor(hit.Z) + 0.5f);
 
-    private static Vector3 SnapToGridCorner(Vector3 hit) =>
-        new(Mathf.Round(hit.X), 0f, Mathf.Round(hit.Z));
+    private Vector3 SnapToGridCorner(Vector3 hit) =>
+        new(Mathf.Round(hit.X), FloorBaseY, Mathf.Round(hit.Z));
 
     // -------------------------------------------------------------------------
     // Material helper
@@ -387,7 +409,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         int rows = maxZ - minZ + 1;
 
         _ghostTile.Size     = new Vector3(cols, 0.1f, rows);
-        _ghostTile.Position = new Vector3(minX + cols * 0.5f, -0.05f, minZ + rows * 0.5f);
+        _ghostTile.Position = new Vector3(minX + cols * 0.5f, FloorBaseY - 0.05f, minZ + rows * 0.5f);
     }
 
     // Fill every cell in the rectangle between a and b
@@ -395,7 +417,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     {
         var (minX, maxX, minZ, maxZ) = CalculateGridBounds(a, b);
 
-        var floorParent = GetOrCreateParentNode("Floor");
+        var floorParent = GetOrCreateParentNode($"Floor_{_activeFloor}");
         if (floorParent == null) return;
 
         var undo = GetUndoRedo();
@@ -415,7 +437,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             {
                 if (occupied.Contains((x, z))) continue;
 
-                var position = new Vector3(x + 0.5f, -0.05f, z + 0.5f);
+                var position = new Vector3(x + 0.5f, FloorBaseY - 0.05f, z + 0.5f);
                 var tile = new CsgBox3D
                 {
                     Name         = "FloorTile",
@@ -481,6 +503,10 @@ public partial class HomeBuilderPlugin : EditorPlugin
         return (int)AfterGuiInput.Pass;
     }
 
+    // -------------------------------------------------------------------------
+    // Opening (door / window)
+    // -------------------------------------------------------------------------
+
     private static float SnapToWall(CsgBox3D box, Vector3 worldHit, float openingWidth)
     {
         var localHit  = box.GlobalTransform.AffineInverse() * worldHit;
@@ -491,7 +517,8 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     private RaycastHitInfo? RaycastToWalls(Camera3D camera, Vector2 screenPos)
     {
-        var wallParent = GetOrCreateParentNode("Walls");
+        // Search walls on the active floor only
+        var wallParent = GetOrCreateParentNode($"Walls_{_activeFloor}");
         if (wallParent == null) return null;
 
         var origin    = camera.ProjectRayOrigin(screenPos);
@@ -557,7 +584,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         var scene = GetEditorInterface().GetEditedSceneRoot();
         if (scene == null) return;
 
-        var wallParent = GetOrCreateParentNode("Walls");
+        var wallParent = GetOrCreateParentNode($"Walls_{_activeFloor}");
 
         // Snapshot transform before modifying the scene tree
         var wallGlobalBasis = wall.GlobalTransform.Basis;
@@ -620,5 +647,77 @@ public partial class HomeBuilderPlugin : EditorPlugin
         undo.AddUndoMethod(wallParent, Node.MethodName.AddChild,    wall);
 
         undo.CommitAction(false);
+    }
+
+    // -------------------------------------------------------------------------
+    // Floor visibility
+    // -------------------------------------------------------------------------
+
+    private void UpdateFloorVisibility()
+    {
+        var scene = GetEditorInterface().GetEditedSceneRoot();
+        if (scene == null) return;
+
+        // Find all Floor_N and Walls_N nodes and update their visibility/transparency
+        foreach (Node child in scene.GetChildren())
+        {
+            if (child is not Node3D node3D) continue;
+
+            int floorIndex = ParseFloorIndex(child.Name);
+            if (floorIndex < 0) continue;
+
+            if (floorIndex == _activeFloor)
+            {
+                // Active floor: fully visible, no transparency override
+                SetNodeTransparency(node3D, 1.0f);
+            }
+            else if (floorIndex < _activeFloor)
+            {
+                // Lower floors: semitransparent for context
+                SetNodeTransparency(node3D, 0.3f);
+            }
+            else
+            {
+                // Upper floors: hidden
+                node3D.Visible = false;
+            }
+        }
+    }
+
+    private static int ParseFloorIndex(StringName name)
+    {
+        // Matches "Floor_1", "Walls_1", "Floor_2", "Walls_2", etc.
+        string s = name.ToString();
+        foreach (string prefix in new[] { "Floor_", "Walls_" })
+        {
+            if (s.StartsWith(prefix) && int.TryParse(s[prefix.Length..], out int idx))
+                return idx;
+        }
+        return -1;
+    }
+
+    private static void SetNodeTransparency(Node3D node, float alpha)
+    {
+        node.Visible = true;
+        foreach (Node child in node.GetChildren())
+        {
+            if (child is GeometryInstance3D geo)
+            {
+                if (alpha < 1.0f)
+                {
+                    geo.MaterialOverride = new StandardMaterial3D
+                    {
+                        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                        AlbedoColor  = new Color(0.8f, 0.8f, 0.8f, alpha),
+                        ShadingMode  = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                        CullMode     = BaseMaterial3D.CullModeEnum.Disabled,
+                    };
+                }
+                else
+                {
+                    geo.MaterialOverride = null;
+                }
+            }
+        }
     }
 }

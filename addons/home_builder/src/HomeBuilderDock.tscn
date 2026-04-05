@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://home_builder_dock"]
+[gd_scene load_steps=8 format=3 uid="uid://home_builder_dock"]
 
 [ext_resource type="Script" path="res://addons/home_builder/src/HomeBuilderDock.cs" id="1"]
 [ext_resource type="Texture2D" path="res://addons/home_builder/icons/suelos.svg" id="2"]
@@ -16,8 +16,6 @@ script = ExtResource("1")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -69,3 +67,23 @@ text = "Sin modo activo"
 horizontal_alignment = 1
 autowrap_mode = 3
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="HSeparator3" type="HSeparator" parent="MainContainer"]
+
+[node name="FloorSelector" type="HBoxContainer" parent="MainContainer"]
+alignment = 1
+
+[node name="FloorDownButton" type="Button" parent="MainContainer/FloorSelector"]
+text = "▼"
+custom_minimum_size = Vector2(32, 0)
+disabled = true
+
+[node name="FloorLabel" type="Label" parent="MainContainer/FloorSelector"]
+text = "Piso 1"
+horizontal_alignment = 1
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+
+[node name="FloorUpButton" type="Button" parent="MainContainer/FloorSelector"]
+text = "▲"
+custom_minimum_size = Vector2(32, 0)
