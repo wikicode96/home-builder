@@ -28,6 +28,15 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private CsgBox3D _wallPointMarker;
     private Vector3? _wallStart;
 
+    // Door / window state
+    private const float DoorWidth  = 2.0f;
+    private const float DoorHeight = 2.1f;
+    private const float WinWidth   = 1.0f;
+    private const float WinHeight  = 1.0f;
+    private const float WinSill    = 0.9f;
+
+    private CsgBox3D _openingMarker;
+
     public override void _EnterTree()
     {
         var dockScene = GD.Load<PackedScene>("res://addons/home_builder/src/HomeBuilderDock.tscn");
@@ -41,16 +50,18 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 ClearAllPreviews();
                 _activeMode = mode switch
                 {
-                    "floor" => BuildMode.Floor,
-                    "walls" => BuildMode.Walls,
+                    "floor"   => BuildMode.Floor,
+                    "walls"   => BuildMode.Walls,
                     "ceiling" => BuildMode.Ceiling,
-                    "doors" => BuildMode.Doors,
+                    "doors"   => BuildMode.Doors,
                     "windows" => BuildMode.Windows,
-                    "stairs" => BuildMode.Stairs,
-                    _ => BuildMode.None
+                    "stairs"  => BuildMode.Stairs,
+                    _         => BuildMode.None
                 };
-                if (_activeMode == BuildMode.Floor) CreateGhostTile();
-                if (_activeMode == BuildMode.Walls) CreateWallPointMarker();
+                if (_activeMode == BuildMode.Floor)   CreateGhostTile();
+                if (_activeMode == BuildMode.Walls)   CreateWallPointMarker();
+                if (_activeMode == BuildMode.Doors)   CreateOpeningMarker(isDoor: true);
+                if (_activeMode == BuildMode.Windows) CreateOpeningMarker(isDoor: false);
             })
         );
     }
@@ -77,9 +88,11 @@ public partial class HomeBuilderPlugin : EditorPlugin
     {
         return _activeMode switch
         {
-            BuildMode.Floor => HandleFloorInput(camera, inputEvent),
-            BuildMode.Walls => HandleWallInput(camera, inputEvent),
-            _               => (int)AfterGuiInput.Pass,
+            BuildMode.Floor   => HandleFloorInput(camera, inputEvent),
+            BuildMode.Walls   => HandleWallInput(camera, inputEvent),
+            BuildMode.Doors   => HandleOpeningInput(camera, inputEvent, isDoor: true),
+            BuildMode.Windows => HandleOpeningInput(camera, inputEvent, isDoor: false),
+            _                 => (int)AfterGuiInput.Pass,
         };
     }
 
@@ -200,23 +213,19 @@ public partial class HomeBuilderPlugin : EditorPlugin
             (start.Z + end.Z) * 0.5f
         );
 
-        var wall = new CsgBox3D
-        {
-            Name     = "Wall",
-            Size     = new Vector3(length, WallHeight, WallThickness),
-            Position = center,
-        };
-
-        // Add collision to the wall
-        wall.UseCollision = true;
-
-        // Build a basis where local X points from start to end.
-        // local Y stays up, local Z is the cross product (thickness axis).
         var dirXZ  = (end - start).Normalized();
         var basisX = dirXZ;
         var basisY = Vector3.Up;
         var basisZ = basisY.Cross(basisX).Normalized();
-        wall.Basis = new Basis(basisX, basisY, basisZ);
+
+        var wall = new CsgBox3D
+        {
+            Name         = "Wall",
+            Size         = new Vector3(length, WallHeight, WallThickness),
+            Position     = center,
+            Basis        = new Basis(basisX, basisY, basisZ),
+            UseCollision = true,
+        };
 
         wallParent.AddChild(wall);
         wall.Owner = wallParent.Owner;
@@ -239,9 +248,9 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
         var marker = new CsgBox3D
         {
-            Name     = name,
-            Size     = size,
-            Position = position,
+            Name             = name,
+            Size             = size,
+            Position         = position,
             MaterialOverride = MakeMaterial(color)
         };
         scene.AddChild(marker);
@@ -268,12 +277,26 @@ public partial class HomeBuilderPlugin : EditorPlugin
         );
     }
 
+    private void CreateOpeningMarker(bool isDoor)
+    {
+        float w = isDoor ? DoorWidth  : WinWidth;
+        float h = isDoor ? DoorHeight : WinHeight;
+
+        _openingMarker = CreatePreviewMarker(
+            "__HB_OpeningMarker__",
+            new Vector3(w, h, WallThickness + 0.05f),
+            new Color(0.2f, 0.6f, 1.0f, 0.5f),
+            Vector3.Zero
+        );
+    }
+
     private void ClearAllPreviews()
     {
-        if (_ghostTile != null && IsInstanceValid(_ghostTile))            { _ghostTile.Free();        _ghostTile        = null; }
-        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)) { _wallPointMarker.Free(); _wallPointMarker = null; }
+        if (_ghostTile       != null && IsInstanceValid(_ghostTile))      { _ghostTile.Free();      _ghostTile      = null; }
+        if (_wallPointMarker != null && IsInstanceValid(_wallPointMarker)){ _wallPointMarker.Free(); _wallPointMarker = null; }
+        if (_openingMarker   != null && IsInstanceValid(_openingMarker))  { _openingMarker.Free();   _openingMarker   = null; }
         _floorDragStart = null;
-        _wallStart = null;
+        _wallStart      = null;
     }
 
     // -------------------------------------------------------------------------
@@ -395,13 +418,11 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 var position = new Vector3(x + 0.5f, -0.05f, z + 0.5f);
                 var tile = new CsgBox3D
                 {
-                    Name     = "FloorTile",
-                    Size     = new Vector3(1f, 0.1f, 1f),
-                    Position = position,
+                    Name         = "FloorTile",
+                    Size         = new Vector3(1f, 0.1f, 1f),
+                    Position     = position,
+                    UseCollision = true,
                 };
-
-                // Add collision to the tile
-                tile.UseCollision = true;
 
                 floorParent.AddChild(tile);
                 tile.Owner = floorParent.Owner;
@@ -410,6 +431,193 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 undo.AddUndoMethod(floorParent, Node.MethodName.RemoveChild, tile);
             }
         }
+
+        undo.CommitAction(false);
+    }
+
+    // ── Doors / Windows ───────────────────────────────────────────────────────
+
+    private int HandleOpeningInput(Camera3D camera, InputEvent inputEvent, bool isDoor)
+    {
+        if (inputEvent is InputEventMouseMotion motionEvent)
+        {
+            var hit = RaycastToWalls(camera, motionEvent.Position);
+            if (hit.HasValue)
+            {
+                var box       = hit.Value.Collider;
+                float opening = isDoor ? DoorWidth : WinWidth;
+                float snapped = SnapToWall(box, hit.Value.Position, opening);
+
+                if (_openingMarker != null && IsInstanceValid(_openingMarker))
+                {
+                    float markerLocalY = isDoor
+                        ? DoorHeight * 0.5f - WallHeight * 0.5f
+                        : WinSill + WinHeight * 0.5f - WallHeight * 0.5f;
+
+                    var axisX = box.GlobalTransform.Basis.X.Normalized();
+                    var axisY = box.GlobalTransform.Basis.Y.Normalized();
+                    _openingMarker.GlobalPosition = box.GlobalPosition + axisX * snapped + axisY * markerLocalY;
+                    _openingMarker.Basis          = box.GlobalTransform.Basis;
+                }
+            }
+            return (int)AfterGuiInput.Pass;
+        }
+
+        if (inputEvent is InputEventMouseButton mb
+            && mb.ButtonIndex == MouseButton.Left
+            && mb.Pressed)
+        {
+            var hit = RaycastToWalls(camera, mb.Position);
+            if (hit.HasValue)
+            {
+                var box       = hit.Value.Collider;
+                float opening = isDoor ? DoorWidth : WinWidth;
+                float snapped = SnapToWall(box, hit.Value.Position, opening);
+                CutOpening(box, snapped, isDoor);
+                return (int)AfterGuiInput.Stop;
+            }
+        }
+
+        return (int)AfterGuiInput.Pass;
+    }
+
+    private static float SnapToWall(CsgBox3D box, Vector3 worldHit, float openingWidth)
+    {
+        var localHit  = box.GlobalTransform.AffineInverse() * worldHit;
+        float halfLen = box.Size.X * 0.5f;
+        float snapped = Mathf.Round(localHit.X);
+        return Mathf.Clamp(snapped, -halfLen + openingWidth * 0.5f, halfLen - openingWidth * 0.5f);
+    }
+
+    private RaycastHitInfo? RaycastToWalls(Camera3D camera, Vector2 screenPos)
+    {
+        var wallParent = GetOrCreateParentNode("Walls");
+        if (wallParent == null) return null;
+
+        var origin    = camera.ProjectRayOrigin(screenPos);
+        var direction = camera.ProjectRayNormal(screenPos);
+
+        CsgBox3D bestBox   = null;
+        Vector3  bestPoint = Vector3.Zero;
+        float    bestDist  = float.MaxValue;
+
+        foreach (Node child in wallParent.GetChildren())
+        {
+            if (child is not CsgBox3D box) continue;
+
+            var invTransform = box.GlobalTransform.AffineInverse();
+            var localOrigin  = invTransform * origin;
+            var localDir     = invTransform.Basis * direction;
+            var half         = box.Size * 0.5f;
+
+            float tMin = float.NegativeInfinity;
+            float tMax = float.PositiveInfinity;
+
+            for (int axis = 0; axis < 3; axis++)
+            {
+                float o = localOrigin[axis];
+                float d = localDir[axis];
+                float h = half[axis];
+
+                if (Mathf.IsZeroApprox(d))
+                {
+                    if (o < -h || o > h) { tMin = float.PositiveInfinity; break; }
+                }
+                else
+                {
+                    float t1 = (-h - o) / d;
+                    float t2 = ( h - o) / d;
+                    if (t1 > t2) (t1, t2) = (t2, t1);
+                    tMin = Mathf.Max(tMin, t1);
+                    tMax = Mathf.Min(tMax, t2);
+                    if (tMin > tMax) { tMin = float.PositiveInfinity; break; }
+                }
+            }
+
+            if (tMin < 0 || tMin == float.PositiveInfinity || tMin >= bestDist) continue;
+
+            bestDist  = tMin;
+            bestBox   = box;
+            bestPoint = origin + direction * tMin;
+        }
+
+        if (bestBox == null) return null;
+        return new RaycastHitInfo { Position = bestPoint, Collider = bestBox };
+    }
+
+    private struct RaycastHitInfo
+    {
+        public Vector3   Position;
+        public CsgBox3D  Collider;
+    }
+
+    // Split the wall into segments leaving a gap for the door/window
+    private void CutOpening(CsgBox3D wall, float localCenter, bool isDoor)
+    {
+        var scene = GetEditorInterface().GetEditedSceneRoot();
+        if (scene == null) return;
+
+        var wallParent = GetOrCreateParentNode("Walls");
+
+        // Snapshot transform before modifying the scene tree
+        var wallGlobalBasis = wall.GlobalTransform.Basis;
+        var wallOrigin      = wall.GlobalPosition;
+        var axisX           = wallGlobalBasis.X.Normalized();
+        var axisY           = wallGlobalBasis.Y.Normalized();
+
+        float wallLen  = wall.Size.X;
+        float opening  = isDoor ? DoorWidth  : WinWidth;
+        float oHeight  = isDoor ? DoorHeight : WinHeight;
+        float oBottom  = isDoor ? 0f         : WinSill;
+        float oTop     = oBottom + oHeight;
+
+        float leftEnd  = -wallLen * 0.5f;
+        float rightEnd =  wallLen * 0.5f;
+        float gapLeft  = localCenter - opening * 0.5f;
+        float gapRight = localCenter + opening * 0.5f;
+
+        // wallOrigin is at WallHeight/2 up, so offset Y relative to that centre
+        Vector3 SegmentWorldPos(float fromX, float toX, float fromY, float toY) =>
+            wallOrigin
+            + axisX * ((fromX + toX) * 0.5f)
+            + axisY * ((fromY + toY) * 0.5f - WallHeight * 0.5f);
+
+        var undo = GetUndoRedo();
+        undo.CreateAction(isDoor ? "Cut Door" : "Cut Window");
+
+        void AddSegment(float fromX, float toX, float fromY, float toY)
+        {
+            float len = toX - fromX;
+            float h   = toY - fromY;
+            if (len < 0.01f || h < 0.01f) return;
+
+            var seg = new CsgBox3D
+            {
+                Name         = "Wall",
+                Size         = new Vector3(len, h, WallThickness),
+                UseCollision = true,
+            };
+
+            // Add to tree first so GlobalTransform is writable
+            wallParent.AddChild(seg);
+            seg.Owner = scene;
+
+            // Assign basis and position AFTER being in the tree
+            seg.GlobalTransform = new Transform3D(wallGlobalBasis, SegmentWorldPos(fromX, toX, fromY, toY));
+
+            undo.AddDoMethod(wallParent,  Node.MethodName.AddChild,    seg);
+            undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, seg);
+        }
+
+        AddSegment(leftEnd,  gapLeft,  0f,   WallHeight);  // left
+        AddSegment(gapRight, rightEnd, 0f,   WallHeight);  // right
+        AddSegment(gapLeft,  gapRight, oTop, WallHeight);  // lintel
+        if (!isDoor)
+            AddSegment(gapLeft, gapRight, 0f, oBottom);    // sill (windows only)
+
+        wallParent.RemoveChild(wall);
+        undo.AddDoMethod(wallParent,   Node.MethodName.RemoveChild, wall);
+        undo.AddUndoMethod(wallParent, Node.MethodName.AddChild,    wall);
 
         undo.CommitAction(false);
     }
