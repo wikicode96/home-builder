@@ -17,11 +17,21 @@ public partial class HomeBuilderDock : Control
     private Button _stairsButton;
     private Label  _statusLabel;
 
-    private Label  _floorLabel;
     private Button _floorUpButton;
     private Button _floorDownButton;
+    private Label  _floorLabel;
+
+    // Material pickers for floor tiles
+    private EditorResourcePicker _tileTopPicker;
+    private EditorResourcePicker _tileBottomPicker;
+    private EditorResourcePicker _tileSidesPicker;
 
     private int _currentFloor = 1;
+
+    // Current materials — read by FloorBuilder when placing tiles
+    public Material TileTopMaterial    => _tileTopPicker?.EditedResource    as Material;
+    public Material TileBottomMaterial => _tileBottomPicker?.EditedResource as Material;
+    public Material TileSidesMaterial  => _tileSidesPicker?.EditedResource  as Material;
 
     public override void _Ready()
     {
@@ -33,11 +43,10 @@ public partial class HomeBuilderDock : Control
         _stairsButton  = GetNode<Button>("MainContainer/StairsButton");
         _statusLabel   = GetNode<Label>("MainContainer/StatusLabel");
 
-        _floorLabel      = GetNode<Label>("MainContainer/FloorSelector/FloorLabel");
         _floorUpButton   = GetNode<Button>("MainContainer/FloorSelector/FloorUpButton");
         _floorDownButton = GetNode<Button>("MainContainer/FloorSelector/FloorDownButton");
+        _floorLabel      = GetNode<Label>("MainContainer/FloorSelector/FloorLabel");
 
-        // Mode buttons — mutually exclusive
         var group = new ButtonGroup();
         _floorButton.ButtonGroup   = group;
         _wallButton.ButtonGroup    = group;
@@ -53,11 +62,30 @@ public partial class HomeBuilderDock : Control
         _windowButton.Pressed  += () => OnModeSelected("windows");
         _stairsButton.Pressed  += () => OnModeSelected("stairs");
 
-        // Floor selector buttons
         _floorUpButton.Pressed   += OnFloorUp;
         _floorDownButton.Pressed += OnFloorDown;
 
+        // Build material pickers at runtime — EditorResourcePicker
+        // must be created in code because it's an editor-only class
+        _tileTopPicker    = CreatePicker("MainContainer/TileMaterials/TopRow/TopPicker");
+        _tileBottomPicker = CreatePicker("MainContainer/TileMaterials/BottomRow/BottomPicker");
+        _tileSidesPicker  = CreatePicker("MainContainer/TileMaterials/SidesRow/SidesPicker");
+
         UpdateFloorLabel();
+    }
+
+    private EditorResourcePicker CreatePicker(string containerPath)
+    {
+        var container = GetNode<HBoxContainer>(containerPath);
+        if (container == null) return null;
+
+        var picker = new EditorResourcePicker
+        {
+            BaseType         = "Material",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+        };
+        container.AddChild(picker);
+        return picker;
     }
 
     private void OnModeSelected(string mode)
@@ -83,7 +111,7 @@ public partial class HomeBuilderDock : Control
 
     private void UpdateFloorLabel()
     {
-        _floorLabel.Text     = $"Piso {_currentFloor}";
+        _floorLabel.Text          = $"Piso {_currentFloor}";
         _floorDownButton.Disabled = _currentFloor <= 1;
     }
 }

@@ -139,10 +139,14 @@ public class FloorBuilder
                     Position = new Vector3(x + 0.5f, floorBaseY - 0.05f, z + 0.5f),
                 };
 
-                // Assign a default material per surface so the user can override later
-                tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceTop,    MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
-                tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceBottom, MakeDefaultMaterial(new Color(0.6f, 0.6f, 0.6f)));
-                tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceSides,  MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
+                // Use materials from dock if assigned, otherwise use defaults
+                var dock = _plugin.Dock;
+                tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceTop,
+                    dock?.TileTopMaterial    ?? MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
+                tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceBottom,
+                    dock?.TileBottomMaterial ?? MakeDefaultMaterial(new Color(0.6f, 0.6f, 0.6f)));
+                tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceSides,
+                    dock?.TileSidesMaterial  ?? MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
 
                 floorParent.AddChild(tile);
                 tile.Owner = floorParent.Owner;

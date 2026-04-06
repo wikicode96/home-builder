@@ -18,6 +18,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 4
 
 [node name="Title" type="Label" parent="MainContainer"]
 text = "Home Builder"
@@ -62,28 +63,68 @@ toggle_mode = true
 
 [node name="HSeparator2" type="HSeparator" parent="MainContainer"]
 
+[node name="FloorSelectorLabel" type="Label" parent="MainContainer"]
+text = "Planta:"
+theme_override_font_sizes/font_size = 12
+
+[node name="FloorSelector" type="HBoxContainer" parent="MainContainer"]
+
+[node name="FloorDownButton" type="Button" parent="MainContainer/FloorSelector"]
+text = "▼"
+custom_minimum_size = Vector2(36, 0)
+
+[node name="FloorLabel" type="Label" parent="MainContainer/FloorSelector"]
+text = "Piso 1"
+size_flags_horizontal = 3
+horizontal_alignment = 1
+
+[node name="FloorUpButton" type="Button" parent="MainContainer/FloorSelector"]
+text = "▲"
+custom_minimum_size = Vector2(36, 0)
+
+[node name="HSeparator3" type="HSeparator" parent="MainContainer"]
+
+[node name="TileMaterials" type="VBoxContainer" parent="MainContainer"]
+theme_override_constants/separation = 2
+
+[node name="TileMaterialsLabel" type="Label" parent="MainContainer/TileMaterials"]
+text = "Materiales baldosa:"
+theme_override_font_sizes/font_size = 12
+
+[node name="TopRow" type="HBoxContainer" parent="MainContainer/TileMaterials"]
+
+[node name="TopLabel" type="Label" parent="MainContainer/TileMaterials/TopRow"]
+text = "Superior"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="TopPicker" type="HBoxContainer" parent="MainContainer/TileMaterials/TopRow"]
+size_flags_horizontal = 3
+
+[node name="BottomRow" type="HBoxContainer" parent="MainContainer/TileMaterials"]
+
+[node name="BottomLabel" type="Label" parent="MainContainer/TileMaterials/BottomRow"]
+text = "Inferior"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="BottomPicker" type="HBoxContainer" parent="MainContainer/TileMaterials/BottomRow"]
+size_flags_horizontal = 3
+
+[node name="SidesRow" type="HBoxContainer" parent="MainContainer/TileMaterials"]
+
+[node name="SidesLabel" type="Label" parent="MainContainer/TileMaterials/SidesRow"]
+text = "Laterales"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="SidesPicker" type="HBoxContainer" parent="MainContainer/TileMaterials/SidesRow"]
+size_flags_horizontal = 3
+
+[node name="HSeparator4" type="HSeparator" parent="MainContainer"]
+
 [node name="StatusLabel" type="Label" parent="MainContainer"]
 text = "Sin modo activo"
 horizontal_alignment = 1
 autowrap_mode = 3
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-
-[node name="HSeparator3" type="HSeparator" parent="MainContainer"]
-
-[node name="FloorSelector" type="HBoxContainer" parent="MainContainer"]
-alignment = 1
-
-[node name="FloorDownButton" type="Button" parent="MainContainer/FloorSelector"]
-text = "▼"
-custom_minimum_size = Vector2(32, 0)
-disabled = true
-
-[node name="FloorLabel" type="Label" parent="MainContainer/FloorSelector"]
-text = "Piso 1"
-horizontal_alignment = 1
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 14
-
-[node name="FloorUpButton" type="Button" parent="MainContainer/FloorSelector"]
-text = "▲"
-custom_minimum_size = Vector2(32, 0)

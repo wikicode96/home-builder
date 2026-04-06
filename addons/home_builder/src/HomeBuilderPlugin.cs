@@ -9,8 +9,9 @@ public enum BuildMode
 public partial class HomeBuilderPlugin : EditorPlugin
 {
     // Exposed to builders
-    public int   ActiveFloor => _activeFloor;
-    public float FloorBaseY  => (_activeFloor - 1) * WallBuilder.Height;
+    public int              ActiveFloor => _activeFloor;
+    public float            FloorBaseY  => (_activeFloor - 1) * WallBuilder.Height;
+    public HomeBuilderDock  Dock        => _dock as HomeBuilderDock;
 
     private Control   _dock;
     private BuildMode _activeMode  = BuildMode.None;
