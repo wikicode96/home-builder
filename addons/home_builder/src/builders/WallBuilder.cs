@@ -13,7 +13,7 @@ public class WallBuilder
     public WallBuilder(HomeBuilderPlugin plugin) => _plugin = plugin;
 
     // -------------------------------------------------------------------------
-    // Preview
+    // Preview (CsgBox3D — previews don't need materials)
     // -------------------------------------------------------------------------
 
     public void CreateMarker(Node3D scene, float floorBaseY)
@@ -77,7 +77,7 @@ public class WallBuilder
     // Placement
     // -------------------------------------------------------------------------
 
-    private void PlaceWall(Vector3 start, Vector3 end, float floorBaseY)
+    public void PlaceWall(Vector3 start, Vector3 end, float floorBaseY)
     {
         var wallParent = _plugin.GetOrCreateParentNode($"Walls_{_plugin.ActiveFloor}");
         if (wallParent == null) return;
@@ -95,15 +95,17 @@ public class WallBuilder
         var basisX = dirXZ;
         var basisY = Vector3.Up;
         var basisZ = basisY.Cross(basisX).Normalized();
+        var basis  = new Basis(basisX, basisY, basisZ);
 
-        var wall = new CsgBox3D
+        var wall = new MeshInstance3D
         {
-            Name         = "Wall",
-            Size         = new Vector3(length, Height, Thickness),
-            Position     = center,
-            Basis        = new Basis(basisX, basisY, basisZ),
-            UseCollision = true,
+            Name     = "Wall",
+            Mesh     = WallMeshBuilder.Build(length, Height, Thickness),
+            Position = center,
+            Basis    = basis,
         };
+
+        ApplyMaterials(wall);
 
         wallParent.AddChild(wall);
         wall.Owner = wallParent.Owner;
@@ -114,4 +116,24 @@ public class WallBuilder
         undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, wall);
         undo.CommitAction(false);
     }
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    public void ApplyMaterials(MeshInstance3D wall)
+    {
+        var dock = _plugin.Dock;
+        wall.SetSurfaceOverrideMaterial(WallMeshBuilder.SurfaceFaceA,
+            dock?.WallFaceAMaterial ?? MakeDefaultMaterial(new Color(0.9f, 0.9f, 0.85f)));
+        wall.SetSurfaceOverrideMaterial(WallMeshBuilder.SurfaceFaceB,
+            dock?.WallFaceBMaterial ?? MakeDefaultMaterial(new Color(0.85f, 0.85f, 0.8f)));
+        wall.SetSurfaceOverrideMaterial(WallMeshBuilder.SurfaceEdges,
+            dock?.WallEdgesMaterial ?? MakeDefaultMaterial(new Color(0.7f, 0.7f, 0.65f)));
+    }
+
+    private static StandardMaterial3D MakeDefaultMaterial(Color color) => new()
+    {
+        AlbedoColor = color,
+    };
 }

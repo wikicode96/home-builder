@@ -21,17 +21,27 @@ public partial class HomeBuilderDock : Control
     private Button _floorDownButton;
     private Label  _floorLabel;
 
-    // Material pickers for floor tiles
+    // Tile material pickers
     private EditorResourcePicker _tileTopPicker;
     private EditorResourcePicker _tileBottomPicker;
     private EditorResourcePicker _tileSidesPicker;
 
+    // Wall material pickers
+    private EditorResourcePicker _wallFaceAPicker;
+    private EditorResourcePicker _wallFaceBPicker;
+    private EditorResourcePicker _wallEdgesPicker;
+
     private int _currentFloor = 1;
 
-    // Current materials — read by FloorBuilder when placing tiles
+    // ── Tile materials ────────────────────────────────────────────────────────
     public Material TileTopMaterial    => _tileTopPicker?.EditedResource    as Material;
     public Material TileBottomMaterial => _tileBottomPicker?.EditedResource as Material;
     public Material TileSidesMaterial  => _tileSidesPicker?.EditedResource  as Material;
+
+    // ── Wall materials ────────────────────────────────────────────────────────
+    public Material WallFaceAMaterial  => _wallFaceAPicker?.EditedResource  as Material;
+    public Material WallFaceBMaterial  => _wallFaceBPicker?.EditedResource  as Material;
+    public Material WallEdgesMaterial  => _wallEdgesPicker?.EditedResource  as Material;
 
     public override void _Ready()
     {
@@ -65,11 +75,15 @@ public partial class HomeBuilderDock : Control
         _floorUpButton.Pressed   += OnFloorUp;
         _floorDownButton.Pressed += OnFloorDown;
 
-        // Build material pickers at runtime — EditorResourcePicker
-        // must be created in code because it's an editor-only class
+        // Tile pickers
         _tileTopPicker    = CreatePicker("MainContainer/TileMaterials/TopRow/TopPicker");
         _tileBottomPicker = CreatePicker("MainContainer/TileMaterials/BottomRow/BottomPicker");
         _tileSidesPicker  = CreatePicker("MainContainer/TileMaterials/SidesRow/SidesPicker");
+
+        // Wall pickers
+        _wallFaceAPicker = CreatePicker("MainContainer/WallMaterials/FaceARow/FaceAPicker");
+        _wallFaceBPicker = CreatePicker("MainContainer/WallMaterials/FaceBRow/FaceBPicker");
+        _wallEdgesPicker = CreatePicker("MainContainer/WallMaterials/EdgesRow/EdgesPicker");
 
         UpdateFloorLabel();
     }
@@ -81,7 +95,7 @@ public partial class HomeBuilderDock : Control
 
         var picker = new EditorResourcePicker
         {
-            BaseType         = "Material",
+            BaseType            = "Material",
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
         };
         container.AddChild(picker);

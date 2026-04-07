@@ -123,6 +123,45 @@ size_flags_horizontal = 3
 
 [node name="HSeparator4" type="HSeparator" parent="MainContainer"]
 
+[node name="WallMaterials" type="VBoxContainer" parent="MainContainer"]
+theme_override_constants/separation = 2
+
+[node name="WallMaterialsLabel" type="Label" parent="MainContainer/WallMaterials"]
+text = "Materiales pared:"
+theme_override_font_sizes/font_size = 12
+
+[node name="FaceARow" type="HBoxContainer" parent="MainContainer/WallMaterials"]
+
+[node name="FaceALabel" type="Label" parent="MainContainer/WallMaterials/FaceARow"]
+text = "Cara A"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="FaceAPicker" type="HBoxContainer" parent="MainContainer/WallMaterials/FaceARow"]
+size_flags_horizontal = 3
+
+[node name="FaceBRow" type="HBoxContainer" parent="MainContainer/WallMaterials"]
+
+[node name="FaceBLabel" type="Label" parent="MainContainer/WallMaterials/FaceBRow"]
+text = "Cara B"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="FaceBPicker" type="HBoxContainer" parent="MainContainer/WallMaterials/FaceBRow"]
+size_flags_horizontal = 3
+
+[node name="EdgesRow" type="HBoxContainer" parent="MainContainer/WallMaterials"]
+
+[node name="EdgesLabel" type="Label" parent="MainContainer/WallMaterials/EdgesRow"]
+text = "Grosor"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="EdgesPicker" type="HBoxContainer" parent="MainContainer/WallMaterials/EdgesRow"]
+size_flags_horizontal = 3
+
+[node name="HSeparator5" type="HSeparator" parent="MainContainer"]
+
 [node name="StatusLabel" type="Label" parent="MainContainer"]
 text = "Sin modo activo"
 horizontal_alignment = 1
