@@ -15,6 +15,7 @@ public partial class HomeBuilderDock : Control
     private Button _doorButton;
     private Button _windowButton;
     private Button _stairsButton;
+    private Button _noneButton;
     private Label  _statusLabel;
 
     private Button _floorUpButton;
@@ -51,6 +52,7 @@ public partial class HomeBuilderDock : Control
         _doorButton    = GetNode<Button>("MainContainer/DoorButton");
         _windowButton  = GetNode<Button>("MainContainer/WindowButton");
         _stairsButton  = GetNode<Button>("MainContainer/StairsButton");
+        _noneButton    = GetNode<Button>("MainContainer/NoneButton");
         _statusLabel   = GetNode<Label>("MainContainer/StatusLabel");
 
         _floorUpButton   = GetNode<Button>("MainContainer/FloorSelector/FloorUpButton");
@@ -64,6 +66,7 @@ public partial class HomeBuilderDock : Control
         _doorButton.ButtonGroup    = group;
         _windowButton.ButtonGroup  = group;
         _stairsButton.ButtonGroup  = group;
+        _noneButton.ButtonGroup    = group;
 
         _floorButton.Pressed   += () => OnModeSelected("floor");
         _wallButton.Pressed    += () => OnModeSelected("walls");
@@ -71,6 +74,7 @@ public partial class HomeBuilderDock : Control
         _doorButton.Pressed    += () => OnModeSelected("doors");
         _windowButton.Pressed  += () => OnModeSelected("windows");
         _stairsButton.Pressed  += () => OnModeSelected("stairs");
+        _noneButton.Pressed    += () => OnModeSelected("none");
 
         _floorUpButton.Pressed   += OnFloorUp;
         _floorDownButton.Pressed += OnFloorDown;

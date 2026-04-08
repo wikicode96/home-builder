@@ -61,6 +61,10 @@ text = "Escaleras"
 icon = ExtResource("7")
 toggle_mode = true
 
+[node name="NoneButton" type="Button" parent="MainContainer"]
+text = "Desactivar edición"
+toggle_mode = true
+
 [node name="HSeparator2" type="HSeparator" parent="MainContainer"]
 
 [node name="FloorSelectorLabel" type="Label" parent="MainContainer"]

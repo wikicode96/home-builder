@@ -46,6 +46,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                     "doors"   => BuildMode.Doors,
                     "windows" => BuildMode.Windows,
                     "stairs"  => BuildMode.Stairs,
+                    "none"    => BuildMode.None,
                     _         => BuildMode.None
                 };
                 CreateActivePreviews();
