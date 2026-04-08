@@ -4,8 +4,8 @@ public static class RaycastHelper
 {
     public struct HitInfo
     {
-        public Vector3  Position;
-        public CsgBox3D Collider;
+        public Vector3      Position;
+        public StaticBody3D Collider;
     }
 
     public static Vector3? ToFloorPlane(Camera3D camera, Vector2 screenPos, float floorBaseY)
@@ -21,7 +21,7 @@ public static class RaycastHelper
         return origin + direction * t;
     }
 
-    // OBB slab test against every CsgBox3D child of wallParent
+    // Raycast against StaticBody3D children of wallParent (ArrayMesh walls)
     public static HitInfo? ToWalls(Camera3D camera, Vector2 screenPos, Node3D wallParent)
     {
         if (wallParent == null) return null;
@@ -29,51 +29,38 @@ public static class RaycastHelper
         var origin    = camera.ProjectRayOrigin(screenPos);
         var direction = camera.ProjectRayNormal(screenPos);
 
-        CsgBox3D bestBox   = null;
-        Vector3  bestPoint = Vector3.Zero;
-        float    bestDist  = float.MaxValue;
+        var space = camera.GetWorld3D().DirectSpaceState;
+        if (space == null) return null;
 
-        foreach (Node child in wallParent.GetChildren())
+        var query = new PhysicsRayQueryParameters3D
         {
-            if (child is not CsgBox3D box) continue;
+            From             = origin,
+            To               = origin + direction * 1000f,
+            CollisionMask    = 1, // Layer 1 for walls
+            Exclude          = new Godot.Collections.Array<Rid>(),
+            HitFromInside    = true,
+        };
 
-            var invTransform = box.GlobalTransform.AffineInverse();
-            var localOrigin  = invTransform * origin;
-            var localDir     = invTransform.Basis * direction;
-            var half         = box.Size * 0.5f;
+        var result = space.IntersectRay(query);
+        if (result.Count == 0) return null;
 
-            float tMin = float.NegativeInfinity;
-            float tMax = float.PositiveInfinity;
+        var collider = result["collider"].As<Node3D>();
+        if (collider == null) return null;
 
-            for (int axis = 0; axis < 3; axis++)
-            {
-                float o = localOrigin[axis];
-                float d = localDir[axis];
-                float h = half[axis];
-
-                if (Mathf.IsZeroApprox(d))
-                {
-                    if (o < -h || o > h) { tMin = float.PositiveInfinity; break; }
-                }
-                else
-                {
-                    float t1 = (-h - o) / d;
-                    float t2 = ( h - o) / d;
-                    if (t1 > t2) (t1, t2) = (t2, t1);
-                    tMin = Mathf.Max(tMin, t1);
-                    tMax = Mathf.Min(tMax, t2);
-                    if (tMin > tMax) { tMin = float.PositiveInfinity; break; }
-                }
-            }
-
-            if (tMin < 0 || tMin == float.PositiveInfinity || tMin >= bestDist) continue;
-
-            bestDist  = tMin;
-            bestBox   = box;
-            bestPoint = origin + direction * tMin;
+        // Find the StaticBody3D parent (the wall root)
+        StaticBody3D wallBody = collider as StaticBody3D;
+        if (wallBody == null)
+        {
+            // If collider is a child (CollisionShape3D), get the parent StaticBody3D
+            wallBody = collider.GetParent() as StaticBody3D;
         }
 
-        if (bestBox == null) return null;
-        return new HitInfo { Position = bestPoint, Collider = bestBox };
+        if (wallBody == null) return null;
+
+        // Verify it's a child of wallParent
+        if (wallBody.GetParent() != wallParent) return null;
+
+        var position = result["position"].AsVector3();
+        return new HitInfo { Position = position, Collider = wallBody };
     }
 }

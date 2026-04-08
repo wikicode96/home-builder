@@ -169,34 +169,7 @@ public class FloorBuilder
             }
         }
 
-        // Save tile data to metadata
-        SaveTiles(minX, maxX, minZ, maxZ, activeFloor, occupied);
-
         undo.CommitAction(false);
-    }
-
-    // -------------------------------------------------------------------------
-    // Metadata
-    // -------------------------------------------------------------------------
-
-    private void SaveTiles(int minX, int maxX, int minZ, int maxZ,
-                           int activeFloor,
-                           System.Collections.Generic.HashSet<(int, int)> occupied)
-    {
-        var scenePath = _plugin.GetEditorInterface().GetEditedSceneRoot()?.SceneFilePath;
-        if (string.IsNullOrEmpty(scenePath)) return;
-
-        var data  = HBMetadataIO.Load(scenePath);
-        var floor = data.GetOrCreateFloor(activeFloor);
-
-        for (int x = minX; x <= maxX; x++)
-            for (int z = minZ; z <= maxZ; z++)
-            {
-                if (occupied.Contains((x, z))) continue;
-                floor.Tiles.Add(new HBTileData { X = x, Z = z });
-            }
-
-        HBMetadataIO.Save(data, scenePath);
     }
 
     // -------------------------------------------------------------------------
