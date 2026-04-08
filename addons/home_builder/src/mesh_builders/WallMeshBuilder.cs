@@ -29,6 +29,29 @@ public static class WallMeshBuilder
         return mesh;
     }
 
+    public static ArrayMesh BuildWithOpening(float length, float height, float thickness,
+        float openingCenterX, float openingWidth, float openingBottomY, float openingHeight)
+    {
+        float hx = length    * 0.5f;
+        float hy = height    * 0.5f;
+        float hz = thickness * 0.5f;
+
+        float ohx = openingWidth  * 0.5f;
+        float ohy = openingHeight * 0.5f;
+
+        // Opening bounds in local space
+        float oLeft   = openingCenterX - ohx;
+        float oRight  = openingCenterX + ohx;
+        float oBottom = openingBottomY - hy;
+        float oTop    = oBottom + openingHeight;
+
+        var mesh = new ArrayMesh();
+        AddSurface(mesh, BuildFaceAWithOpening(hx, hy, hz, oLeft, oRight, oBottom, oTop));
+        AddSurface(mesh, BuildFaceBWithOpening(hx, hy, hz, oLeft, oRight, oBottom, oTop));
+        AddSurface(mesh, BuildEdgesWithOpening(hx, hy, hz, oLeft, oRight, oBottom, oTop));
+        return mesh;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static void AddSurface(ArrayMesh mesh, SurfaceTool st)
@@ -74,6 +97,73 @@ public static class WallMeshBuilder
         return st;
     }
 
+    private static SurfaceTool BuildFaceAWithOpening(float hx, float hy, float hz,
+        float oLeft, float oRight, float oBottom, float oTop)
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+
+        var normal = new Vector3(0, 0, -1);
+
+        // Top segment (above opening)
+        if (oTop < hy)
+        {
+            AddQuad(st,
+                new Vector3(-hx,  hy, -hz),
+                new Vector3( hx,  hy, -hz),
+                new Vector3( hx,  oTop, -hz),
+                new Vector3(-hx,  oTop, -hz),
+                normal,
+                new Vector2(0, 0), new Vector2(1, 0),
+                new Vector2(1, (hy - oTop) / (2 * hy)), new Vector2(0, (hy - oTop) / (2 * hy))
+            );
+        }
+
+        // Bottom segment (below opening)
+        if (oBottom > -hy)
+        {
+            AddQuad(st,
+                new Vector3(-hx, oBottom, -hz),
+                new Vector3( hx, oBottom, -hz),
+                new Vector3( hx,     -hy, -hz),
+                new Vector3(-hx,     -hy, -hz),
+                normal,
+                new Vector2(0, (oBottom + hy) / (2 * hy)), new Vector2(1, (oBottom + hy) / (2 * hy)),
+                new Vector2(1, 1), new Vector2(0, 1)
+            );
+        }
+
+        // Left segment (left of opening)
+        if (oLeft > -hx)
+        {
+            AddQuad(st,
+                new Vector3(-hx,  oTop,    -hz),
+                new Vector3(oLeft,  oTop,    -hz),
+                new Vector3(oLeft,  oBottom, -hz),
+                new Vector3(-hx,  oBottom, -hz),
+                normal,
+                new Vector2(0, (hy - oTop) / (2 * hy)), new Vector2((oLeft + hx) / (2 * hx), (hy - oTop) / (2 * hy)),
+                new Vector2((oLeft + hx) / (2 * hx), (oBottom + hy) / (2 * hy)), new Vector2(0, (oBottom + hy) / (2 * hy))
+            );
+        }
+
+        // Right segment (right of opening)
+        if (oRight < hx)
+        {
+            AddQuad(st,
+                new Vector3(oRight,  oTop,    -hz),
+                new Vector3( hx,     oTop,    -hz),
+                new Vector3( hx,     oBottom, -hz),
+                new Vector3(oRight,  oBottom, -hz),
+                normal,
+                new Vector2((oRight + hx) / (2 * hx), (hy - oTop) / (2 * hy)), new Vector2(1, (hy - oTop) / (2 * hy)),
+                new Vector2(1, (oBottom + hy) / (2 * hy)), new Vector2((oRight + hx) / (2 * hx), (oBottom + hy) / (2 * hy))
+            );
+        }
+
+        return st;
+    }
+
     // ── Face B (normal = +Z, exterior side) ──────────────────────────────────
 
     private static SurfaceTool BuildFaceB(float hx, float hy, float hz)
@@ -92,6 +182,73 @@ public static class WallMeshBuilder
             new Vector2(0, 0), new Vector2(1, 0),
             new Vector2(1, 1), new Vector2(0, 1)
         );
+
+        return st;
+    }
+
+    private static SurfaceTool BuildFaceBWithOpening(float hx, float hy, float hz,
+        float oLeft, float oRight, float oBottom, float oTop)
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+
+        var normal = new Vector3(0, 0, 1);
+
+        // Top segment (above opening) - X reversed for exterior
+        if (oTop < hy)
+        {
+            AddQuad(st,
+                new Vector3( hx,  hy,  hz),
+                new Vector3(-hx,  hy,  hz),
+                new Vector3(-hx,  oTop, hz),
+                new Vector3( hx,  oTop, hz),
+                normal,
+                new Vector2(0, 0), new Vector2(1, 0),
+                new Vector2(1, (hy - oTop) / (2 * hy)), new Vector2(0, (hy - oTop) / (2 * hy))
+            );
+        }
+
+        // Bottom segment (below opening) - X reversed for exterior
+        if (oBottom > -hy)
+        {
+            AddQuad(st,
+                new Vector3( hx, oBottom, hz),
+                new Vector3(-hx, oBottom, hz),
+                new Vector3(-hx,     -hy, hz),
+                new Vector3( hx,     -hy, hz),
+                normal,
+                new Vector2(0, (oBottom + hy) / (2 * hy)), new Vector2(1, (oBottom + hy) / (2 * hy)),
+                new Vector2(1, 1), new Vector2(0, 1)
+            );
+        }
+
+        // Left segment (left of opening) - same X coordinates as Face A
+        if (oLeft > -hx)
+        {
+            AddQuad(st,
+                new Vector3(oLeft,  oTop,    hz),
+                new Vector3(-hx,    oTop,    hz),
+                new Vector3(-hx,    oBottom, hz),
+                new Vector3(oLeft,  oBottom, hz),
+                normal,
+                new Vector2((oLeft + hx) / (2 * hx), (hy - oTop) / (2 * hy)), new Vector2(0, (hy - oTop) / (2 * hy)),
+                new Vector2(0, (oBottom + hy) / (2 * hy)), new Vector2((oLeft + hx) / (2 * hx), (oBottom + hy) / (2 * hy))
+            );
+        }
+
+        // Right segment (right of opening) - same X coordinates as Face A
+        if (oRight < hx)
+        {
+            AddQuad(st,
+                new Vector3( hx,     oTop,    hz),
+                new Vector3(oRight,  oTop,    hz),
+                new Vector3(oRight,  oBottom, hz),
+                new Vector3( hx,     oBottom, hz),
+                normal,
+                new Vector2(1, (hy - oTop) / (2 * hy)), new Vector2((oRight + hx) / (2 * hx), (hy - oTop) / (2 * hy)),
+                new Vector2((oRight + hx) / (2 * hx), (oBottom + hy) / (2 * hy)), new Vector2(1, (oBottom + hy) / (2 * hy))
+            );
+        }
 
         return st;
     }
@@ -145,6 +302,116 @@ public static class WallMeshBuilder
             Vector3.Right,
             new Vector2(0, 0), new Vector2(0, 1),
             new Vector2(1, 1), new Vector2(1, 0)
+        );
+
+        return st;
+    }
+
+    private static SurfaceTool BuildEdgesWithOpening(float hx, float hy, float hz,
+        float oLeft, float oRight, float oBottom, float oTop)
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+
+        // Top edge (above opening, normal = +Y)
+        if (oTop < hy)
+        {
+            AddQuad(st,
+                new Vector3(-hx,  hy,  hz),
+                new Vector3( hx,  hy,  hz),
+                new Vector3( hx,  hy, -hz),
+                new Vector3(-hx,  hy, -hz),
+                Vector3.Up,
+                new Vector2(0, 0), new Vector2(1, 0),
+                new Vector2(1, 1), new Vector2(0, 1)
+            );
+        }
+
+        // Bottom edge (below opening, normal = -Y)
+        if (oBottom > -hy)
+        {
+            AddQuad(st,
+                new Vector3( hx, -hy,  hz),
+                new Vector3(-hx, -hy,  hz),
+                new Vector3(-hx, -hy, -hz),
+                new Vector3( hx, -hy, -hz),
+                Vector3.Down,
+                new Vector2(0, 0), new Vector2(1, 0),
+                new Vector2(1, 1), new Vector2(0, 1)
+            );
+        }
+
+        // Left edge (left of opening, normal = -X)
+        if (oLeft > -hx)
+        {
+            AddQuad(st,
+                new Vector3(-hx,  hy, -hz),
+                new Vector3(-hx, -hy, -hz),
+                new Vector3(-hx, -hy,  hz),
+                new Vector3(-hx,  hy,  hz),
+                Vector3.Left,
+                new Vector2(0, 0), new Vector2(0, 1),
+                new Vector2(1, 1), new Vector2(1, 0)
+            );
+        }
+
+        // Right edge (right of opening, normal = +X)
+        if (oRight < hx)
+        {
+            AddQuad(st,
+                new Vector3( hx,  hy,  hz),
+                new Vector3( hx, -hy,  hz),
+                new Vector3( hx, -hy, -hz),
+                new Vector3( hx,  hy, -hz),
+                Vector3.Right,
+                new Vector2(0, 0), new Vector2(0, 1),
+                new Vector2(1, 1), new Vector2(1, 0)
+            );
+        }
+
+        // Opening frame edges (interior faces of the opening)
+        // Top frame (normal = -Y, facing down into the opening)
+        AddQuad(st,
+            new Vector3(oLeft,  oTop,  hz),
+            new Vector3(oRight, oTop,  hz),
+            new Vector3(oRight, oTop, -hz),
+            new Vector3(oLeft,  oTop, -hz),
+            Vector3.Down,
+            new Vector2((oLeft + hx) / (2 * hx), 0), new Vector2((oRight + hx) / (2 * hx), 0),
+            new Vector2((oRight + hx) / (2 * hx), 1), new Vector2((oLeft + hx) / (2 * hx), 1)
+        );
+
+        // Bottom frame (normal = +Y, facing up into the opening)
+        AddQuad(st,
+            new Vector3(oRight, oBottom,  hz),
+            new Vector3(oLeft,  oBottom,  hz),
+            new Vector3(oLeft,  oBottom, -hz),
+            new Vector3(oRight, oBottom, -hz),
+            Vector3.Up,
+            new Vector2((oRight + hx) / (2 * hx), 0), new Vector2((oLeft + hx) / (2 * hx), 0),
+            new Vector2((oLeft + hx) / (2 * hx), 1), new Vector2((oRight + hx) / (2 * hx), 1)
+        );
+
+        // Left frame (normal = +X, facing right into the opening)
+        AddQuad(st,
+            new Vector3(oLeft, oTop,    hz),
+            new Vector3(oLeft, oBottom, hz),
+            new Vector3(oLeft, oBottom, -hz),
+            new Vector3(oLeft, oTop,    -hz),
+            Vector3.Right,
+            new Vector2(0, (hy - oTop) / (2 * hy)), new Vector2(0, (oBottom + hy) / (2 * hy)),
+            new Vector2(1, (oBottom + hy) / (2 * hy)), new Vector2(1, (hy - oTop) / (2 * hy))
+        );
+
+        // Right frame (normal = -X, facing left into the opening)
+        AddQuad(st,
+            new Vector3(oRight, oBottom, hz),
+            new Vector3(oRight, oTop,    hz),
+            new Vector3(oRight, oTop,    -hz),
+            new Vector3(oRight, oBottom, -hz),
+            Vector3.Left,
+            new Vector2(0, (oBottom + hy) / (2 * hy)), new Vector2(0, (hy - oTop) / (2 * hy)),
+            new Vector2(1, (hy - oTop) / (2 * hy)), new Vector2(1, (oBottom + hy) / (2 * hy))
         );
 
         return st;

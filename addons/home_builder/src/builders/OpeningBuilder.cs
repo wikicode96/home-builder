@@ -68,14 +68,21 @@ public class OpeningBuilder
             && mb.ButtonIndex == MouseButton.Left
             && mb.Pressed)
         {
+            GD.Print($"Left click detected - isDoor: {isDoor}");
             var hit = RaycastHelper.ToWalls(camera, mb.Position, wallParent);
             if (hit.HasValue)
             {
+                GD.Print($"Raycast hit successful");
                 var wallBody  = hit.Value.Collider;
                 float opening = isDoor ? DoorWidth : WinWidth;
                 float snapped = SnapHelper.ToWall(wallBody, hit.Value.Position, opening);
+                GD.Print($"Snapped position: {snapped}");
                 CutOpening(wallBody, snapped, isDoor, wallParent);
                 return 1;
+            }
+            else
+            {
+                GD.Print("Raycast hit failed");
             }
         }
 
@@ -88,13 +95,14 @@ public class OpeningBuilder
 
     private void CutOpening(StaticBody3D wallBody, float localCenter, bool isDoor, Node3D wallParent)
     {
-        var scene = _plugin.GetEditorInterface().GetEditedSceneRoot() as Node3D;
-        if (scene == null) return;
+        GD.Print($"CutOpening called - isDoor: {isDoor}, localCenter: {localCenter}");
 
-        var wallGlobalBasis = wallBody.GlobalTransform.Basis;
-        var wallOrigin      = wallBody.GlobalPosition;
-        var axisX           = wallGlobalBasis.X.Normalized();
-        var axisY           = wallGlobalBasis.Y.Normalized();
+        var scene = _plugin.GetEditorInterface().GetEditedSceneRoot() as Node3D;
+        if (scene == null)
+        {
+            GD.Print("Scene is null");
+            return;
+        }
 
         // Get wall length from CollisionShape3D
         float wallLen = 0f;
@@ -103,60 +111,55 @@ public class OpeningBuilder
             if (child is CollisionShape3D shape && shape.Shape is BoxShape3D boxShape)
             {
                 wallLen = boxShape.Size.X;
+                GD.Print($"Wall length: {wallLen}");
                 break;
             }
         }
-        if (wallLen == 0f) return;
+        if (wallLen == 0f)
+        {
+            GD.Print("Wall length is 0");
+            return;
+        }
+
+        // Find the MeshInstance3D
+        MeshInstance3D wallMesh = null;
+        foreach (Node child in wallBody.GetChildren())
+        {
+            if (child is MeshInstance3D mesh)
+            {
+                wallMesh = mesh;
+                GD.Print($"Found MeshInstance3D: {mesh.Name}");
+                break;
+            }
+        }
+        if (wallMesh == null)
+        {
+            GD.Print("MeshInstance3D not found");
+            return;
+        }
 
         float opening  = isDoor ? DoorWidth  : WinWidth;
         float oHeight  = isDoor ? DoorHeight : WinHeight;
         float oBottom  = isDoor ? 0f         : WinSill;
-        float oTop     = oBottom + oHeight;
 
-        float leftEnd  = -wallLen * 0.5f;
-        float rightEnd =  wallLen * 0.5f;
-        float gapLeft  = localCenter - opening * 0.5f;
-        float gapRight = localCenter + opening * 0.5f;
+        GD.Print($"Opening params - width: {opening}, height: {oHeight}, bottom: {oBottom}");
 
-        Vector3 SegmentWorldPos(float fromX, float toX, float fromY, float toY) =>
-            wallOrigin
-            + axisX * ((fromX + toX) * 0.5f)
-            + axisY * ((fromY + toY) * 0.5f - WallBuilder.Height * 0.5f);
+        // Create new ArrayMesh with opening
+        var newMesh = WallMeshBuilder.BuildWithOpening(
+            wallLen,
+            WallBuilder.Height,
+            WallBuilder.Thickness,
+            localCenter,
+            opening,
+            oBottom,
+            oHeight
+        );
 
-        var undo = _plugin.GetUndoRedo();
-        undo.CreateAction(isDoor ? "Cut Door" : "Cut Window");
+        GD.Print($"New mesh created: {newMesh != null}");
 
-        void AddSegment(float fromX, float toX, float fromY, float toY)
-        {
-            float len = toX - fromX;
-            float h   = toY - fromY;
-            if (len < 0.01f || h < 0.01f) return;
+        // Apply mesh directly first (without undo/redo for testing)
+        wallMesh.Mesh = newMesh;
 
-            var seg = new CsgBox3D
-            {
-                Name         = "Wall",
-                Size         = new Vector3(len, h, WallBuilder.Thickness),
-                UseCollision = true,
-            };
-
-            wallParent.AddChild(seg);
-            seg.Owner = scene;
-            seg.GlobalTransform = new Transform3D(wallGlobalBasis, SegmentWorldPos(fromX, toX, fromY, toY));
-
-            undo.AddDoMethod(wallParent,  Node.MethodName.AddChild,    seg);
-            undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, seg);
-        }
-
-        AddSegment(leftEnd,  gapLeft,  0f,                WallBuilder.Height);
-        AddSegment(gapRight, rightEnd, 0f,                WallBuilder.Height);
-        AddSegment(gapLeft,  gapRight, oTop,              WallBuilder.Height);
-        if (!isDoor)
-            AddSegment(gapLeft, gapRight, 0f, oBottom);
-
-        wallParent.RemoveChild(wallBody);
-        undo.AddDoMethod(wallParent,   Node.MethodName.RemoveChild, wallBody);
-        undo.AddUndoMethod(wallParent, Node.MethodName.AddChild,    wallBody);
-
-        undo.CommitAction(false);
+        GD.Print("CutOpening completed");
     }
 }
