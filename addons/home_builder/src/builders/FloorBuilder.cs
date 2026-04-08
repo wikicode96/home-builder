@@ -132,14 +132,15 @@ public class FloorBuilder
             {
                 if (occupied.Contains((x, z))) continue;
 
-                var tile = new MeshInstance3D
+                // StaticBody3D is the root — holds position and collision
+                var body = new StaticBody3D
                 {
                     Name     = "FloorTile",
-                    Mesh     = tileMesh,
                     Position = new Vector3(x + 0.5f, floorBaseY - 0.05f, z + 0.5f),
                 };
 
-                // Use materials from dock if assigned, otherwise use defaults
+                // Visual mesh as child
+                var tile = new MeshInstance3D { Mesh = tileMesh };
                 var dock = _plugin.Dock;
                 tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceTop,
                     dock?.TileTopMaterial    ?? MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
@@ -148,11 +149,23 @@ public class FloorBuilder
                 tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceSides,
                     dock?.TileSidesMaterial  ?? MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
 
-                floorParent.AddChild(tile);
+                // Collision shape as child — BoxShape3D matches tile dimensions exactly
+                var shape = new CollisionShape3D
+                {
+                    Shape = new BoxShape3D { Size = new Vector3(1f, 0.1f, 1f) }
+                };
+
+                floorParent.AddChild(body);
+                body.Owner = floorParent.Owner;
+
+                body.AddChild(tile);
                 tile.Owner = floorParent.Owner;
 
-                undo.AddDoMethod(floorParent,   Node.MethodName.AddChild,    tile);
-                undo.AddUndoMethod(floorParent, Node.MethodName.RemoveChild, tile);
+                body.AddChild(shape);
+                shape.Owner = floorParent.Owner;
+
+                undo.AddDoMethod(floorParent,   Node.MethodName.AddChild,    body);
+                undo.AddUndoMethod(floorParent, Node.MethodName.RemoveChild, body);
             }
         }
 

@@ -97,23 +97,40 @@ public class WallBuilder
         var basisZ = basisY.Cross(basisX).Normalized();
         var basis  = new Basis(basisX, basisY, basisZ);
 
-        var wall = new MeshInstance3D
+        // StaticBody3D is the root — holds position, basis and collision
+        var body = new StaticBody3D
         {
             Name     = "Wall",
-            Mesh     = WallMeshBuilder.Build(length, Height, Thickness),
             Position = center,
             Basis    = basis,
         };
 
+        // Visual mesh as child
+        var wall = new MeshInstance3D
+        {
+            Mesh = WallMeshBuilder.Build(length, Height, Thickness),
+        };
         ApplyMaterials(wall);
 
-        wallParent.AddChild(wall);
+        // Collision shape — BoxShape3D matches wall dimensions exactly
+        var shape = new CollisionShape3D
+        {
+            Shape = new BoxShape3D { Size = new Vector3(length, Height, Thickness) }
+        };
+
+        wallParent.AddChild(body);
+        body.Owner = wallParent.Owner;
+
+        body.AddChild(wall);
         wall.Owner = wallParent.Owner;
+
+        body.AddChild(shape);
+        shape.Owner = wallParent.Owner;
 
         var undo = _plugin.GetUndoRedo();
         undo.CreateAction("Place Wall");
-        undo.AddDoMethod(wallParent,  Node.MethodName.AddChild,    wall);
-        undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, wall);
+        undo.AddDoMethod(wallParent,  Node.MethodName.AddChild,    body);
+        undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, body);
         undo.CommitAction(false);
     }
 
