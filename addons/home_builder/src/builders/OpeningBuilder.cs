@@ -5,8 +5,8 @@ public class OpeningBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    private const float DoorWidth  = 2.0f;
-    private const float DoorHeight = 2.1f;
+    private const float DoorWidth  = 1.0f;
+    private const float DoorHeight = 2.0f;
     private const float WinWidth   = 1.0f;
     private const float WinHeight  = 1.0f;
     private const float WinSill    = 0.9f;
