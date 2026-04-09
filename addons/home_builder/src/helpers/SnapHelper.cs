@@ -11,20 +11,13 @@ public static class SnapHelper
     public static float ToWall(StaticBody3D wallBody, Vector3 worldHit, float openingWidth)
     {
         var localHit = wallBody.GlobalTransform.AffineInverse() * worldHit;
-        
-        // Get wall length from CollisionShape3D
-        float wallLen = 0f;
-        foreach (Node child in wallBody.GetChildren())
-        {
-            if (child is CollisionShape3D shape && shape.Shape is BoxShape3D boxShape)
-            {
-                wallLen = boxShape.Size.X;
-                break;
-            }
-        }
-        
+
+        // Read wall length — prefer stored metadata so this keeps working after
+        // the first opening replaces BoxShape3D with ConcavePolygonShape3D.
+        float wallLen = GetWallLength(wallBody);
+
         if (wallLen == 0f) return localHit.X;
-        
+
         float halfLen = wallLen * 0.5f;
         float snapped = Mathf.Round(localHit.X);
         return Mathf.Clamp(snapped, -halfLen + openingWidth * 0.5f, halfLen - openingWidth * 0.5f);
@@ -43,5 +36,24 @@ public static class SnapHelper
             Mathf.Min(z0, z1),
             Mathf.Max(z0, z1)
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal helper — shared with OpeningBuilder via the metadata key
+    // -------------------------------------------------------------------------
+
+    private static float GetWallLength(StaticBody3D wallBody)
+    {
+        // Preferred path: metadata written by WallBuilder at creation time
+        if (wallBody.HasMeta(OpeningBuilder.MetaWallLength))
+            return wallBody.GetMeta(OpeningBuilder.MetaWallLength).AsSingle();
+
+        // Fallback: BoxShape3D is still there (no opening cut yet)
+        foreach (Node child in wallBody.GetChildren())
+        {
+            if (child is CollisionShape3D shape && shape.Shape is BoxShape3D box)
+                return box.Size.X;
+        }
+        return 0f;
     }
 }

@@ -105,6 +105,10 @@ public class WallBuilder
             Basis    = basis,
         };
 
+        // Store wall length as metadata so OpeningBuilder can read it later,
+        // even after the collision shape is replaced by ConcavePolygonShape3D.
+        body.SetMeta(OpeningBuilder.MetaWallLength, length);
+
         // Visual mesh as child
         var wall = new MeshInstance3D
         {
@@ -129,7 +133,7 @@ public class WallBuilder
 
         var undo = _plugin.GetUndoRedo();
         undo.CreateAction("Place Wall");
-        undo.AddDoMethod(wallParent,  Node.MethodName.AddChild,    body);
+        undo.AddDoMethod(wallParent,   Node.MethodName.AddChild,    body);
         undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, body);
         undo.CommitAction(false);
     }

@@ -12,6 +12,9 @@ public static class PreviewHelper
             Size             = size,
             Position         = position,
             MaterialOverride = MakeMaterial(color),
+            // Disable collision so the marker never intercepts raycasts
+            // (either physics-based or geometric OBB tests).
+            UseCollision     = false,
         };
         scene.AddChild(marker);
         return marker;
