@@ -97,8 +97,7 @@ public class OpeningBuilder
     {
         GD.Print($"CutOpening called - isDoor: {isDoor}, localCenter: {localCenter}");
 
-        var scene = _plugin.GetEditorInterface().GetEditedSceneRoot() as Node3D;
-        if (scene == null)
+        if (EditorInterface.Singleton.GetEditedSceneRoot() is not Node3D scene)
         {
             GD.Print("Scene is null");
             return;
@@ -160,6 +159,61 @@ public class OpeningBuilder
         // Apply mesh directly first (without undo/redo for testing)
         wallMesh.Mesh = newMesh;
 
+        // Update collision to match the new mesh with opening
+        UpdateCollision(wallBody, newMesh);
+
         GD.Print("CutOpening completed");
+    }
+
+    private void UpdateCollision(StaticBody3D wallBody, ArrayMesh newMesh)
+    {
+        // Find the CollisionShape3D
+        CollisionShape3D collisionShape = null;
+        foreach (Node child in wallBody.GetChildren())
+        {
+            if (child is CollisionShape3D shape)
+            {
+                collisionShape = shape;
+                GD.Print($"Found CollisionShape3D: {shape.Name}");
+                break;
+            }
+        }
+        if (collisionShape == null)
+        {
+            GD.Print("CollisionShape3D not found");
+            return;
+        }
+
+        // Extract vertices from all surfaces using native C# arrays
+        var vertexList = new System.Collections.Generic.List<Vector3>();
+        for (int i = 0; i < newMesh.GetSurfaceCount(); i++)
+        {
+            var meshData = newMesh.SurfaceGetArrays(i);
+            if (meshData == null || meshData.Count == 0) continue;
+
+            var meshVertices = (Godot.Collections.Array)meshData[(int)Mesh.ArrayType.Vertex];
+            foreach (Vector3 v in meshVertices)
+            {
+                vertexList.Add(v);
+            }
+        }
+
+        if (vertexList.Count == 0)
+        {
+            GD.Print("No vertices found in mesh");
+            return;
+        }
+
+        GD.Print($"Extracted {vertexList.Count} vertices from mesh");
+
+        // Create ConcavePolygonShape3D and set the data using the Data property
+        var concaveShape = new ConcavePolygonShape3D();
+        
+        // Convert List<Vector3> to native Vector3[] array for the Data property
+        concaveShape.Data = vertexList.ToArray();
+
+        // Replace the collision shape
+        collisionShape.Shape = concaveShape;
+        GD.Print("Collision updated to ConcavePolygonShape3D");
     }
 }
