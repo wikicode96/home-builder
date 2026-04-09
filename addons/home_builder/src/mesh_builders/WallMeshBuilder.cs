@@ -327,9 +327,40 @@ public static class WallMeshBuilder
             );
         }
 
-        // Bottom edge (normal = -Y)
-        if (oBottom > -hy)
+        // Bottom edge (normal = -Y) — dividida en dos partes si el hueco llega al suelo
+        if (oBottom <= -hy)
         {
+            // Tramo izquierdo (desde el borde hasta el hueco)
+            if (oLeft > -hx)
+            {
+                AddQuad(st,
+                    new Vector3(oLeft, -hy,  hz),
+                    new Vector3(-hx,   -hy,  hz),
+                    new Vector3(-hx,   -hy, -hz),
+                    new Vector3(oLeft, -hy, -hz),
+                    Vector3.Down,
+                    new Vector2((oLeft + hx) / (2 * hx), 0), new Vector2(0, 0),
+                    new Vector2(0, 1), new Vector2((oLeft + hx) / (2 * hx), 1)
+                );
+            }
+
+            // Tramo derecho (desde el hueco hasta el borde)
+            if (oRight < hx)
+            {
+                AddQuad(st,
+                    new Vector3( hx,    -hy,  hz),
+                    new Vector3(oRight, -hy,  hz),
+                    new Vector3(oRight, -hy, -hz),
+                    new Vector3( hx,    -hy, -hz),
+                    Vector3.Down,
+                    new Vector2(1, 0), new Vector2((oRight + hx) / (2 * hx), 0),
+                    new Vector2((oRight + hx) / (2 * hx), 1), new Vector2(1, 1)
+                );
+            }
+        }
+        else
+        {
+            // Sin hueco en el suelo — cara completa
             AddQuad(st,
                 new Vector3( hx, -hy,  hz),
                 new Vector3(-hx, -hy,  hz),
@@ -384,18 +415,21 @@ public static class WallMeshBuilder
             new Vector2((oRight + hx) / (2 * hx), 1)
         );
 
-        // Bottom frame (normal = +Y, suelo/alféizar del hueco — visible desde arriba)
-        AddQuad(st,
-            new Vector3(oLeft,  oBottom,  hz),
-            new Vector3(oRight, oBottom,  hz),
-            new Vector3(oRight, oBottom, -hz),
-            new Vector3(oLeft,  oBottom, -hz),
-            Vector3.Up,
-            new Vector2((oLeft  + hx) / (2 * hx), 0),
-            new Vector2((oRight + hx) / (2 * hx), 0),
-            new Vector2((oRight + hx) / (2 * hx), 1),
-            new Vector2((oLeft  + hx) / (2 * hx), 1)
-        );
+        // Bottom frame (normal = +Y, suelo/alféizar del hueco — solo para ventanas)
+        if (oBottom > -hy)
+        {
+            AddQuad(st,
+                new Vector3(oLeft,  oBottom,  hz),
+                new Vector3(oRight, oBottom,  hz),
+                new Vector3(oRight, oBottom, -hz),
+                new Vector3(oLeft,  oBottom, -hz),
+                Vector3.Up,
+                new Vector2((oLeft  + hx) / (2 * hx), 0),
+                new Vector2((oRight + hx) / (2 * hx), 0),
+                new Vector2((oRight + hx) / (2 * hx), 1),
+                new Vector2((oLeft  + hx) / (2 * hx), 1)
+            );
+        }
 
         // Left frame (normal = +X, facing right into the opening)
         AddQuad(st,
