@@ -313,7 +313,7 @@ public static class WallMeshBuilder
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
 
-        // Top edge (above opening, normal = +Y)
+        // Top edge (normal = +Y)
         if (oTop < hy)
         {
             AddQuad(st,
@@ -327,7 +327,7 @@ public static class WallMeshBuilder
             );
         }
 
-        // Bottom edge (below opening, normal = -Y)
+        // Bottom edge (normal = -Y)
         if (oBottom > -hy)
         {
             AddQuad(st,
@@ -341,7 +341,7 @@ public static class WallMeshBuilder
             );
         }
 
-        // Left edge (left of opening, normal = -X)
+        // Left edge (normal = -X)
         if (oLeft > -hx)
         {
             AddQuad(st,
@@ -355,7 +355,7 @@ public static class WallMeshBuilder
             );
         }
 
-        // Right edge (right of opening, normal = +X)
+        // Right edge (normal = +X)
         if (oRight < hx)
         {
             AddQuad(st,
@@ -370,26 +370,31 @@ public static class WallMeshBuilder
         }
 
         // Opening frame edges (interior faces of the opening)
-        // Top frame (normal = -Y, facing down into the opening)
+
+        // Top frame (normal = -Y, techo del hueco — visible desde abajo)
         AddQuad(st,
-            new Vector3(oLeft,  oTop,  hz),
             new Vector3(oRight, oTop,  hz),
-            new Vector3(oRight, oTop, -hz),
+            new Vector3(oLeft,  oTop,  hz),
             new Vector3(oLeft,  oTop, -hz),
+            new Vector3(oRight, oTop, -hz),
             Vector3.Down,
-            new Vector2((oLeft + hx) / (2 * hx), 0), new Vector2((oRight + hx) / (2 * hx), 0),
-            new Vector2((oRight + hx) / (2 * hx), 1), new Vector2((oLeft + hx) / (2 * hx), 1)
+            new Vector2((oRight + hx) / (2 * hx), 0),
+            new Vector2((oLeft  + hx) / (2 * hx), 0),
+            new Vector2((oLeft  + hx) / (2 * hx), 1),
+            new Vector2((oRight + hx) / (2 * hx), 1)
         );
 
-        // Bottom frame (normal = +Y, facing up into the opening)
+        // Bottom frame (normal = +Y, suelo/alféizar del hueco — visible desde arriba)
         AddQuad(st,
-            new Vector3(oRight, oBottom,  hz),
             new Vector3(oLeft,  oBottom,  hz),
-            new Vector3(oLeft,  oBottom, -hz),
+            new Vector3(oRight, oBottom,  hz),
             new Vector3(oRight, oBottom, -hz),
+            new Vector3(oLeft,  oBottom, -hz),
             Vector3.Up,
-            new Vector2((oRight + hx) / (2 * hx), 0), new Vector2((oLeft + hx) / (2 * hx), 0),
-            new Vector2((oLeft + hx) / (2 * hx), 1), new Vector2((oRight + hx) / (2 * hx), 1)
+            new Vector2((oLeft  + hx) / (2 * hx), 0),
+            new Vector2((oRight + hx) / (2 * hx), 0),
+            new Vector2((oRight + hx) / (2 * hx), 1),
+            new Vector2((oLeft  + hx) / (2 * hx), 1)
         );
 
         // Left frame (normal = +X, facing right into the opening)
