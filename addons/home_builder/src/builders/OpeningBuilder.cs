@@ -68,15 +68,13 @@ public class OpeningBuilder
             && mb.ButtonIndex == MouseButton.Left
             && mb.Pressed)
         {
-            GD.Print($"Left click detected - isDoor: {isDoor}");
             var hit = RaycastHelper.ToWalls(camera, mb.Position, wallParent);
             if (hit.HasValue)
             {
-                GD.Print($"Raycast hit successful");
                 var wallBody  = hit.Value.Collider;
                 float opening = isDoor ? DoorWidth : WinWidth;
                 float snapped = SnapHelper.ToWall(wallBody, hit.Value.Position, opening);
-                GD.Print($"Snapped position: {snapped}");
+
                 CutOpening(wallBody, snapped, isDoor, wallParent);
                 return 1;
             }
@@ -95,8 +93,6 @@ public class OpeningBuilder
 
     private void CutOpening(StaticBody3D wallBody, float localCenter, bool isDoor, Node3D wallParent)
     {
-        GD.Print($"CutOpening called - isDoor: {isDoor}, localCenter: {localCenter}");
-
         if (EditorInterface.Singleton.GetEditedSceneRoot() is not Node3D scene)
         {
             GD.Print("Scene is null");
@@ -110,13 +106,11 @@ public class OpeningBuilder
             if (child is CollisionShape3D shape && shape.Shape is BoxShape3D boxShape)
             {
                 wallLen = boxShape.Size.X;
-                GD.Print($"Wall length: {wallLen}");
                 break;
             }
         }
         if (wallLen == 0f)
         {
-            GD.Print("Wall length is 0");
             return;
         }
 
@@ -127,21 +121,17 @@ public class OpeningBuilder
             if (child is MeshInstance3D mesh)
             {
                 wallMesh = mesh;
-                GD.Print($"Found MeshInstance3D: {mesh.Name}");
                 break;
             }
         }
         if (wallMesh == null)
         {
-            GD.Print("MeshInstance3D not found");
             return;
         }
 
         float opening  = isDoor ? DoorWidth  : WinWidth;
         float oHeight  = isDoor ? DoorHeight : WinHeight;
         float oBottom  = isDoor ? 0f         : WinSill;
-
-        GD.Print($"Opening params - width: {opening}, height: {oHeight}, bottom: {oBottom}");
 
         // Create new ArrayMesh with opening
         var newMesh = WallMeshBuilder.BuildWithOpening(
@@ -154,15 +144,11 @@ public class OpeningBuilder
             oHeight
         );
 
-        GD.Print($"New mesh created: {newMesh != null}");
-
         // Apply mesh directly first (without undo/redo for testing)
         wallMesh.Mesh = newMesh;
 
         // Update collision to match the new mesh with opening
         UpdateCollision(wallBody, newMesh);
-
-        GD.Print("CutOpening completed");
     }
 
     private void UpdateCollision(StaticBody3D wallBody, ArrayMesh newMesh)
@@ -174,7 +160,6 @@ public class OpeningBuilder
             if (child is CollisionShape3D shape)
             {
                 collisionShape = shape;
-                GD.Print($"Found CollisionShape3D: {shape.Name}");
                 break;
             }
         }
@@ -204,8 +189,6 @@ public class OpeningBuilder
             return;
         }
 
-        GD.Print($"Extracted {vertexList.Count} vertices from mesh");
-
         // Create ConcavePolygonShape3D and set the data using the Data property
         var concaveShape = new ConcavePolygonShape3D();
         
@@ -214,6 +197,5 @@ public class OpeningBuilder
 
         // Replace the collision shape
         collisionShape.Shape = concaveShape;
-        GD.Print("Collision updated to ConcavePolygonShape3D");
     }
 }
