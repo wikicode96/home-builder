@@ -9,12 +9,12 @@ public enum BuildMode
 public partial class HomeBuilderPlugin : EditorPlugin
 {
     public int              ActiveFloor => _activeFloor;
-    public float            FloorBaseY  => (_activeFloor - 1) * WallBuilder.Height;
+    public float            FloorBaseY  => _activeFloor * WallBuilder.Height;
     public HomeBuilderDock  Dock        => _dock as HomeBuilderDock;
 
     private Control   _dock;
     private BuildMode _activeMode  = BuildMode.None;
-    private int       _activeFloor = 1;
+    private int       _activeFloor = 0;
 
     private FloorBuilder   _floorBuilder;
     private WallBuilder    _wallBuilder;
@@ -82,7 +82,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             _dock = null;
         }
         _activeMode  = BuildMode.None;
-        _activeFloor = 1;
+        _activeFloor = 0;
     }
 
     private void OnSceneChanged(Node sceneRoot)
@@ -165,8 +165,8 @@ public partial class HomeBuilderPlugin : EditorPlugin
         {
             if (child is not Node3D node3D) continue;
 
-            int floorIndex = ParseFloorIndex(child.Name);
-            if (floorIndex < 0) continue;
+            int? floorIndex = ParseFloorIndex(child.Name);
+            if (floorIndex == null) continue;
 
             if (floorIndex == _activeFloor)
                 SetNodeTransparency(node3D, 1.0f);
@@ -177,7 +177,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         }
     }
 
-    private static int ParseFloorIndex(StringName name)
+    private static int? ParseFloorIndex(StringName name)
     {
         string s = name.ToString();
         foreach (string prefix in new[] { "Floor_", "Walls_", "Stairs_" })
@@ -185,7 +185,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             if (s.StartsWith(prefix) && int.TryParse(s[prefix.Length..], out int idx))
                 return idx;
         }
-        return -1;
+        return null;
     }
 
     private static void SetNodeTransparency(Node3D node, float alpha)

@@ -32,7 +32,7 @@ public partial class HomeBuilderDock : Control
     private EditorResourcePicker _wallFaceBPicker;
     private EditorResourcePicker _wallEdgesPicker;
 
-    private int _currentFloor = 1;
+    private int _currentFloor = 0;
 
     // ── Tile materials ────────────────────────────────────────────────────────
     public Material TileTopMaterial    => _tileTopPicker?.EditedResource    as Material;
@@ -121,7 +121,6 @@ public partial class HomeBuilderDock : Control
 
     private void OnFloorDown()
     {
-        if (_currentFloor <= 1) return;
         _currentFloor--;
         UpdateFloorLabel();
         EmitSignal(SignalName.FloorChanged, _currentFloor);
@@ -130,6 +129,6 @@ public partial class HomeBuilderDock : Control
     private void UpdateFloorLabel()
     {
         _floorLabel.Text          = $"Piso {_currentFloor}";
-        _floorDownButton.Disabled = _currentFloor <= 1;
+        _floorDownButton.Disabled = false;
     }
 }
