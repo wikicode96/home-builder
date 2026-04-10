@@ -107,7 +107,7 @@ public class WallBuilder
 
         // Store wall length as metadata so OpeningBuilder can read it later,
         // even after the collision shape is replaced by ConcavePolygonShape3D.
-        body.SetMeta(OpeningBuilder.MetaWallLength, length);
+        body.SetMeta(WallHelper.MetaWallLength, length);
 
         // Visual mesh as child
         var wall = new MeshInstance3D
@@ -146,15 +146,10 @@ public class WallBuilder
     {
         var dock = _plugin.Dock;
         wall.SetSurfaceOverrideMaterial(WallMeshBuilder.SurfaceFaceA,
-            dock?.WallFaceAMaterial ?? MakeDefaultMaterial(new Color(0.9f, 0.9f, 0.85f)));
+            dock?.WallFaceAMaterial ?? MaterialHelper.MakeDefaultMaterial(new Color(0.9f, 0.9f, 0.85f)));
         wall.SetSurfaceOverrideMaterial(WallMeshBuilder.SurfaceFaceB,
-            dock?.WallFaceBMaterial ?? MakeDefaultMaterial(new Color(0.85f, 0.85f, 0.8f)));
+            dock?.WallFaceBMaterial ?? MaterialHelper.MakeDefaultMaterial(new Color(0.85f, 0.85f, 0.8f)));
         wall.SetSurfaceOverrideMaterial(WallMeshBuilder.SurfaceEdges,
-            dock?.WallEdgesMaterial ?? MakeDefaultMaterial(new Color(0.7f, 0.7f, 0.65f)));
+            dock?.WallEdgesMaterial ?? MaterialHelper.MakeDefaultMaterial(new Color(0.7f, 0.7f, 0.65f)));
     }
-
-    private static StandardMaterial3D MakeDefaultMaterial(Color color) => new()
-    {
-        AlbedoColor = color,
-    };
 }

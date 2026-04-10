@@ -79,9 +79,9 @@ public static class WallMeshBuilder
             .ToList();
 
         var mesh = new ArrayMesh();
-        AddSurface(mesh, BuildFaceWithOpenings(hx, hy, hz, ops, faceZ: -hz, normalZ: -1f));
-        AddSurface(mesh, BuildFaceWithOpenings(hx, hy, hz, ops, faceZ:  hz, normalZ:  1f));
-        AddSurface(mesh, BuildEdgesWithOpenings(hx, hy, hz, ops));
+        MeshHelper.AddSurface(mesh, BuildFaceWithOpenings(hx, hy, hz, ops, faceZ: -hz, normalZ: -1f));
+        MeshHelper.AddSurface(mesh, BuildFaceWithOpenings(hx, hy, hz, ops, faceZ:  hz, normalZ:  1f));
+        MeshHelper.AddSurface(mesh, BuildEdgesWithOpenings(hx, hy, hz, ops));
         return mesh;
     }
 
@@ -89,30 +89,11 @@ public static class WallMeshBuilder
     // Internal helpers
     // =========================================================================
 
-    private static void AddSurface(ArrayMesh mesh, SurfaceTool st)
-    {
-        st.GenerateTangents();
-        st.Commit(mesh);
-    }
-
     // AddQuad: CW winding, Godot right-handed coords.
     //
     //  v0 ── v1
     //  │    ╱ │
     //  v3 ── v2
-    private static void AddQuad(SurfaceTool st,
-        Vector3 v0, Vector3 v1, Vector3 v2, Vector3 v3,
-        Vector3 normal,
-        Vector2 uv0, Vector2 uv1, Vector2 uv2, Vector2 uv3)
-    {
-        st.SetNormal(normal); st.SetUV(uv0); st.AddVertex(v0);
-        st.SetNormal(normal); st.SetUV(uv2); st.AddVertex(v2);
-        st.SetNormal(normal); st.SetUV(uv1); st.AddVertex(v1);
-
-        st.SetNormal(normal); st.SetUV(uv0); st.AddVertex(v0);
-        st.SetNormal(normal); st.SetUV(uv3); st.AddVertex(v3);
-        st.SetNormal(normal); st.SetUV(uv2); st.AddVertex(v2);
-    }
 
     // UV helpers — map a local X/Y position to 0..1 UV space
     private static float UvX(float x, float hx) => (x + hx) / (2f * hx);
@@ -204,7 +185,7 @@ public static class WallMeshBuilder
         float lx = flipX ? x1 : x0;
         float rx = flipX ? x0 : x1;
 
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3(lx, y1, faceZ),
             new Vector3(rx, y1, faceZ),
             new Vector3(rx, y0, faceZ),
@@ -229,7 +210,7 @@ public static class WallMeshBuilder
         st.Begin(Mesh.PrimitiveType.Triangles);
 
         // ── Top edge (normal = +Y) ────────────────────────────────────────────
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3(-hx,  hy,  hz),
             new Vector3( hx,  hy,  hz),
             new Vector3( hx,  hy, -hz),
@@ -254,7 +235,7 @@ public static class WallMeshBuilder
             foreach (var (bLeft, bRight) in blocked)
             {
                 if (cursor < bLeft)
-                    AddQuad(st,
+                    MeshHelper.AddQuad(st,
                         new Vector3( bLeft, -hy,  hz),
                         new Vector3(cursor, -hy,  hz),
                         new Vector3(cursor, -hy, -hz),
@@ -266,7 +247,7 @@ public static class WallMeshBuilder
                 cursor = bRight;
             }
             if (cursor < hx)
-                AddQuad(st,
+                MeshHelper.AddQuad(st,
                     new Vector3(  hx,  -hy,  hz),
                     new Vector3(cursor, -hy,  hz),
                     new Vector3(cursor, -hy, -hz),
@@ -278,7 +259,7 @@ public static class WallMeshBuilder
         }
 
         // ── Left outer edge (normal = -X) ─────────────────────────────────────
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3(-hx,  hy, -hz),
             new Vector3(-hx, -hy, -hz),
             new Vector3(-hx, -hy,  hz),
@@ -289,7 +270,7 @@ public static class WallMeshBuilder
         );
 
         // ── Right outer edge (normal = +X) ────────────────────────────────────
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3( hx,  hy,  hz),
             new Vector3( hx, -hy,  hz),
             new Vector3( hx, -hy, -hz),
@@ -308,7 +289,7 @@ public static class WallMeshBuilder
             float oTop    = op.LocalTop(hy);
 
             // Top lintel (normal = -Y, ceiling of the opening — visible from below)
-            AddQuad(st,
+            MeshHelper.AddQuad(st,
                 new Vector3(oRight, oTop,  hz),
                 new Vector3(oLeft,  oTop,  hz),
                 new Vector3(oLeft,  oTop, -hz),
@@ -323,7 +304,7 @@ public static class WallMeshBuilder
             // Sill (normal = +Y — only for windows, not floor-level doors)
             if (oBottom > -hy)
             {
-                AddQuad(st,
+                MeshHelper.AddQuad(st,
                     new Vector3(oLeft,  oBottom,  hz),
                     new Vector3(oRight, oBottom,  hz),
                     new Vector3(oRight, oBottom, -hz),
@@ -337,7 +318,7 @@ public static class WallMeshBuilder
             }
 
             // Left jamb (normal = +X, faces right into the opening)
-            AddQuad(st,
+            MeshHelper.AddQuad(st,
                 new Vector3(oLeft, oTop,    hz),
                 new Vector3(oLeft, oBottom, hz),
                 new Vector3(oLeft, oBottom, -hz),
@@ -350,7 +331,7 @@ public static class WallMeshBuilder
             );
 
             // Right jamb (normal = -X, faces left into the opening)
-            AddQuad(st,
+            MeshHelper.AddQuad(st,
                 new Vector3(oRight, oBottom, hz),
                 new Vector3(oRight, oTop,    hz),
                 new Vector3(oRight, oTop,    -hz),

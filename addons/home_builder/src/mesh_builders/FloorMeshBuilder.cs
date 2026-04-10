@@ -18,19 +18,13 @@ public static class FloorMeshBuilder
     public static ArrayMesh Build()
     {
         var mesh = new ArrayMesh();
-        AddSurface(mesh, BuildTop());
-        AddSurface(mesh, BuildBottom());
-        AddSurface(mesh, BuildSides());
+        MeshHelper.AddSurface(mesh, BuildTop());
+        MeshHelper.AddSurface(mesh, BuildBottom());
+        MeshHelper.AddSurface(mesh, BuildSides());
         return mesh;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static void AddSurface(ArrayMesh mesh, SurfaceTool st)
-    {
-        st.GenerateTangents();
-        st.Commit(mesh);
-    }
 
     // Adds a quad (2 triangles) to the surface tool.
     // Vertices must be given in counter-clockwise order when viewed
@@ -43,20 +37,6 @@ public static class FloorMeshBuilder
     //
     // Triangle 1: v0, v1, v2
     // Triangle 2: v0, v2, v3
-    private static void AddQuad(SurfaceTool st,
-        Vector3 v0, Vector3 v1, Vector3 v2, Vector3 v3,
-        Vector3 normal,
-        Vector2 uv0, Vector2 uv1, Vector2 uv2, Vector2 uv3)
-    {
-        // CW winding — Godot's default front face is CW in right-handed coords
-        st.SetNormal(normal); st.SetUV(uv0); st.AddVertex(v0);
-        st.SetNormal(normal); st.SetUV(uv2); st.AddVertex(v2);
-        st.SetNormal(normal); st.SetUV(uv1); st.AddVertex(v1);
-
-        st.SetNormal(normal); st.SetUV(uv0); st.AddVertex(v0);
-        st.SetNormal(normal); st.SetUV(uv3); st.AddVertex(v3);
-        st.SetNormal(normal); st.SetUV(uv2); st.AddVertex(v2);
-    }
 
     // ── Top face (Y = +HalfY, normal = Vector3.Up) ───────────────────────────
 
@@ -70,7 +50,7 @@ public static class FloorMeshBuilder
         //  v0(-X,+Z) ── v1(+X,+Z)
         //  │                    │
         //  v3(-X,-Z) ── v2(+X,-Z)
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3(-HalfX,  HalfY,  HalfZ),  // v0
             new Vector3( HalfX,  HalfY,  HalfZ),  // v1
             new Vector3( HalfX,  HalfY, -HalfZ),  // v2
@@ -95,7 +75,7 @@ public static class FloorMeshBuilder
         //  v0(+X,-Y,+Z) ── v1(-X,-Y,+Z)
         //  │                           │
         //  v3(+X,-Y,-Z) ── v2(-X,-Y,-Z)
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3( HalfX, -HalfY,  HalfZ),  // v0
             new Vector3(-HalfX, -HalfY,  HalfZ),  // v1
             new Vector3(-HalfX, -HalfY, -HalfZ),  // v2
@@ -116,7 +96,7 @@ public static class FloorMeshBuilder
         st.Begin(Mesh.PrimitiveType.Triangles);
 
         // Front face (+Z, normal = +Z) — v1 and v3 swapped vs top/bottom
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3(-HalfX,  HalfY,  HalfZ),
             new Vector3(-HalfX, -HalfY,  HalfZ),
             new Vector3( HalfX, -HalfY,  HalfZ),
@@ -127,7 +107,7 @@ public static class FloorMeshBuilder
         );
 
         // Back face (-Z, normal = -Z)
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3( HalfX,  HalfY, -HalfZ),
             new Vector3( HalfX, -HalfY, -HalfZ),
             new Vector3(-HalfX, -HalfY, -HalfZ),
@@ -138,7 +118,7 @@ public static class FloorMeshBuilder
         );
 
         // Right face (+X, normal = +X)
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3( HalfX,  HalfY,  HalfZ),
             new Vector3( HalfX, -HalfY,  HalfZ),
             new Vector3( HalfX, -HalfY, -HalfZ),
@@ -149,7 +129,7 @@ public static class FloorMeshBuilder
         );
 
         // Left face (-X, normal = -X)
-        AddQuad(st,
+        MeshHelper.AddQuad(st,
             new Vector3(-HalfX,  HalfY, -HalfZ),
             new Vector3(-HalfX, -HalfY, -HalfZ),
             new Vector3(-HalfX, -HalfY,  HalfZ),

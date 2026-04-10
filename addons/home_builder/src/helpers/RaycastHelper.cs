@@ -141,16 +141,5 @@ public static class RaycastHelper
     // fall back to BoxShape3D for walls created before this update.
     // -------------------------------------------------------------------------
 
-    private static float GetWallHalfLength(StaticBody3D body)
-    {
-        if (body.HasMeta(OpeningBuilder.MetaWallLength))
-            return body.GetMeta(OpeningBuilder.MetaWallLength).AsSingle() * 0.5f;
-
-        foreach (Node child in body.GetChildren())
-        {
-            if (child is CollisionShape3D cs && cs.Shape is BoxShape3D box)
-                return box.Size.X * 0.5f;
-        }
-        return 0f;
-    }
+    private static float GetWallHalfLength(StaticBody3D body) => WallHelper.GetWallHalfLength(body);
 }

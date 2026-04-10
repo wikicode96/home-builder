@@ -143,11 +143,11 @@ public class FloorBuilder
                 var tile = new MeshInstance3D { Mesh = tileMesh };
                 var dock = _plugin.Dock;
                 tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceTop,
-                    dock?.TileTopMaterial    ?? MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
+                    dock?.TileTopMaterial    ?? MaterialHelper.MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
                 tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceBottom,
-                    dock?.TileBottomMaterial ?? MakeDefaultMaterial(new Color(0.6f, 0.6f, 0.6f)));
+                    dock?.TileBottomMaterial ?? MaterialHelper.MakeDefaultMaterial(new Color(0.6f, 0.6f, 0.6f)));
                 tile.SetSurfaceOverrideMaterial(FloorMeshBuilder.SurfaceSides,
-                    dock?.TileSidesMaterial  ?? MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
+                    dock?.TileSidesMaterial  ?? MaterialHelper.MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
 
                 // Collision shape as child — BoxShape3D matches tile dimensions exactly
                 var shape = new CollisionShape3D
@@ -172,12 +172,4 @@ public class FloorBuilder
         undo.CommitAction(false);
     }
 
-    // -------------------------------------------------------------------------
-    // Material helper
-    // -------------------------------------------------------------------------
-
-    private static StandardMaterial3D MakeDefaultMaterial(Color color) => new()
-    {
-        AlbedoColor = color,
-    };
 }

@@ -42,18 +42,5 @@ public static class SnapHelper
     // Internal helper — shared with OpeningBuilder via the metadata key
     // -------------------------------------------------------------------------
 
-    private static float GetWallLength(StaticBody3D wallBody)
-    {
-        // Preferred path: metadata written by WallBuilder at creation time
-        if (wallBody.HasMeta(OpeningBuilder.MetaWallLength))
-            return wallBody.GetMeta(OpeningBuilder.MetaWallLength).AsSingle();
-
-        // Fallback: BoxShape3D is still there (no opening cut yet)
-        foreach (Node child in wallBody.GetChildren())
-        {
-            if (child is CollisionShape3D shape && shape.Shape is BoxShape3D box)
-                return box.Size.X;
-        }
-        return 0f;
-    }
+    private static float GetWallLength(StaticBody3D wallBody) => WallHelper.GetWallLength(wallBody);
 }
