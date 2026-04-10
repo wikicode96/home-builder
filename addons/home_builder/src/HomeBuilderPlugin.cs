@@ -8,7 +8,6 @@ public enum BuildMode
 [Tool]
 public partial class HomeBuilderPlugin : EditorPlugin
 {
-    // Exposed to builders
     public int              ActiveFloor => _activeFloor;
     public float            FloorBaseY  => (_activeFloor - 1) * WallBuilder.Height;
     public HomeBuilderDock  Dock        => _dock as HomeBuilderDock;
@@ -49,7 +48,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                     "none"    => BuildMode.None,
                     _         => BuildMode.None
                 };
-                CreateActivePreviews();
+                CallDeferred(MethodName.CreateActivePreviews);
             })
         );
 
@@ -60,13 +59,21 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 _activeFloor = floor;
                 UpdateFloorVisibility();
                 ClearAllPreviews();
-                CreateActivePreviews();
+                CallDeferred(MethodName.CreateActivePreviews);
             })
         );
+
+        SceneChanged += OnSceneChanged;
+
+        // If a scene is already open when the plugin activates, SceneChanged
+        // will NOT fire. We must manually select the scene root so that Godot
+        // routes _Forward3DGuiInput events to this plugin.
+        CallDeferred(MethodName.SelectSceneRoot);
     }
 
     public override void _ExitTree()
     {
+        SceneChanged -= OnSceneChanged;
         ClearAllPreviews();
         if (_dock != null)
         {
@@ -76,6 +83,25 @@ public partial class HomeBuilderPlugin : EditorPlugin
         }
         _activeMode  = BuildMode.None;
         _activeFloor = 1;
+    }
+
+    private void OnSceneChanged(Node sceneRoot)
+    {
+        ClearAllPreviews();
+        CallDeferred(MethodName.CreateActivePreviews);
+        // Re-select the new root so input routing is re-established.
+        CallDeferred(MethodName.SelectSceneRoot);
+    }
+
+    // Selects the scene root node in the editor so that _Forward3DGuiInput
+    // is routed to this plugin. Without a selection that _Handles() accepts,
+    // Godot 4 does not forward 3D viewport input events to editor plugins.
+    private void SelectSceneRoot()
+    {
+        var root = GetEditorInterface().GetEditedSceneRoot();
+        if (root == null) return;
+        GetEditorInterface().GetSelection().Clear();
+        GetEditorInterface().GetSelection().AddNode(root);
     }
 
     public override bool _Handles(GodotObject obj) => true;
