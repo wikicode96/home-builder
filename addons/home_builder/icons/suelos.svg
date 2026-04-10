@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <!-- Gradiente para la superficie del suelo -->
+    <linearGradient id="isoFloor" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8C99B" />
+      <stop offset="100%" stop-color="#C9A16E" />
+    </linearGradient>
+    <!-- Sombra proyectada -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#5A3E24" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Fondo transparente (opcional, para que no choque) -->
+  <rect width="32" height="32" fill="transparent" />
+
+  <!-- Suelo isométrico: rombo con esquinas redondeadas -->
+  <g filter="url(#shadow)">
+    <polygon points="16,5 27,16 16,27 5,16" fill="url(#isoFloor)" stroke="#A87B4D" stroke-width="1.2" stroke-linejoin="round" />
+  </g>
+
+  <!-- Brillo superior (luz cenital) -->
+  <polygon points="16,5 27,16 16,18 5,16" fill="white" opacity="0.12" />
+  <!-- Reflejo pequeño en la esquina superior -->
+  <polygon points="16,5 20,9 16,10 12,9" fill="white" opacity="0.2" />
+</svg>

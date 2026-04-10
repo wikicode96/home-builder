@@ -1,0 +1,173 @@
+[gd_scene load_steps=8 format=3 uid="uid://home_builder_dock"]
+
+[ext_resource type="Script" path="res://addons/home_builder/src/HomeBuilderDock.cs" id="1"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/suelos.svg" id="2"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/paredes.svg" id="3"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/techos.svg" id="4"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/puertas.svg" id="5"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/ventanas.svg" id="6"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/escaleras.svg" id="7"]
+
+[node name="HomeBuilderDock" type="Control"]
+custom_minimum_size = Vector2(200, 0)
+script = ExtResource("1")
+
+[node name="MainContainer" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="MainContainer"]
+text = "Home Builder"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="HSeparator" type="HSeparator" parent="MainContainer"]
+
+[node name="ModeLabel" type="Label" parent="MainContainer"]
+text = "Modo de construcción:"
+theme_override_font_sizes/font_size = 12
+
+[node name="FloorButton" type="Button" parent="MainContainer"]
+text = "Suelos"
+icon = ExtResource("2")
+toggle_mode = true
+
+[node name="WallButton" type="Button" parent="MainContainer"]
+text = "Paredes"
+icon = ExtResource("3")
+toggle_mode = true
+
+[node name="CeilingButton" type="Button" parent="MainContainer"]
+text = "Techos"
+icon = ExtResource("4")
+toggle_mode = true
+
+[node name="DoorButton" type="Button" parent="MainContainer"]
+text = "Puertas"
+icon = ExtResource("5")
+toggle_mode = true
+
+[node name="WindowButton" type="Button" parent="MainContainer"]
+text = "Ventanas"
+icon = ExtResource("6")
+toggle_mode = true
+
+[node name="StairsButton" type="Button" parent="MainContainer"]
+text = "Escaleras"
+icon = ExtResource("7")
+toggle_mode = true
+
+[node name="NoneButton" type="Button" parent="MainContainer"]
+text = "Desactivar edición"
+toggle_mode = true
+
+[node name="HSeparator2" type="HSeparator" parent="MainContainer"]
+
+[node name="FloorSelectorLabel" type="Label" parent="MainContainer"]
+text = "Planta:"
+theme_override_font_sizes/font_size = 12
+
+[node name="FloorSelector" type="HBoxContainer" parent="MainContainer"]
+
+[node name="FloorDownButton" type="Button" parent="MainContainer/FloorSelector"]
+text = "▼"
+custom_minimum_size = Vector2(36, 0)
+
+[node name="FloorLabel" type="Label" parent="MainContainer/FloorSelector"]
+text = "Piso 1"
+size_flags_horizontal = 3
+horizontal_alignment = 1
+
+[node name="FloorUpButton" type="Button" parent="MainContainer/FloorSelector"]
+text = "▲"
+custom_minimum_size = Vector2(36, 0)
+
+[node name="HSeparator3" type="HSeparator" parent="MainContainer"]
+
+[node name="TileMaterials" type="VBoxContainer" parent="MainContainer"]
+theme_override_constants/separation = 2
+
+[node name="TileMaterialsLabel" type="Label" parent="MainContainer/TileMaterials"]
+text = "Materiales baldosa:"
+theme_override_font_sizes/font_size = 12
+
+[node name="TopRow" type="HBoxContainer" parent="MainContainer/TileMaterials"]
+
+[node name="TopLabel" type="Label" parent="MainContainer/TileMaterials/TopRow"]
+text = "Superior"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="TopPicker" type="HBoxContainer" parent="MainContainer/TileMaterials/TopRow"]
+size_flags_horizontal = 3
+
+[node name="BottomRow" type="HBoxContainer" parent="MainContainer/TileMaterials"]
+
+[node name="BottomLabel" type="Label" parent="MainContainer/TileMaterials/BottomRow"]
+text = "Inferior"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="BottomPicker" type="HBoxContainer" parent="MainContainer/TileMaterials/BottomRow"]
+size_flags_horizontal = 3
+
+[node name="SidesRow" type="HBoxContainer" parent="MainContainer/TileMaterials"]
+
+[node name="SidesLabel" type="Label" parent="MainContainer/TileMaterials/SidesRow"]
+text = "Laterales"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="SidesPicker" type="HBoxContainer" parent="MainContainer/TileMaterials/SidesRow"]
+size_flags_horizontal = 3
+
+[node name="HSeparator4" type="HSeparator" parent="MainContainer"]
+
+[node name="WallMaterials" type="VBoxContainer" parent="MainContainer"]
+theme_override_constants/separation = 2
+
+[node name="WallMaterialsLabel" type="Label" parent="MainContainer/WallMaterials"]
+text = "Materiales pared:"
+theme_override_font_sizes/font_size = 12
+
+[node name="FaceARow" type="HBoxContainer" parent="MainContainer/WallMaterials"]
+
+[node name="FaceALabel" type="Label" parent="MainContainer/WallMaterials/FaceARow"]
+text = "Cara A"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="FaceAPicker" type="HBoxContainer" parent="MainContainer/WallMaterials/FaceARow"]
+size_flags_horizontal = 3
+
+[node name="FaceBRow" type="HBoxContainer" parent="MainContainer/WallMaterials"]
+
+[node name="FaceBLabel" type="Label" parent="MainContainer/WallMaterials/FaceBRow"]
+text = "Cara B"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="FaceBPicker" type="HBoxContainer" parent="MainContainer/WallMaterials/FaceBRow"]
+size_flags_horizontal = 3
+
+[node name="EdgesRow" type="HBoxContainer" parent="MainContainer/WallMaterials"]
+
+[node name="EdgesLabel" type="Label" parent="MainContainer/WallMaterials/EdgesRow"]
+text = "Grosor"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="EdgesPicker" type="HBoxContainer" parent="MainContainer/WallMaterials/EdgesRow"]
+size_flags_horizontal = 3
+
+[node name="HSeparator5" type="HSeparator" parent="MainContainer"]
+
+[node name="StatusLabel" type="Label" parent="MainContainer"]
+text = "Sin modo activo"
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
