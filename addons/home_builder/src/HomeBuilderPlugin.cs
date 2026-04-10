@@ -57,7 +57,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             Callable.From((int floor) =>
             {
                 _activeFloor = floor;
-                UpdateFloorVisibility();
+                UpdateNodeVisibility();
                 ClearAllPreviews();
                 CallDeferred(MethodName.CreateActivePreviews);
             })
@@ -153,10 +153,10 @@ public partial class HomeBuilderPlugin : EditorPlugin
     }
 
     // -------------------------------------------------------------------------
-    // Floor visibility
+    // Node visibility
     // -------------------------------------------------------------------------
 
-    private void UpdateFloorVisibility()
+    private void UpdateNodeVisibility()
     {
         var scene = GetEditorInterface().GetEditedSceneRoot() as Node3D;
         if (scene == null) return;
@@ -165,19 +165,17 @@ public partial class HomeBuilderPlugin : EditorPlugin
         {
             if (child is not Node3D node3D) continue;
 
-            int? floorIndex = ParseFloorIndex(child.Name);
-            if (floorIndex == null) continue;
+            int? nodeIndex = ParseNodeIndex(child.Name);
+            if (nodeIndex == null) continue;
 
-            if (floorIndex == _activeFloor)
-                SetNodeTransparency(node3D, 1.0f);
-            else if (floorIndex < _activeFloor)
-                SetNodeTransparency(node3D, 0.3f);
-            else
+            if (nodeIndex > _activeFloor)
                 node3D.Visible = false;
+            else
+                node3D.Visible = true;
         }
     }
 
-    private static int? ParseFloorIndex(StringName name)
+    private static int? ParseNodeIndex(StringName name)
     {
         string s = name.ToString();
         foreach (string prefix in new[] { "Floor_", "Walls_", "Stairs_" })
@@ -186,25 +184,6 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 return idx;
         }
         return null;
-    }
-
-    private static void SetNodeTransparency(Node3D node, float alpha)
-    {
-        node.Visible = true;
-        foreach (Node child in node.GetChildren())
-        {
-            if (child is not GeometryInstance3D geo) continue;
-
-            geo.MaterialOverride = alpha < 1.0f
-                ? new StandardMaterial3D
-                {
-                    Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                    AlbedoColor  = new Color(0.8f, 0.8f, 0.8f, alpha),
-                    ShadingMode  = BaseMaterial3D.ShadingModeEnum.Unshaded,
-                    CullMode     = BaseMaterial3D.CullModeEnum.Disabled,
-                }
-                : null;
-        }
     }
 
     // -------------------------------------------------------------------------
