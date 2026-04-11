@@ -133,6 +133,9 @@ public class StairsBuilder
         var basisY = Vector3.Up;
         var stepBasis = new Basis(basisX, basisY, basisZ);
 
+        // Build the shared mesh once — all steps share the same mesh
+        var stepMesh = StairsMeshBuilder.Build(StairWidth, StairRise, StairRun);
+
         var undo = _plugin.GetUndoRedo();
         undo.CreateAction("Place Stairs");
 
@@ -143,19 +146,41 @@ public class StairsBuilder
 
             var stepPos = start + dirXZ * runOffset + Vector3.Up * riseOffset;
 
-            var step = new CsgBox3D
+            // StaticBody3D is the root — holds position, basis and collision
+            var body = new StaticBody3D
             {
-                Name         = $"Step_{i + 1}",
-                Size         = new Vector3(StairWidth, StairRise, StairRun),
-                UseCollision = true,
+                Name     = $"Step_{i + 1}",
+                Position = stepPos,
+                Basis    = stepBasis,
             };
 
-            stairsParent.AddChild(step);
-            step.Owner = scene;
-            step.GlobalTransform = new Transform3D(stepBasis, stepPos);
+            // Visual mesh as child
+            var step = new MeshInstance3D { Mesh = stepMesh };
+            var dock = _plugin.Dock;
+            step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceTop,
+                dock?.StairTopMaterial    ?? MaterialHelper.MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
+            step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceBottom,
+                dock?.StairBottomMaterial ?? MaterialHelper.MakeDefaultMaterial(new Color(0.6f, 0.6f, 0.6f)));
+            step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceSides,
+                dock?.StairSidesMaterial  ?? MaterialHelper.MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
 
-            undo.AddDoMethod(stairsParent,  Node.MethodName.AddChild,    step);
-            undo.AddUndoMethod(stairsParent, Node.MethodName.RemoveChild, step);
+            // Collision shape as child — BoxShape3D matches step dimensions exactly
+            var shape = new CollisionShape3D
+            {
+                Shape = new BoxShape3D { Size = new Vector3(StairWidth, StairRise, StairRun) }
+            };
+
+            stairsParent.AddChild(body);
+            body.Owner = scene;
+
+            body.AddChild(step);
+            step.Owner = scene;
+
+            body.AddChild(shape);
+            shape.Owner = scene;
+
+            undo.AddDoMethod(stairsParent,   Node.MethodName.AddChild,    body);
+            undo.AddUndoMethod(stairsParent, Node.MethodName.RemoveChild, body);
         }
 
         undo.CommitAction(false);

@@ -32,6 +32,11 @@ public partial class HomeBuilderDock : Control
     private EditorResourcePicker _wallFaceBPicker;
     private EditorResourcePicker _wallEdgesPicker;
 
+    // Stair material pickers
+    private EditorResourcePicker _stairTopPicker;
+    private EditorResourcePicker _stairBottomPicker;
+    private EditorResourcePicker _stairSidesPicker;
+
     private int _currentFloor = 0;
 
     // ── Tile materials ────────────────────────────────────────────────────────
@@ -43,6 +48,11 @@ public partial class HomeBuilderDock : Control
     public Material WallFaceAMaterial  => _wallFaceAPicker?.EditedResource  as Material;
     public Material WallFaceBMaterial  => _wallFaceBPicker?.EditedResource  as Material;
     public Material WallEdgesMaterial  => _wallEdgesPicker?.EditedResource  as Material;
+
+    // ── Stair materials ────────────────────────────────────────────────────────
+    public Material StairTopMaterial    => _stairTopPicker?.EditedResource    as Material;
+    public Material StairBottomMaterial => _stairBottomPicker?.EditedResource as Material;
+    public Material StairSidesMaterial  => _stairSidesPicker?.EditedResource  as Material;
 
     public override void _Ready()
     {
@@ -88,6 +98,11 @@ public partial class HomeBuilderDock : Control
         _wallFaceAPicker = CreatePicker("MainContainer/WallMaterials/FaceARow/FaceAPicker");
         _wallFaceBPicker = CreatePicker("MainContainer/WallMaterials/FaceBRow/FaceBPicker");
         _wallEdgesPicker = CreatePicker("MainContainer/WallMaterials/EdgesRow/EdgesPicker");
+
+        // Stair pickers
+        _stairTopPicker    = CreatePicker("MainContainer/StairMaterials/TopRow/TopPicker");
+        _stairBottomPicker = CreatePicker("MainContainer/StairMaterials/BottomRow/BottomPicker");
+        _stairSidesPicker  = CreatePicker("MainContainer/StairMaterials/SidesRow/SidesPicker");
 
         UpdateFloorLabel();
     }

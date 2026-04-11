@@ -166,6 +166,45 @@ size_flags_horizontal = 3
 
 [node name="HSeparator5" type="HSeparator" parent="MainContainer"]
 
+[node name="StairMaterials" type="VBoxContainer" parent="MainContainer"]
+theme_override_constants/separation = 2
+
+[node name="StairMaterialsLabel" type="Label" parent="MainContainer/StairMaterials"]
+text = "Materiales escalera:"
+theme_override_font_sizes/font_size = 12
+
+[node name="TopRow" type="HBoxContainer" parent="MainContainer/StairMaterials"]
+
+[node name="TopLabel" type="Label" parent="MainContainer/StairMaterials/TopRow"]
+text = "Superior"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="TopPicker" type="HBoxContainer" parent="MainContainer/StairMaterials/TopRow"]
+size_flags_horizontal = 3
+
+[node name="BottomRow" type="HBoxContainer" parent="MainContainer/StairMaterials"]
+
+[node name="BottomLabel" type="Label" parent="MainContainer/StairMaterials/BottomRow"]
+text = "Inferior"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="BottomPicker" type="HBoxContainer" parent="MainContainer/StairMaterials/BottomRow"]
+size_flags_horizontal = 3
+
+[node name="SidesRow" type="HBoxContainer" parent="MainContainer/StairMaterials"]
+
+[node name="SidesLabel" type="Label" parent="MainContainer/StairMaterials/SidesRow"]
+text = "Laterales"
+custom_minimum_size = Vector2(60, 0)
+theme_override_font_sizes/font_size = 11
+
+[node name="SidesPicker" type="HBoxContainer" parent="MainContainer/StairMaterials/SidesRow"]
+size_flags_horizontal = 3
+
+[node name="HSeparator6" type="HSeparator" parent="MainContainer"]
+
 [node name="StatusLabel" type="Label" parent="MainContainer"]
 text = "Sin modo activo"
 horizontal_alignment = 1
