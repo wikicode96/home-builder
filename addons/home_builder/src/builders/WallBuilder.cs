@@ -1,4 +1,5 @@
 using Godot;
+using System.Collections.Generic;
 
 public class WallBuilder
 {
@@ -136,6 +137,54 @@ public class WallBuilder
         undo.AddDoMethod(wallParent,   Node.MethodName.AddChild,    body);
         undo.AddUndoMethod(wallParent, Node.MethodName.RemoveChild, body);
         undo.CommitAction(false);
+
+        // Re-solve junctions for this floor and rebuild every wall whose cap
+        // offsets changed. This is what yields clean miter corners at L, T
+        // and X junctions with arbitrary angles.
+        RebuildJunctions(wallParent);
+    }
+
+    // -------------------------------------------------------------------------
+    // Junction rebuild
+    //
+    // Recomputes miter offsets across every wall under `wallParent` and
+    // rebuilds any wall whose mesh should change. Cheap for realistic scenes
+    // (tens to hundreds of walls per floor) and avoids the need to track
+    // "dirty" neighbours incrementally.
+    // -------------------------------------------------------------------------
+
+    public static void RebuildJunctions(Node3D wallParent)
+    {
+        if (wallParent == null) return;
+
+        var offsets = WallJunctionSolver.Solve(wallParent);
+        foreach (var kv in offsets)
+            RebuildWallMesh(kv.Key, kv.Value);
+    }
+
+    private static void RebuildWallMesh(StaticBody3D wallBody, WallJunctionSolver.Offsets off)
+    {
+        float wallLen = WallHelper.GetWallLength(wallBody);
+        if (wallLen <= 0f) return;
+
+        var openings = OpeningBuilder.LoadOpenings(wallBody);
+        var joins    = WallJunctionSolver.ToMeshJoins(off);
+
+        var newMesh = WallMeshBuilder.BuildWithOpeningsAndJoins(
+            wallLen, Height, Thickness, openings, joins);
+
+        MeshInstance3D meshInstance = null;
+        CollisionShape3D collisionShape = null;
+        foreach (Node child in wallBody.GetChildren())
+        {
+            if (child is MeshInstance3D mi)  meshInstance = mi;
+            if (child is CollisionShape3D c) collisionShape = c;
+        }
+        if (meshInstance == null) return;
+
+        meshInstance.Mesh = newMesh;
+        if (collisionShape != null)
+            OpeningBuilder.UpdateCollisionFromMesh(collisionShape, newMesh);
     }
 
     // -------------------------------------------------------------------------

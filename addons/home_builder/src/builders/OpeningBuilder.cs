@@ -135,12 +135,14 @@ public class OpeningBuilder
         // ── 6. Save updated list back to metadata ─────────────────────────────
         SaveOpenings(wallBody, openings);
 
-        // ── 7. Rebuild mesh with all openings ─────────────────────────────────
-        var newMesh = WallMeshBuilder.BuildWithOpenings(
+        // ── 7. Rebuild mesh, keeping the current junction miter offsets ──────
+        var joins = SolveJoinsFor(wallBody);
+        var newMesh = WallMeshBuilder.BuildWithOpeningsAndJoins(
             wallLen,
             WallBuilder.Height,
             WallBuilder.Thickness,
-            openings
+            openings,
+            joins
         );
 
         // ── 8. Apply to MeshInstance3D ────────────────────────────────────────
@@ -153,11 +155,22 @@ public class OpeningBuilder
         UpdateCollision(wallBody, newMesh);
     }
 
+    // Re-solves junctions for the wall's parent and returns this wall's
+    // current mesh join offsets (or zeros if it has no neighbours).
+    private static WallMeshBuilder.JoinOffsets SolveJoinsFor(StaticBody3D wallBody)
+    {
+        if (wallBody.GetParent() is not Node3D parent) return default;
+        var all = WallJunctionSolver.Solve(parent);
+        return all.TryGetValue(wallBody, out var off)
+            ? WallJunctionSolver.ToMeshJoins(off)
+            : default;
+    }
+
     // -------------------------------------------------------------------------
     // Metadata helpers — openings stored as a Godot Array of Dictionaries
     // -------------------------------------------------------------------------
 
-    private static List<WallMeshBuilder.Opening> LoadOpenings(StaticBody3D wall)
+    public static List<WallMeshBuilder.Opening> LoadOpenings(StaticBody3D wall)
     {
         var result = new List<WallMeshBuilder.Opening>();
 
@@ -223,8 +236,14 @@ public class OpeningBuilder
             if (child is CollisionShape3D cs) { collisionShape = cs; break; }
         }
         if (collisionShape == null) return;
+        UpdateCollisionFromMesh(collisionShape, newMesh);
+    }
 
-        var vertexList = new System.Collections.Generic.List<Vector3>();
+    public static void UpdateCollisionFromMesh(CollisionShape3D collisionShape, ArrayMesh newMesh)
+    {
+        if (collisionShape == null || newMesh == null) return;
+
+        var vertexList = new List<Vector3>();
         for (int i = 0; i < newMesh.GetSurfaceCount(); i++)
         {
             var meshData = newMesh.SurfaceGetArrays(i);
