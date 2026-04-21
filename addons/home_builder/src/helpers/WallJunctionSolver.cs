@@ -46,6 +46,13 @@ public static class WallJunctionSolver
         public float EndPlusZ;     // cap offset at End   on local +Z side
     }
 
+    // Convex polygon (world XZ) that fills the gap at a multi-wall junction.
+    // Points are in CCW order matching the half-edge sort order.
+    public struct JunctionFill
+    {
+        public Vector2[] PointsXZ;
+    }
+
     // Two world positions within this distance are treated as the same node.
     private const float PosTolerance = 0.01f;
     // A point must be at least this far from either endpoint of a wall to
@@ -70,13 +77,14 @@ public static class WallJunctionSolver
     // Public API
     // -------------------------------------------------------------------------
 
-    // Solves all junctions under `wallParent` and returns the offsets each
-    // wall should use for its next mesh rebuild. Walls not present in the
-    // dictionary should be rebuilt with zero offsets.
-    public static Dictionary<StaticBody3D, Offsets> Solve(Node3D wallParent)
+    // Solves all junctions under `wallParent`. Returns per-wall cap offsets and
+    // a list of fill polygons (one per junction gap that needs covering).
+    public static (Dictionary<StaticBody3D, Offsets> Offsets, List<JunctionFill> Fills)
+        Solve(Node3D wallParent)
     {
         var result = new Dictionary<StaticBody3D, Offsets>();
-        if (wallParent == null) return result;
+        var fills  = new List<JunctionFill>();
+        if (wallParent == null) return (result, fills);
 
         // ── Collect walls and per-wall info
         var walls     = new List<StaticBody3D>();
@@ -105,7 +113,7 @@ public static class WallJunctionSolver
             result[b]   = default;
         }
 
-        if (walls.Count == 0) return result;
+        if (walls.Count == 0) return (result, fills);
 
         // ── Build half-edges at both endpoints of every wall
         var halfEdges = new List<HalfEdge>();
@@ -196,11 +204,34 @@ public static class WallJunctionSolver
                                    .CompareTo(Mathf.Atan2(b.Dir.Y, b.Dir.X)));
 
             int n = node.Count;
+            var miterPts = new List<Vector2>();
+
             for (int i = 0; i < n; i++)
             {
                 var a = node[i];
                 var b = node[(i + 1) % n];
-                if (!TryMiter(a, b, out float sa, out float sb)) continue;
+                if (!TryMiter(a, b, out float sa, out float sb))
+                {
+                    // Antiparallel real walls (e.g. two collinear walls both
+                    // terminating at this node, plus a third branch): TryMiter
+                    // finds no unique intersection because the miter lines are
+                    // coincident. The gap vertex is the node offset by
+                    // perpCCW(da) * thickness/2 — the exterior face of the
+                    // straight joint. We only do this for real (non-virtual)
+                    // half-edges; a virtual antiparallel pair means a single
+                    // through-wall whose own top surface already covers the node.
+                    if (a.Kind != Kind.MidVirtual && b.Kind != Kind.MidVirtual)
+                    {
+                        float dot = a.Dir.X * b.Dir.X + a.Dir.Y * b.Dir.Y;
+                        if (dot < -1f + ParallelEpsilon * 10f)
+                        {
+                            var pXZ2 = new Vector2(a.NodePos.X, a.NodePos.Z);
+                            var nLa2 = new Vector2(-a.Dir.Y, a.Dir.X);
+                            miterPts.Add(pXZ2 + nLa2 * (a.Thickness * 0.5f));
+                        }
+                    }
+                    continue;
+                }
 
                 // Clamp so we never trim more than half the wall's length.
                 sa = Mathf.Clamp(sa, -a.WallLength * 0.5f, a.WallLength * 0.5f);
@@ -208,10 +239,19 @@ public static class WallJunctionSolver
 
                 StoreOffset(result, a, sideCCW: true,  value: sa);
                 StoreOffset(result, b, sideCCW: false, value: sb);
+
+                // World-XZ position of this miter intersection.
+                var nLa = new Vector2(-a.Dir.Y, a.Dir.X);
+                var pXZ = new Vector2(a.NodePos.X, a.NodePos.Z);
+                miterPts.Add(pXZ + nLa * (a.Thickness * 0.5f) + sa * a.Dir);
             }
+
+            // Three or more miter points form a gap polygon that needs filling.
+            if (miterPts.Count >= 3)
+                fills.Add(new JunctionFill { PointsXZ = miterPts.ToArray() });
         }
 
-        return result;
+        return (result, fills);
     }
 
     // -------------------------------------------------------------------------

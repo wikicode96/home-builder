@@ -157,9 +157,71 @@ public class WallBuilder
     {
         if (wallParent == null) return;
 
-        var offsets = WallJunctionSolver.Solve(wallParent);
+        var (offsets, fills) = WallJunctionSolver.Solve(wallParent);
         foreach (var kv in offsets)
             RebuildWallMesh(kv.Key, kv.Value);
+        RebuildJunctionFills(wallParent, fills);
+    }
+
+    // -------------------------------------------------------------------------
+    // Junction fill mesh — covers the gap polygon at X/Y/multi-wall nodes.
+    // -------------------------------------------------------------------------
+
+    private const string FillNodeName = "__HB_JunctionFills__";
+
+    private static void RebuildJunctionFills(
+        Node3D wallParent,
+        System.Collections.Generic.List<WallJunctionSolver.JunctionFill> fills)
+    {
+        MeshInstance3D fillNode = null;
+        foreach (Node child in wallParent.GetChildren())
+        {
+            if (child.Name == FillNodeName && child is MeshInstance3D mi)
+            {
+                fillNode = mi;
+                break;
+            }
+        }
+
+        if (fills.Count == 0)
+        {
+            fillNode?.QueueFree();
+            return;
+        }
+
+        if (fillNode == null)
+        {
+            fillNode = new MeshInstance3D { Name = FillNodeName };
+            wallParent.AddChild(fillNode);
+            fillNode.Owner = wallParent.Owner;
+        }
+
+        // Position the fill node at the same Y centre as the walls so that
+        // local Y = ±Height/2 aligns with the wall top and bottom in world.
+        float wallCentreY = Height * 0.5f;
+        foreach (Node child in wallParent.GetChildren())
+        {
+            if (child is StaticBody3D body) { wallCentreY = body.Position.Y; break; }
+        }
+        fillNode.Position = new Vector3(0f, wallCentreY, 0f);
+
+        fillNode.Mesh = JunctionFillMeshBuilder.Build(fills, Height);
+
+        // Reuse the edge material from the first available wall.
+        if (fillNode.GetSurfaceOverrideMaterial(0) == null)
+        {
+            foreach (Node child in wallParent.GetChildren())
+            {
+                if (child is not StaticBody3D) continue;
+                foreach (Node gc in child.GetChildren())
+                {
+                    if (gc is not MeshInstance3D wm) continue;
+                    var mat = wm.GetSurfaceOverrideMaterial(WallMeshBuilder.SurfaceEdges);
+                    if (mat != null) { fillNode.SetSurfaceOverrideMaterial(0, mat); goto done; }
+                }
+            }
+            done:;
+        }
     }
 
     private static void RebuildWallMesh(StaticBody3D wallBody, WallJunctionSolver.Offsets off)
