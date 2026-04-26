@@ -2,7 +2,7 @@ using Godot;
 
 public enum BuildMode
 {
-    None, Floor, Walls, Ceiling, Doors, Windows, Stairs
+    None, Floor, Walls, Roof, Doors, Windows, Stairs
 }
 
 [Tool]
@@ -20,6 +20,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private WallBuilder    _wallBuilder;
     private OpeningBuilder _openingBuilder;
     private StairsBuilder  _stairsBuilder;
+    private RoofBuilder    _roofBuilder;
 
     public override void _EnterTree()
     {
@@ -27,6 +28,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _wallBuilder    = new WallBuilder(this);
         _openingBuilder = new OpeningBuilder(this);
         _stairsBuilder  = new StairsBuilder(this);
+        _roofBuilder    = new RoofBuilder(this);
 
         var dockScene = GD.Load<PackedScene>("res://addons/home_builder/src/HomeBuilderDock.tscn");
         _dock = dockScene.Instantiate<Control>();
@@ -41,7 +43,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 {
                     "floor"   => BuildMode.Floor,
                     "walls"   => BuildMode.Walls,
-                    "ceiling" => BuildMode.Ceiling,
+                    "roof"    => BuildMode.Roof,
                     "doors"   => BuildMode.Doors,
                     "windows" => BuildMode.Windows,
                     "stairs"  => BuildMode.Stairs,
@@ -118,6 +120,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         {
             BuildMode.Floor   => _floorBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Walls   => _wallBuilder.HandleInput(camera, inputEvent, FloorBaseY),
+            BuildMode.Roof    => _roofBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Doors   => _openingBuilder.HandleInput(camera, inputEvent, isDoor: true,  wallParent),
             BuildMode.Windows => _openingBuilder.HandleInput(camera, inputEvent, isDoor: false, wallParent),
             BuildMode.Stairs  => _stairsBuilder.HandleInput(camera, inputEvent, FloorBaseY),
@@ -138,6 +141,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         {
             case BuildMode.Floor:   _floorBuilder.CreateGhost(scene, FloorBaseY);         break;
             case BuildMode.Walls:   _wallBuilder.CreateMarker(scene, FloorBaseY);         break;
+            case BuildMode.Roof:    _roofBuilder.CreateGhost(scene, FloorBaseY);          break;
             case BuildMode.Doors:   _openingBuilder.CreateMarker(scene, isDoor: true);    break;
             case BuildMode.Windows: _openingBuilder.CreateMarker(scene, isDoor: false);   break;
             case BuildMode.Stairs:  _stairsBuilder.CreateGhost(scene, FloorBaseY);        break;
@@ -150,6 +154,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _wallBuilder?.ClearPreview();
         _openingBuilder?.ClearPreview();
         _stairsBuilder?.ClearPreview();
+        _roofBuilder?.ClearPreview();
     }
 
     // -------------------------------------------------------------------------
@@ -178,7 +183,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private static int? ParseNodeIndex(StringName name)
     {
         string s = name.ToString();
-        foreach (string prefix in new[] { "Floor_", "Walls_", "Stairs_" })
+        foreach (string prefix in new[] { "Floor_", "Walls_", "Stairs_", "Roof_" })
         {
             if (s.StartsWith(prefix) && int.TryParse(s[prefix.Length..], out int idx))
                 return idx;
