@@ -161,7 +161,7 @@ public class OpeningBuilder
     {
         if (wallBody.GetParent() is not Node3D parent) return default;
         var all = WallJunctionSolver.Solve(parent);
-        return all.TryGetValue(wallBody, out var off)
+        return all.Offsets.TryGetValue(wallBody, out var off)
             ? WallJunctionSolver.ToMeshJoins(off)
             : default;
     }

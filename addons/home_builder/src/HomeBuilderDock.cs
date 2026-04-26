@@ -9,6 +9,8 @@ public partial class HomeBuilderDock : Control
     [Signal]
     public delegate void FloorChangedEventHandler(int floor);
 
+    private const string Root = "Scroll/Margin/MainContainer";
+
     private Button _floorButton;
     private Button _wallButton;
     private Button _ceilingButton;
@@ -21,6 +23,14 @@ public partial class HomeBuilderDock : Control
     private Button _floorUpButton;
     private Button _floorDownButton;
     private Label  _floorLabel;
+
+    // Material section roots (used to show/hide based on active mode)
+    private VBoxContainer _tileSection;
+    private VBoxContainer _wallSection;
+    private VBoxContainer _stairSection;
+    private HSeparator    _tileSeparator;
+    private HSeparator    _wallSeparator;
+    private HSeparator    _stairSeparator;
 
     // Tile material pickers
     private EditorResourcePicker _tileTopPicker;
@@ -49,25 +59,32 @@ public partial class HomeBuilderDock : Control
     public Material WallFaceBMaterial  => _wallFaceBPicker?.EditedResource  as Material;
     public Material WallEdgesMaterial  => _wallEdgesPicker?.EditedResource  as Material;
 
-    // ── Stair materials ────────────────────────────────────────────────────────
+    // ── Stair materials ───────────────────────────────────────────────────────
     public Material StairTopMaterial    => _stairTopPicker?.EditedResource    as Material;
     public Material StairBottomMaterial => _stairBottomPicker?.EditedResource as Material;
     public Material StairSidesMaterial  => _stairSidesPicker?.EditedResource  as Material;
 
     public override void _Ready()
     {
-        _floorButton   = GetNode<Button>("MainContainer/FloorButton");
-        _wallButton    = GetNode<Button>("MainContainer/WallButton");
-        _ceilingButton = GetNode<Button>("MainContainer/CeilingButton");
-        _doorButton    = GetNode<Button>("MainContainer/DoorButton");
-        _windowButton  = GetNode<Button>("MainContainer/WindowButton");
-        _stairsButton  = GetNode<Button>("MainContainer/StairsButton");
-        _noneButton    = GetNode<Button>("MainContainer/NoneButton");
-        _statusLabel   = GetNode<Label>("MainContainer/StatusLabel");
+        _floorButton   = GetNode<Button>($"{Root}/ModeGrid/FloorButton");
+        _wallButton    = GetNode<Button>($"{Root}/ModeGrid/WallButton");
+        _ceilingButton = GetNode<Button>($"{Root}/ModeGrid/CeilingButton");
+        _doorButton    = GetNode<Button>($"{Root}/ModeGrid/DoorButton");
+        _windowButton  = GetNode<Button>($"{Root}/ModeGrid/WindowButton");
+        _stairsButton  = GetNode<Button>($"{Root}/ModeGrid/StairsButton");
+        _noneButton    = GetNode<Button>($"{Root}/NoneButton");
+        _statusLabel   = GetNode<Label>($"{Root}/StatusLabel");
 
-        _floorUpButton   = GetNode<Button>("MainContainer/FloorSelector/FloorUpButton");
-        _floorDownButton = GetNode<Button>("MainContainer/FloorSelector/FloorDownButton");
-        _floorLabel      = GetNode<Label>("MainContainer/FloorSelector/FloorLabel");
+        _floorUpButton   = GetNode<Button>($"{Root}/FloorSelector/FloorUpButton");
+        _floorDownButton = GetNode<Button>($"{Root}/FloorSelector/FloorDownButton");
+        _floorLabel      = GetNode<Label>($"{Root}/FloorSelector/FloorLabel");
+
+        _tileSection    = GetNode<VBoxContainer>($"{Root}/TileMaterials");
+        _wallSection    = GetNode<VBoxContainer>($"{Root}/WallMaterials");
+        _stairSection   = GetNode<VBoxContainer>($"{Root}/StairMaterials");
+        _tileSeparator  = GetNode<HSeparator>($"{Root}/HSeparator4");
+        _wallSeparator  = GetNode<HSeparator>($"{Root}/HSeparator5");
+        _stairSeparator = GetNode<HSeparator>($"{Root}/HSeparator6");
 
         var group = new ButtonGroup();
         _floorButton.ButtonGroup   = group;
@@ -90,21 +107,22 @@ public partial class HomeBuilderDock : Control
         _floorDownButton.Pressed += OnFloorDown;
 
         // Tile pickers
-        _tileTopPicker    = CreatePicker("MainContainer/TileMaterials/TopRow/TopPicker");
-        _tileBottomPicker = CreatePicker("MainContainer/TileMaterials/BottomRow/BottomPicker");
-        _tileSidesPicker  = CreatePicker("MainContainer/TileMaterials/SidesRow/SidesPicker");
+        _tileTopPicker    = CreatePicker($"{Root}/TileMaterials/TopRow/TopPicker");
+        _tileBottomPicker = CreatePicker($"{Root}/TileMaterials/BottomRow/BottomPicker");
+        _tileSidesPicker  = CreatePicker($"{Root}/TileMaterials/SidesRow/SidesPicker");
 
         // Wall pickers
-        _wallFaceAPicker = CreatePicker("MainContainer/WallMaterials/FaceARow/FaceAPicker");
-        _wallFaceBPicker = CreatePicker("MainContainer/WallMaterials/FaceBRow/FaceBPicker");
-        _wallEdgesPicker = CreatePicker("MainContainer/WallMaterials/EdgesRow/EdgesPicker");
+        _wallFaceAPicker = CreatePicker($"{Root}/WallMaterials/FaceARow/FaceAPicker");
+        _wallFaceBPicker = CreatePicker($"{Root}/WallMaterials/FaceBRow/FaceBPicker");
+        _wallEdgesPicker = CreatePicker($"{Root}/WallMaterials/EdgesRow/EdgesPicker");
 
         // Stair pickers
-        _stairTopPicker    = CreatePicker("MainContainer/StairMaterials/TopRow/TopPicker");
-        _stairBottomPicker = CreatePicker("MainContainer/StairMaterials/BottomRow/BottomPicker");
-        _stairSidesPicker  = CreatePicker("MainContainer/StairMaterials/SidesRow/SidesPicker");
+        _stairTopPicker    = CreatePicker($"{Root}/StairMaterials/TopRow/TopPicker");
+        _stairBottomPicker = CreatePicker($"{Root}/StairMaterials/BottomRow/BottomPicker");
+        _stairSidesPicker  = CreatePicker($"{Root}/StairMaterials/SidesRow/SidesPicker");
 
         UpdateFloorLabel();
+        UpdateMaterialSectionsVisibility("none");
     }
 
     private EditorResourcePicker CreatePicker(string containerPath)
@@ -123,9 +141,37 @@ public partial class HomeBuilderDock : Control
 
     private void OnModeSelected(string mode)
     {
-        _statusLabel.Text = $"Modo activo: {mode}";
+        _statusLabel.Text = mode == "none"
+            ? "Sin modo activo"
+            : $"Modo activo: {ModeDisplayName(mode)}";
+        UpdateMaterialSectionsVisibility(mode);
         EmitSignal(SignalName.ModeChanged, mode);
     }
+
+    private void UpdateMaterialSectionsVisibility(string mode)
+    {
+        bool showTile  = mode is "floor" or "ceiling";
+        bool showWall  = mode is "walls" or "doors" or "windows";
+        bool showStair = mode is "stairs";
+
+        _tileSection.Visible    = showTile;
+        _tileSeparator.Visible  = showTile;
+        _wallSection.Visible    = showWall;
+        _wallSeparator.Visible  = showWall;
+        _stairSection.Visible   = showStair;
+        _stairSeparator.Visible = showStair;
+    }
+
+    private static string ModeDisplayName(string mode) => mode switch
+    {
+        "floor"   => "Suelos",
+        "walls"   => "Paredes",
+        "ceiling" => "Techos",
+        "doors"   => "Puertas",
+        "windows" => "Ventanas",
+        "stairs"  => "Escaleras",
+        _         => mode,
+    };
 
     private void OnFloorUp()
     {
@@ -143,7 +189,6 @@ public partial class HomeBuilderDock : Control
 
     private void UpdateFloorLabel()
     {
-        _floorLabel.Text          = $"Piso {_currentFloor}";
-        _floorDownButton.Disabled = false;
+        _floorLabel.Text = $"Piso {_currentFloor}";
     }
 }
