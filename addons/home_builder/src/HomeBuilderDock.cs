@@ -28,9 +28,11 @@ public partial class HomeBuilderDock : Control
     private VBoxContainer _tileSection;
     private VBoxContainer _wallSection;
     private VBoxContainer _stairSection;
+    private VBoxContainer _roofSection;
     private HSeparator    _tileSeparator;
     private HSeparator    _wallSeparator;
     private HSeparator    _stairSeparator;
+    private HSeparator    _roofSeparator;
 
     // Tile material pickers
     private EditorResourcePicker _tileTopPicker;
@@ -46,6 +48,16 @@ public partial class HomeBuilderDock : Control
     private EditorResourcePicker _stairTopPicker;
     private EditorResourcePicker _stairBottomPicker;
     private EditorResourcePicker _stairSidesPicker;
+
+    // Roof material pickers + shape config
+    private EditorResourcePicker _roofTopPicker;
+    private EditorResourcePicker _roofBottomPicker;
+    private EditorResourcePicker _roofSidesPicker;
+    private OptionButton         _roofTypeOption;
+    private OptionButton         _roofDirectionOption;
+    private SpinBox              _roofPitchSpin;
+    private Label                _roofDirectionLabel;
+    private Label                _roofPitchLabel;
 
     private int _currentFloor = 0;
 
@@ -63,6 +75,14 @@ public partial class HomeBuilderDock : Control
     public Material StairTopMaterial    => _stairTopPicker?.EditedResource    as Material;
     public Material StairBottomMaterial => _stairBottomPicker?.EditedResource as Material;
     public Material StairSidesMaterial  => _stairSidesPicker?.EditedResource  as Material;
+
+    // ── Roof config + materials ───────────────────────────────────────────────
+    public Material      RoofTopMaterial       => _roofTopPicker?.EditedResource    as Material;
+    public Material      RoofBottomMaterial    => _roofBottomPicker?.EditedResource as Material;
+    public Material      RoofSidesMaterial     => _roofSidesPicker?.EditedResource  as Material;
+    public RoofType      SelectedRoofType      => (RoofType)(_roofTypeOption?.Selected ?? 0);
+    public RoofDirection SelectedRoofDirection => (RoofDirection)(_roofDirectionOption?.Selected ?? 0);
+    public float         RoofPitch             => (float)(_roofPitchSpin?.Value ?? 1.5f);
 
     public override void _Ready()
     {
@@ -82,9 +102,23 @@ public partial class HomeBuilderDock : Control
         _tileSection    = GetNode<VBoxContainer>($"{Root}/TileMaterials");
         _wallSection    = GetNode<VBoxContainer>($"{Root}/WallMaterials");
         _stairSection   = GetNode<VBoxContainer>($"{Root}/StairMaterials");
+        _roofSection    = GetNode<VBoxContainer>($"{Root}/RoofMaterials");
         _tileSeparator  = GetNode<HSeparator>($"{Root}/HSeparator4");
         _wallSeparator  = GetNode<HSeparator>($"{Root}/HSeparator5");
         _stairSeparator = GetNode<HSeparator>($"{Root}/HSeparator6");
+        _roofSeparator  = GetNode<HSeparator>($"{Root}/HSeparator7");
+
+        // Roof config controls
+        _roofTypeOption      = GetNode<OptionButton>($"{Root}/RoofMaterials/TypeRow/TypeOption");
+        _roofDirectionOption = GetNode<OptionButton>($"{Root}/RoofMaterials/DirectionRow/DirectionOption");
+        _roofPitchSpin       = GetNode<SpinBox>($"{Root}/RoofMaterials/PitchRow/PitchSpin");
+        _roofDirectionLabel  = GetNode<Label>($"{Root}/RoofMaterials/DirectionRow/DirectionLabel");
+        _roofPitchLabel      = GetNode<Label>($"{Root}/RoofMaterials/PitchRow/PitchLabel");
+
+        PopulateRoofTypeOptions();
+        PopulateRoofDirectionOptions();
+        _roofTypeOption.ItemSelected += _ => UpdateRoofShapeControls();
+        UpdateRoofShapeControls();
 
         var group = new ButtonGroup();
         _floorButton.ButtonGroup   = group;
@@ -97,7 +131,7 @@ public partial class HomeBuilderDock : Control
 
         _floorButton.Pressed   += () => OnModeSelected("floor");
         _wallButton.Pressed    += () => OnModeSelected("walls");
-        _ceilingButton.Pressed += () => OnModeSelected("ceiling");
+        _ceilingButton.Pressed += () => OnModeSelected("roof");
         _doorButton.Pressed    += () => OnModeSelected("doors");
         _windowButton.Pressed  += () => OnModeSelected("windows");
         _stairsButton.Pressed  += () => OnModeSelected("stairs");
@@ -121,8 +155,45 @@ public partial class HomeBuilderDock : Control
         _stairBottomPicker = CreatePicker($"{Root}/StairMaterials/BottomRow/BottomPicker");
         _stairSidesPicker  = CreatePicker($"{Root}/StairMaterials/SidesRow/SidesPicker");
 
+        // Roof pickers
+        _roofTopPicker    = CreatePicker($"{Root}/RoofMaterials/TopRow/TopPicker");
+        _roofBottomPicker = CreatePicker($"{Root}/RoofMaterials/BottomRow/BottomPicker");
+        _roofSidesPicker  = CreatePicker($"{Root}/RoofMaterials/SidesRow/SidesPicker");
+
         UpdateFloorLabel();
         UpdateMaterialSectionsVisibility("none");
+    }
+
+    private void PopulateRoofTypeOptions()
+    {
+        _roofTypeOption.Clear();
+        _roofTypeOption.AddItem("Plano",         (int)RoofType.Flat);
+        _roofTypeOption.AddItem("A un agua",     (int)RoofType.Shed);
+        _roofTypeOption.AddItem("A dos aguas",   (int)RoofType.Gable);
+        _roofTypeOption.AddItem("A cuatro aguas",(int)RoofType.Hip);
+    }
+
+    private void PopulateRoofDirectionOptions()
+    {
+        _roofDirectionOption.Clear();
+        _roofDirectionOption.AddItem("Norte", (int)RoofDirection.North);
+        _roofDirectionOption.AddItem("Sur",   (int)RoofDirection.South);
+        _roofDirectionOption.AddItem("Este",  (int)RoofDirection.East);
+        _roofDirectionOption.AddItem("Oeste", (int)RoofDirection.West);
+    }
+
+    private void UpdateRoofShapeControls()
+    {
+        // Direction and pitch are only meaningful for non-flat roofs;
+        // hip ignores direction (rotational symmetry of a rectangular hip).
+        var t = SelectedRoofType;
+        bool needsPitch     = t != RoofType.Flat;
+        bool needsDirection = t == RoofType.Shed || t == RoofType.Gable;
+
+        _roofPitchSpin.Editable      = needsPitch;
+        _roofPitchLabel.Modulate     = needsPitch ? Colors.White : new Color(1, 1, 1, 0.4f);
+        _roofDirectionOption.Disabled = !needsDirection;
+        _roofDirectionLabel.Modulate  = needsDirection ? Colors.White : new Color(1, 1, 1, 0.4f);
     }
 
     private EditorResourcePicker CreatePicker(string containerPath)
@@ -150,9 +221,10 @@ public partial class HomeBuilderDock : Control
 
     private void UpdateMaterialSectionsVisibility(string mode)
     {
-        bool showTile  = mode is "floor" or "ceiling";
+        bool showTile  = mode is "floor";
         bool showWall  = mode is "walls" or "doors" or "windows";
         bool showStair = mode is "stairs";
+        bool showRoof  = mode is "roof";
 
         _tileSection.Visible    = showTile;
         _tileSeparator.Visible  = showTile;
@@ -160,13 +232,15 @@ public partial class HomeBuilderDock : Control
         _wallSeparator.Visible  = showWall;
         _stairSection.Visible   = showStair;
         _stairSeparator.Visible = showStair;
+        _roofSection.Visible    = showRoof;
+        _roofSeparator.Visible  = showRoof;
     }
 
     private static string ModeDisplayName(string mode) => mode switch
     {
         "floor"   => "Suelos",
         "walls"   => "Paredes",
-        "ceiling" => "Techos",
+        "roof"    => "Tejados",
         "doors"   => "Puertas",
         "windows" => "Ventanas",
         "stairs"  => "Escaleras",

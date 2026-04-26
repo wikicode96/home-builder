@@ -71,7 +71,7 @@ toggle_mode = true
 [node name="CeilingButton" type="Button" parent="Scroll/Margin/MainContainer/ModeGrid"]
 custom_minimum_size = Vector2(0, 36)
 size_flags_horizontal = 3
-text = "Techos"
+text = "Tejados"
 icon = ExtResource("4")
 toggle_mode = true
 
@@ -257,6 +257,92 @@ theme_override_font_sizes/font_size = 11
 vertical_alignment = 1
 
 [node name="SidesPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/StairMaterials/SidesRow"]
+size_flags_horizontal = 3
+
+[node name="HSeparator7" type="HSeparator" parent="Scroll/Margin/MainContainer"]
+
+[node name="RoofMaterials" type="VBoxContainer" parent="Scroll/Margin/MainContainer"]
+theme_override_constants/separation = 4
+
+[node name="RoofMaterialsLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+text = "Tejado"
+theme_override_font_sizes/font_size = 12
+
+[node name="TypeRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+theme_override_constants/separation = 6
+
+[node name="TypeLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/TypeRow"]
+text = "Tipo"
+custom_minimum_size = Vector2(70, 0)
+theme_override_font_sizes/font_size = 11
+vertical_alignment = 1
+
+[node name="TypeOption" type="OptionButton" parent="Scroll/Margin/MainContainer/RoofMaterials/TypeRow"]
+size_flags_horizontal = 3
+
+[node name="DirectionRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+theme_override_constants/separation = 6
+
+[node name="DirectionLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/DirectionRow"]
+text = "Dirección"
+custom_minimum_size = Vector2(70, 0)
+theme_override_font_sizes/font_size = 11
+vertical_alignment = 1
+
+[node name="DirectionOption" type="OptionButton" parent="Scroll/Margin/MainContainer/RoofMaterials/DirectionRow"]
+size_flags_horizontal = 3
+
+[node name="PitchRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+theme_override_constants/separation = 6
+
+[node name="PitchLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/PitchRow"]
+text = "Pendiente"
+custom_minimum_size = Vector2(70, 0)
+theme_override_font_sizes/font_size = 11
+vertical_alignment = 1
+
+[node name="PitchSpin" type="SpinBox" parent="Scroll/Margin/MainContainer/RoofMaterials/PitchRow"]
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 10.0
+step = 0.1
+value = 1.5
+suffix = "m"
+
+[node name="TopRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+theme_override_constants/separation = 6
+
+[node name="TopLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/TopRow"]
+text = "Superior"
+custom_minimum_size = Vector2(70, 0)
+theme_override_font_sizes/font_size = 11
+vertical_alignment = 1
+
+[node name="TopPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials/TopRow"]
+size_flags_horizontal = 3
+
+[node name="BottomRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+theme_override_constants/separation = 6
+
+[node name="BottomLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/BottomRow"]
+text = "Inferior"
+custom_minimum_size = Vector2(70, 0)
+theme_override_font_sizes/font_size = 11
+vertical_alignment = 1
+
+[node name="BottomPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials/BottomRow"]
+size_flags_horizontal = 3
+
+[node name="SidesRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+theme_override_constants/separation = 6
+
+[node name="SidesLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/SidesRow"]
+text = "Laterales"
+custom_minimum_size = Vector2(70, 0)
+theme_override_font_sizes/font_size = 11
+vertical_alignment = 1
+
+[node name="SidesPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials/SidesRow"]
 size_flags_horizontal = 3
 
 [node name="HSeparator6" type="HSeparator" parent="Scroll/Margin/MainContainer"]
