@@ -18,7 +18,7 @@ public class RoofBuilder
         _ghost = PreviewHelper.CreateMarker(
             scene,
             "__HB_GhostRoof__",
-            new Vector3(1f, 0.1f, 1f),
+            new Vector3(0.5f, 0.1f, 0.5f),
             new Color(0.2f, 0.5f, 0.9f, 0.4f),
             new Vector3(0f, baseY + 0.05f, 0f)
         );
@@ -39,7 +39,7 @@ public class RoofBuilder
             var pos = RaycastHelper.ToFloorPlane(camera, motion.Position, baseY);
             if (!pos.HasValue) return 0;
 
-            var cell = SnapHelper.ToTileCenter(pos.Value, baseY);
+            var cell = SnapHelper.ToHalfTileCenter(pos.Value, baseY);
             cell.Y = baseY + 0.05f;
 
             if (_dragStart.HasValue)
@@ -48,7 +48,7 @@ public class RoofBuilder
             }
             else if (_ghost != null && GodotObject.IsInstanceValid(_ghost))
             {
-                _ghost.Size     = new Vector3(1f, 0.1f, 1f);
+                _ghost.Size     = new Vector3(0.5f, 0.1f, 0.5f);
                 _ghost.Position = cell;
             }
             return 0;
@@ -61,18 +61,18 @@ public class RoofBuilder
 
             if (mb.Pressed)
             {
-                _dragStart = SnapHelper.ToTileCenter(pos.Value, baseY);
+                _dragStart = SnapHelper.ToHalfTileCenter(pos.Value, baseY);
                 return 1;
             }
 
             if (_dragStart.HasValue)
             {
-                var endCell = SnapHelper.ToTileCenter(pos.Value, baseY);
+                var endCell = SnapHelper.ToHalfTileCenter(pos.Value, baseY);
                 PlaceRoof(_dragStart.Value, endCell, baseY, _plugin.ActiveFloor);
                 _dragStart = null;
 
                 if (_ghost != null && GodotObject.IsInstanceValid(_ghost))
-                    _ghost.Size = new Vector3(1f, 0.1f, 1f);
+                    _ghost.Size = new Vector3(0.5f, 0.1f, 0.5f);
             }
             return 1;
         }
@@ -84,19 +84,21 @@ public class RoofBuilder
     {
         if (_ghost == null || !GodotObject.IsInstanceValid(_ghost)) return;
 
-        var (minX, maxX, minZ, maxZ) = SnapHelper.GridBounds(a, b);
+        var (minX, maxX, minZ, maxZ) = SnapHelper.HalfGridBounds(a, b);
         int cols = maxX - minX + 1;
         int rows = maxZ - minZ + 1;
+        float w = cols * 0.5f;
+        float d = rows * 0.5f;
 
-        _ghost.Size     = new Vector3(cols, 0.1f, rows);
-        _ghost.Position = new Vector3(minX + cols * 0.5f, baseY + 0.05f, minZ + rows * 0.5f);
+        _ghost.Size     = new Vector3(w, 0.1f, d);
+        _ghost.Position = new Vector3(minX * 0.5f + w * 0.5f, baseY + 0.05f, minZ * 0.5f + d * 0.5f);
     }
 
     private void PlaceRoof(Vector3 a, Vector3 b, float baseY, int activeFloor)
     {
-        var (minX, maxX, minZ, maxZ) = SnapHelper.GridBounds(a, b);
-        float w = maxX - minX + 1;
-        float d = maxZ - minZ + 1;
+        var (minX, maxX, minZ, maxZ) = SnapHelper.HalfGridBounds(a, b);
+        float w = (maxX - minX + 1) * 0.5f;
+        float d = (maxZ - minZ + 1) * 0.5f;
 
         var dock  = _plugin.Dock;
         var type  = dock?.SelectedRoofType      ?? RoofType.Flat;
@@ -114,7 +116,7 @@ public class RoofBuilder
         var body = new StaticBody3D
         {
             Name     = "Roof",
-            Position = new Vector3(minX, baseY, minZ),
+            Position = new Vector3(minX * 0.5f, baseY, minZ * 0.5f),
         };
 
         var inst = new MeshInstance3D { Mesh = mesh };
