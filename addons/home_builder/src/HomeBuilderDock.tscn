@@ -1,15 +1,19 @@
-[gd_scene load_steps=8 format=3 uid="uid://home_builder_dock"]
+[gd_scene format=3 uid="uid://bsh1q0iona6a5"]
 
-[ext_resource type="Script" path="res://addons/home_builder/src/HomeBuilderDock.cs" id="1"]
-[ext_resource type="Texture2D" path="res://addons/home_builder/icons/suelos.svg" id="2"]
-[ext_resource type="Texture2D" path="res://addons/home_builder/icons/paredes.svg" id="3"]
-[ext_resource type="Texture2D" path="res://addons/home_builder/icons/techos.svg" id="4"]
-[ext_resource type="Texture2D" path="res://addons/home_builder/icons/puertas.svg" id="5"]
-[ext_resource type="Texture2D" path="res://addons/home_builder/icons/ventanas.svg" id="6"]
-[ext_resource type="Texture2D" path="res://addons/home_builder/icons/escaleras.svg" id="7"]
+[ext_resource type="Script" uid="uid://cepw2jiiilfh6" path="res://addons/home_builder/src/HomeBuilderDock.cs" id="1"]
+[ext_resource type="Texture2D" uid="uid://cacmv1peq5la6" path="res://addons/home_builder/icons/suelos.svg" id="2"]
+[ext_resource type="Texture2D" uid="uid://b4dqptsmvtd2c" path="res://addons/home_builder/icons/paredes.svg" id="3"]
+[ext_resource type="Texture2D" uid="uid://cf8fusl4a48ah" path="res://addons/home_builder/icons/techos.svg" id="4"]
+[ext_resource type="Texture2D" uid="uid://dng5a2ygrx1mg" path="res://addons/home_builder/icons/puertas.svg" id="5"]
+[ext_resource type="Texture2D" uid="uid://dg6x8m1v7mxm1" path="res://addons/home_builder/icons/ventanas.svg" id="6"]
+[ext_resource type="Texture2D" uid="uid://ckcup2xplhuco" path="res://addons/home_builder/icons/escaleras.svg" id="7"]
+[ext_resource type="Texture2D" uid="uid://kwj7rsbch684" path="res://addons/home_builder/icons/vallas.svg" id="8"]
 
-[node name="HomeBuilderDock" type="Control"]
-custom_minimum_size = Vector2(240, 0)
+[sub_resource type="ButtonGroup" id="ButtonGroup_r3gl0"]
+
+[node name="HomeBuilderDock" type="Control" unique_id=1184045607]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -17,338 +21,462 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 
-[node name="Scroll" type="ScrollContainer" parent="."]
-anchors_preset = 15
+[node name="Background" type="PanelContainer" parent="." unique_id=1620495455]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-horizontal_scroll_mode = 0
 
-[node name="Margin" type="MarginContainer" parent="Scroll"]
-size_flags_horizontal = 3
-size_flags_vertical = 3
+[node name="Margin" type="MarginContainer" parent="Background" unique_id=1060136542]
+layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="MainContainer" type="VBoxContainer" parent="Scroll/Margin"]
+[node name="MainHBox" type="HBoxContainer" parent="Background/Margin" unique_id=66710652]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="LeftColumn" type="HBoxContainer" parent="Background/Margin/MainHBox" unique_id=408539011]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ModeGrid" type="GridContainer" parent="Background/Margin/MainHBox/LeftColumn" unique_id=284365635]
+layout_mode = 2
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+columns = 4
+
+[node name="FloorButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=144427165]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Suelos"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("2")
+expand_icon = true
+
+[node name="WallButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=978949437]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Paredes"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("3")
+expand_icon = true
+
+[node name="CeilingButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=215695553]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Tejados"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("4")
+expand_icon = true
+
+[node name="DoorButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=2050712747]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Puertas"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("5")
+expand_icon = true
+
+[node name="WindowButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=1310329576]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Ventanas"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("6")
+expand_icon = true
+
+[node name="StairsButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=512361688]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Escaleras"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("7")
+expand_icon = true
+
+[node name="FenceButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=1994106757]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Vallas"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("8")
+expand_icon = true
+
+[node name="NoneButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=907469383]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Desactivar edición"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+text = "✕"
+
+[node name="FloorSelector" type="VBoxContainer" parent="Background/Margin/MainHBox/LeftColumn" unique_id=1134372724]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="FloorUpButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/FloorSelector" unique_id=1908828589]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+text = "▲"
+
+[node name="FloorLabel" type="Label" parent="Background/Margin/MainHBox/LeftColumn/FloorSelector" unique_id=1519316023]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_font_sizes/font_size = 12
+text = "P 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FloorDownButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/FloorSelector" unique_id=1286905224]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+text = "▼"
+
+[node name="VSeparator" type="VSeparator" parent="Background/Margin/MainHBox" unique_id=1820171863]
+layout_mode = 2
+
+[node name="RightColumn" type="VBoxContainer" parent="Background/Margin/MainHBox" unique_id=1892366455]
+layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="Scroll/Margin/MainContainer"]
-text = "Home Builder"
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 18
+[node name="StatusLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn" unique_id=1580116888]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "Sin modo activo"
 
-[node name="HSeparator" type="HSeparator" parent="Scroll/Margin/MainContainer"]
-
-[node name="ModeLabel" type="Label" parent="Scroll/Margin/MainContainer"]
-text = "Modo de construcción"
-theme_override_font_sizes/font_size = 12
-
-[node name="ModeGrid" type="GridContainer" parent="Scroll/Margin/MainContainer"]
-columns = 2
-theme_override_constants/h_separation = 6
-theme_override_constants/v_separation = 6
-
-[node name="FloorButton" type="Button" parent="Scroll/Margin/MainContainer/ModeGrid"]
-custom_minimum_size = Vector2(0, 36)
+[node name="ConfigStack" type="Control" parent="Background/Margin/MainHBox/RightColumn" unique_id=1478427670]
+layout_mode = 2
 size_flags_horizontal = 3
-text = "Suelos"
-icon = ExtResource("2")
-toggle_mode = true
+size_flags_vertical = 3
 
-[node name="WallButton" type="Button" parent="Scroll/Margin/MainContainer/ModeGrid"]
-custom_minimum_size = Vector2(0, 36)
+[node name="TileMaterials" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=1236798111]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_constants/separation = 18
+
+[node name="TopRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials" unique_id=1340270821]
+layout_mode = 2
 size_flags_horizontal = 3
-text = "Paredes"
-icon = ExtResource("3")
-toggle_mode = true
-
-[node name="CeilingButton" type="Button" parent="Scroll/Margin/MainContainer/ModeGrid"]
-custom_minimum_size = Vector2(0, 36)
-size_flags_horizontal = 3
-text = "Tejados"
-icon = ExtResource("4")
-toggle_mode = true
-
-[node name="DoorButton" type="Button" parent="Scroll/Margin/MainContainer/ModeGrid"]
-custom_minimum_size = Vector2(0, 36)
-size_flags_horizontal = 3
-text = "Puertas"
-icon = ExtResource("5")
-toggle_mode = true
-
-[node name="WindowButton" type="Button" parent="Scroll/Margin/MainContainer/ModeGrid"]
-custom_minimum_size = Vector2(0, 36)
-size_flags_horizontal = 3
-text = "Ventanas"
-icon = ExtResource("6")
-toggle_mode = true
-
-[node name="StairsButton" type="Button" parent="Scroll/Margin/MainContainer/ModeGrid"]
-custom_minimum_size = Vector2(0, 36)
-size_flags_horizontal = 3
-text = "Escaleras"
-icon = ExtResource("7")
-toggle_mode = true
-
-[node name="NoneButton" type="Button" parent="Scroll/Margin/MainContainer"]
-custom_minimum_size = Vector2(0, 32)
-text = "Desactivar edición"
-toggle_mode = true
-
-[node name="HSeparator2" type="HSeparator" parent="Scroll/Margin/MainContainer"]
-
-[node name="FloorSelectorLabel" type="Label" parent="Scroll/Margin/MainContainer"]
-text = "Planta"
-theme_override_font_sizes/font_size = 12
-
-[node name="FloorSelector" type="HBoxContainer" parent="Scroll/Margin/MainContainer"]
-theme_override_constants/separation = 6
-
-[node name="FloorDownButton" type="Button" parent="Scroll/Margin/MainContainer/FloorSelector"]
-text = "▼"
-custom_minimum_size = Vector2(40, 32)
-
-[node name="FloorLabel" type="Label" parent="Scroll/Margin/MainContainer/FloorSelector"]
-text = "Piso 1"
-size_flags_horizontal = 3
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="FloorUpButton" type="Button" parent="Scroll/Margin/MainContainer/FloorSelector"]
-text = "▲"
-custom_minimum_size = Vector2(40, 32)
-
-[node name="HSeparator3" type="HSeparator" parent="Scroll/Margin/MainContainer"]
-
-[node name="TileMaterials" type="VBoxContainer" parent="Scroll/Margin/MainContainer"]
 theme_override_constants/separation = 4
 
-[node name="TileMaterialsLabel" type="Label" parent="Scroll/Margin/MainContainer/TileMaterials"]
-text = "Materiales baldosa"
-theme_override_font_sizes/font_size = 12
-
-[node name="TopRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/TileMaterials"]
-theme_override_constants/separation = 6
-
-[node name="TopLabel" type="Label" parent="Scroll/Margin/MainContainer/TileMaterials/TopRow"]
+[node name="TopLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/TopRow" unique_id=827811408]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Superior"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="TopPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/TileMaterials/TopRow"]
+[node name="TopPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/TopRow" unique_id=2134729]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BottomRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/TileMaterials"]
-theme_override_constants/separation = 6
-
-[node name="BottomLabel" type="Label" parent="Scroll/Margin/MainContainer/TileMaterials/BottomRow"]
-text = "Inferior"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
-
-[node name="BottomPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/TileMaterials/BottomRow"]
+[node name="BottomRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials" unique_id=450087740]
+layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="SidesRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/TileMaterials"]
-theme_override_constants/separation = 6
-
-[node name="SidesLabel" type="Label" parent="Scroll/Margin/MainContainer/TileMaterials/SidesRow"]
-text = "Laterales"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
-
-[node name="SidesPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/TileMaterials/SidesRow"]
-size_flags_horizontal = 3
-
-[node name="HSeparator4" type="HSeparator" parent="Scroll/Margin/MainContainer"]
-
-[node name="WallMaterials" type="VBoxContainer" parent="Scroll/Margin/MainContainer"]
 theme_override_constants/separation = 4
 
-[node name="WallMaterialsLabel" type="Label" parent="Scroll/Margin/MainContainer/WallMaterials"]
-text = "Materiales pared"
-theme_override_font_sizes/font_size = 12
+[node name="BottomLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/BottomRow" unique_id=1986082517]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Inferior"
 
-[node name="FaceARow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/WallMaterials"]
-theme_override_constants/separation = 6
+[node name="BottomPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/BottomRow" unique_id=118185774]
+layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="FaceALabel" type="Label" parent="Scroll/Margin/MainContainer/WallMaterials/FaceARow"]
+[node name="SidesRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials" unique_id=1374958368]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SidesLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/SidesRow" unique_id=324820326]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Laterales"
+
+[node name="SidesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/SidesRow" unique_id=128321315]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WallMaterials" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=1540364715]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_constants/separation = 18
+
+[node name="FaceARow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials" unique_id=1974609754]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="FaceALabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/FaceARow" unique_id=656343368]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Cara A"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="FaceAPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/WallMaterials/FaceARow"]
+[node name="FaceAPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/FaceARow" unique_id=1598294150]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="FaceBRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/WallMaterials"]
-theme_override_constants/separation = 6
+[node name="FaceBRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials" unique_id=333047579]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 
-[node name="FaceBLabel" type="Label" parent="Scroll/Margin/MainContainer/WallMaterials/FaceBRow"]
+[node name="FaceBLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/FaceBRow" unique_id=18573262]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Cara B"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="FaceBPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/WallMaterials/FaceBRow"]
+[node name="FaceBPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/FaceBRow" unique_id=569371711]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="EdgesRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/WallMaterials"]
-theme_override_constants/separation = 6
+[node name="EdgesRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials" unique_id=355364282]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 
-[node name="EdgesLabel" type="Label" parent="Scroll/Margin/MainContainer/WallMaterials/EdgesRow"]
+[node name="EdgesLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/EdgesRow" unique_id=708919025]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Grosor"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="EdgesPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/WallMaterials/EdgesRow"]
+[node name="EdgesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/EdgesRow" unique_id=638717137]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="HSeparator5" type="HSeparator" parent="Scroll/Margin/MainContainer"]
+[node name="StairMaterials" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=1530151931]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_constants/separation = 18
 
-[node name="StairMaterials" type="VBoxContainer" parent="Scroll/Margin/MainContainer"]
+[node name="TopRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials" unique_id=1022234213]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="StairMaterialsLabel" type="Label" parent="Scroll/Margin/MainContainer/StairMaterials"]
-text = "Materiales escalera"
-theme_override_font_sizes/font_size = 12
-
-[node name="TopRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/StairMaterials"]
-theme_override_constants/separation = 6
-
-[node name="TopLabel" type="Label" parent="Scroll/Margin/MainContainer/StairMaterials/TopRow"]
+[node name="TopLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/TopRow" unique_id=82066276]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Superior"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="TopPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/StairMaterials/TopRow"]
+[node name="TopPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/TopRow" unique_id=787363554]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BottomRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/StairMaterials"]
-theme_override_constants/separation = 6
-
-[node name="BottomLabel" type="Label" parent="Scroll/Margin/MainContainer/StairMaterials/BottomRow"]
-text = "Inferior"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
-
-[node name="BottomPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/StairMaterials/BottomRow"]
+[node name="BottomRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials" unique_id=34731719]
+layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="SidesRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/StairMaterials"]
-theme_override_constants/separation = 6
-
-[node name="SidesLabel" type="Label" parent="Scroll/Margin/MainContainer/StairMaterials/SidesRow"]
-text = "Laterales"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
-
-[node name="SidesPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/StairMaterials/SidesRow"]
-size_flags_horizontal = 3
-
-[node name="HSeparator7" type="HSeparator" parent="Scroll/Margin/MainContainer"]
-
-[node name="RoofMaterials" type="VBoxContainer" parent="Scroll/Margin/MainContainer"]
 theme_override_constants/separation = 4
 
-[node name="RoofMaterialsLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials"]
-text = "Tejado"
-theme_override_font_sizes/font_size = 12
+[node name="BottomLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/BottomRow" unique_id=698223528]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Inferior"
 
-[node name="TypeRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
+[node name="BottomPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/BottomRow" unique_id=1691188208]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SidesRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials" unique_id=49328935]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SidesLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/SidesRow" unique_id=927271327]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Laterales"
+
+[node name="SidesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/SidesRow" unique_id=1533889701]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RoofMaterials" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=961168223]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 130.0
+grow_horizontal = 2
 theme_override_constants/separation = 6
 
-[node name="TypeLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/TypeRow"]
+[node name="ConfigRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials" unique_id=1262547378]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="TypeRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow" unique_id=50835617]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="TypeLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/TypeRow" unique_id=711508513]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Tipo"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="TypeOption" type="OptionButton" parent="Scroll/Margin/MainContainer/RoofMaterials/TypeRow"]
+[node name="TypeOption" type="OptionButton" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/TypeRow" unique_id=1898867553]
+layout_mode = 2
 size_flags_horizontal = 3
+selected = 0
+item_count = 4
+popup/item_0/text = "Plano"
+popup/item_0/id = 0
+popup/item_1/text = "A un agua"
+popup/item_1/id = 1
+popup/item_2/text = "A dos aguas"
+popup/item_2/id = 2
+popup/item_3/text = "A cuatro aguas"
+popup/item_3/id = 3
 
-[node name="DirectionRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
-theme_override_constants/separation = 6
+[node name="DirectionRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow" unique_id=1361938677]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 
-[node name="DirectionLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/DirectionRow"]
+[node name="DirectionLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/DirectionRow" unique_id=1011116454]
+modulate = Color(1, 1, 1, 0.4)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Dirección"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="DirectionOption" type="OptionButton" parent="Scroll/Margin/MainContainer/RoofMaterials/DirectionRow"]
+[node name="DirectionOption" type="OptionButton" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/DirectionRow" unique_id=938358386]
+layout_mode = 2
 size_flags_horizontal = 3
+disabled = true
+selected = 0
+item_count = 4
+popup/item_0/text = "Norte"
+popup/item_0/id = 0
+popup/item_1/text = "Sur"
+popup/item_1/id = 1
+popup/item_2/text = "Este"
+popup/item_2/id = 2
+popup/item_3/text = "Oeste"
+popup/item_3/id = 3
 
-[node name="PitchRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
-theme_override_constants/separation = 6
+[node name="PitchRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow" unique_id=1558484140]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 
-[node name="PitchLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/PitchRow"]
+[node name="PitchLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/PitchRow" unique_id=892648254]
+modulate = Color(1, 1, 1, 0.4)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Pendiente"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="PitchSpin" type="SpinBox" parent="Scroll/Margin/MainContainer/RoofMaterials/PitchRow"]
+[node name="PitchSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/PitchRow" unique_id=1684151225]
+layout_mode = 2
 size_flags_horizontal = 3
-min_value = 0.0
 max_value = 10.0
 step = 0.1
 value = 1.5
+editable = false
 suffix = "m"
 
-[node name="TopRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
-theme_override_constants/separation = 6
+[node name="MaterialsRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials" unique_id=1818790487]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
 
-[node name="TopLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/TopRow"]
+[node name="TopRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow" unique_id=1511347729]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="TopLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/TopRow" unique_id=951497094]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Superior"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="TopPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials/TopRow"]
+[node name="TopPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/TopRow" unique_id=511335985]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BottomRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
-theme_override_constants/separation = 6
+[node name="BottomRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow" unique_id=1828161935]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 
-[node name="BottomLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/BottomRow"]
+[node name="BottomLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/BottomRow" unique_id=249263571]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Inferior"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="BottomPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials/BottomRow"]
+[node name="BottomPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/BottomRow" unique_id=1671742694]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SidesRow" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials"]
-theme_override_constants/separation = 6
+[node name="SidesRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow" unique_id=102048419]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 
-[node name="SidesLabel" type="Label" parent="Scroll/Margin/MainContainer/RoofMaterials/SidesRow"]
+[node name="SidesLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/SidesRow" unique_id=1321244270]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
 text = "Laterales"
-custom_minimum_size = Vector2(70, 0)
-theme_override_font_sizes/font_size = 11
-vertical_alignment = 1
 
-[node name="SidesPicker" type="HBoxContainer" parent="Scroll/Margin/MainContainer/RoofMaterials/SidesRow"]
+[node name="SidesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/SidesRow" unique_id=637112245]
+layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="HSeparator6" type="HSeparator" parent="Scroll/Margin/MainContainer"]
+[node name="FenceAssets" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=1467347958]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_constants/separation = 18
 
-[node name="StatusLabel" type="Label" parent="Scroll/Margin/MainContainer"]
-text = "Sin modo activo"
-horizontal_alignment = 1
-autowrap_mode = 3
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+[node name="AssetRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/FenceAssets" unique_id=467614233]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="AssetLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/FenceAssets/AssetRow" unique_id=1590048090]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Asset (1m, +X)"
+
+[node name="AssetPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/FenceAssets/AssetRow" unique_id=319725219]
+layout_mode = 2
+size_flags_horizontal = 3

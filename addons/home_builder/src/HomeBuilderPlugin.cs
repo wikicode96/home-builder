@@ -2,7 +2,7 @@ using Godot;
 
 public enum BuildMode
 {
-    None, Floor, Walls, Roof, Doors, Windows, Stairs
+    None, Floor, Walls, Roof, Doors, Windows, Stairs, Fences
 }
 
 [Tool]
@@ -21,6 +21,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private OpeningBuilder _openingBuilder;
     private StairsBuilder  _stairsBuilder;
     private RoofBuilder    _roofBuilder;
+    private FenceBuilder   _fenceBuilder;
 
     public override void _EnterTree()
     {
@@ -29,10 +30,11 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _openingBuilder = new OpeningBuilder(this);
         _stairsBuilder  = new StairsBuilder(this);
         _roofBuilder    = new RoofBuilder(this);
+        _fenceBuilder   = new FenceBuilder(this);
 
         var dockScene = GD.Load<PackedScene>("res://addons/home_builder/src/HomeBuilderDock.tscn");
         _dock = dockScene.Instantiate<Control>();
-        AddControlToDock(DockSlot.LeftUl, _dock);
+        AddControlToBottomPanel(_dock, "Home Builder");
 
         _dock.Connect(
             HomeBuilderDock.SignalName.ModeChanged,
@@ -47,6 +49,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                     "doors"   => BuildMode.Doors,
                     "windows" => BuildMode.Windows,
                     "stairs"  => BuildMode.Stairs,
+                    "fences"  => BuildMode.Fences,
                     "none"    => BuildMode.None,
                     _         => BuildMode.None
                 };
@@ -79,7 +82,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         ClearAllPreviews();
         if (_dock != null)
         {
-            RemoveControlFromDocks(_dock);
+            RemoveControlFromBottomPanel(_dock);
             _dock.QueueFree();
             _dock = null;
         }
@@ -124,6 +127,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             BuildMode.Doors   => _openingBuilder.HandleInput(camera, inputEvent, isDoor: true,  wallParent),
             BuildMode.Windows => _openingBuilder.HandleInput(camera, inputEvent, isDoor: false, wallParent),
             BuildMode.Stairs  => _stairsBuilder.HandleInput(camera, inputEvent, FloorBaseY),
+            BuildMode.Fences  => _fenceBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             _                 => (int)AfterGuiInput.Pass,
         };
     }
@@ -145,6 +149,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             case BuildMode.Doors:   _openingBuilder.CreateMarker(scene, isDoor: true);    break;
             case BuildMode.Windows: _openingBuilder.CreateMarker(scene, isDoor: false);   break;
             case BuildMode.Stairs:  _stairsBuilder.CreateGhost(scene, FloorBaseY);        break;
+            case BuildMode.Fences:  _fenceBuilder.CreateMarker(scene, FloorBaseY);        break;
         }
     }
 
@@ -155,6 +160,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _openingBuilder?.ClearPreview();
         _stairsBuilder?.ClearPreview();
         _roofBuilder?.ClearPreview();
+        _fenceBuilder?.ClearPreview();
     }
 
     // -------------------------------------------------------------------------
@@ -183,7 +189,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private static int? ParseNodeIndex(StringName name)
     {
         string s = name.ToString();
-        foreach (string prefix in new[] { "Floor_", "Walls_", "Stairs_", "Roof_" })
+        foreach (string prefix in new[] { "Floor_", "Walls_", "Stairs_", "Roof_", "Fences_" })
         {
             if (s.StartsWith(prefix) && int.TryParse(s[prefix.Length..], out int idx))
                 return idx;

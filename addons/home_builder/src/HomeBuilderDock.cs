@@ -9,30 +9,35 @@ public partial class HomeBuilderDock : Control
     [Signal]
     public delegate void FloorChangedEventHandler(int floor);
 
-    private const string Root = "Scroll/Margin/MainContainer";
+    private const string Left   = "Background/Margin/MainHBox/LeftColumn";
+    private const string Right  = "Background/Margin/MainHBox/RightColumn";
+    private const string Stack  = "Background/Margin/MainHBox/RightColumn/ConfigStack";
 
+    // Mode buttons
     private Button _floorButton;
     private Button _wallButton;
     private Button _ceilingButton;
     private Button _doorButton;
     private Button _windowButton;
     private Button _stairsButton;
+    private Button _fenceButton;
     private Button _noneButton;
-    private Label  _statusLabel;
 
+    // Floor selector
     private Button _floorUpButton;
     private Button _floorDownButton;
     private Label  _floorLabel;
 
-    // Material section roots (used to show/hide based on active mode)
-    private VBoxContainer _tileSection;
-    private VBoxContainer _wallSection;
-    private VBoxContainer _stairSection;
-    private VBoxContainer _roofSection;
-    private HSeparator    _tileSeparator;
-    private HSeparator    _wallSeparator;
-    private HSeparator    _stairSeparator;
-    private HSeparator    _roofSeparator;
+    // Status
+    private Label _statusLabel;
+
+    // Config sections (one visible at a time). Stored as Container so the
+    // section root can be HBox/VBox without changing the field type.
+    private Container _tileSection;
+    private Container _wallSection;
+    private Container _stairSection;
+    private Container _roofSection;
+    private Container _fenceSection;
 
     // Tile material pickers
     private EditorResourcePicker _tileTopPicker;
@@ -49,7 +54,7 @@ public partial class HomeBuilderDock : Control
     private EditorResourcePicker _stairBottomPicker;
     private EditorResourcePicker _stairSidesPicker;
 
-    // Roof material pickers + shape config
+    // Roof config + material pickers
     private EditorResourcePicker _roofTopPicker;
     private EditorResourcePicker _roofBottomPicker;
     private EditorResourcePicker _roofSidesPicker;
@@ -58,6 +63,9 @@ public partial class HomeBuilderDock : Control
     private SpinBox              _roofPitchSpin;
     private Label                _roofDirectionLabel;
     private Label                _roofPitchLabel;
+
+    // Fence asset picker
+    private EditorResourcePicker _fenceAssetPicker;
 
     private int _currentFloor = 0;
 
@@ -84,42 +92,47 @@ public partial class HomeBuilderDock : Control
     public RoofDirection SelectedRoofDirection => (RoofDirection)(_roofDirectionOption?.Selected ?? 0);
     public float         RoofPitch             => (float)(_roofPitchSpin?.Value ?? 1.5f);
 
+    // ── Fence asset ───────────────────────────────────────────────────────────
+    public PackedScene FenceAssetScene => _fenceAssetPicker?.EditedResource as PackedScene;
+
     public override void _Ready()
     {
-        _floorButton   = GetNode<Button>($"{Root}/ModeGrid/FloorButton");
-        _wallButton    = GetNode<Button>($"{Root}/ModeGrid/WallButton");
-        _ceilingButton = GetNode<Button>($"{Root}/ModeGrid/CeilingButton");
-        _doorButton    = GetNode<Button>($"{Root}/ModeGrid/DoorButton");
-        _windowButton  = GetNode<Button>($"{Root}/ModeGrid/WindowButton");
-        _stairsButton  = GetNode<Button>($"{Root}/ModeGrid/StairsButton");
-        _noneButton    = GetNode<Button>($"{Root}/NoneButton");
-        _statusLabel   = GetNode<Label>($"{Root}/StatusLabel");
+        // Mode buttons
+        _floorButton   = GetNode<Button>($"{Left}/ModeGrid/FloorButton");
+        _wallButton    = GetNode<Button>($"{Left}/ModeGrid/WallButton");
+        _ceilingButton = GetNode<Button>($"{Left}/ModeGrid/CeilingButton");
+        _doorButton    = GetNode<Button>($"{Left}/ModeGrid/DoorButton");
+        _windowButton  = GetNode<Button>($"{Left}/ModeGrid/WindowButton");
+        _stairsButton  = GetNode<Button>($"{Left}/ModeGrid/StairsButton");
+        _fenceButton   = GetNode<Button>($"{Left}/ModeGrid/FenceButton");
+        _noneButton    = GetNode<Button>($"{Left}/ModeGrid/NoneButton");
 
-        _floorUpButton   = GetNode<Button>($"{Root}/FloorSelector/FloorUpButton");
-        _floorDownButton = GetNode<Button>($"{Root}/FloorSelector/FloorDownButton");
-        _floorLabel      = GetNode<Label>($"{Root}/FloorSelector/FloorLabel");
+        // Floor selector
+        _floorUpButton   = GetNode<Button>($"{Left}/FloorSelector/FloorUpButton");
+        _floorDownButton = GetNode<Button>($"{Left}/FloorSelector/FloorDownButton");
+        _floorLabel      = GetNode<Label>($"{Left}/FloorSelector/FloorLabel");
 
-        _tileSection    = GetNode<VBoxContainer>($"{Root}/TileMaterials");
-        _wallSection    = GetNode<VBoxContainer>($"{Root}/WallMaterials");
-        _stairSection   = GetNode<VBoxContainer>($"{Root}/StairMaterials");
-        _roofSection    = GetNode<VBoxContainer>($"{Root}/RoofMaterials");
-        _tileSeparator  = GetNode<HSeparator>($"{Root}/HSeparator4");
-        _wallSeparator  = GetNode<HSeparator>($"{Root}/HSeparator5");
-        _stairSeparator = GetNode<HSeparator>($"{Root}/HSeparator6");
-        _roofSeparator  = GetNode<HSeparator>($"{Root}/HSeparator7");
+        // Status + sections
+        _statusLabel  = GetNode<Label>($"{Right}/StatusLabel");
+        _tileSection  = GetNode<Container>($"{Stack}/TileMaterials");
+        _wallSection  = GetNode<Container>($"{Stack}/WallMaterials");
+        _stairSection = GetNode<Container>($"{Stack}/StairMaterials");
+        _roofSection  = GetNode<Container>($"{Stack}/RoofMaterials");
+        _fenceSection = GetNode<Container>($"{Stack}/FenceAssets");
 
-        // Roof config controls
-        _roofTypeOption      = GetNode<OptionButton>($"{Root}/RoofMaterials/TypeRow/TypeOption");
-        _roofDirectionOption = GetNode<OptionButton>($"{Root}/RoofMaterials/DirectionRow/DirectionOption");
-        _roofPitchSpin       = GetNode<SpinBox>($"{Root}/RoofMaterials/PitchRow/PitchSpin");
-        _roofDirectionLabel  = GetNode<Label>($"{Root}/RoofMaterials/DirectionRow/DirectionLabel");
-        _roofPitchLabel      = GetNode<Label>($"{Root}/RoofMaterials/PitchRow/PitchLabel");
+        // Roof config controls (now nested under ConfigRow)
+        _roofTypeOption      = GetNode<OptionButton>($"{Stack}/RoofMaterials/ConfigRow/TypeRow/TypeOption");
+        _roofDirectionOption = GetNode<OptionButton>($"{Stack}/RoofMaterials/ConfigRow/DirectionRow/DirectionOption");
+        _roofPitchSpin       = GetNode<SpinBox>($"{Stack}/RoofMaterials/ConfigRow/PitchRow/PitchSpin");
+        _roofDirectionLabel  = GetNode<Label>($"{Stack}/RoofMaterials/ConfigRow/DirectionRow/DirectionLabel");
+        _roofPitchLabel      = GetNode<Label>($"{Stack}/RoofMaterials/ConfigRow/PitchRow/PitchLabel");
 
         PopulateRoofTypeOptions();
         PopulateRoofDirectionOptions();
         _roofTypeOption.ItemSelected += _ => UpdateRoofShapeControls();
         UpdateRoofShapeControls();
 
+        // Button group (only one mode active at a time)
         var group = new ButtonGroup();
         _floorButton.ButtonGroup   = group;
         _wallButton.ButtonGroup    = group;
@@ -127,6 +140,7 @@ public partial class HomeBuilderDock : Control
         _doorButton.ButtonGroup    = group;
         _windowButton.ButtonGroup  = group;
         _stairsButton.ButtonGroup  = group;
+        _fenceButton.ButtonGroup   = group;
         _noneButton.ButtonGroup    = group;
 
         _floorButton.Pressed   += () => OnModeSelected("floor");
@@ -135,42 +149,46 @@ public partial class HomeBuilderDock : Control
         _doorButton.Pressed    += () => OnModeSelected("doors");
         _windowButton.Pressed  += () => OnModeSelected("windows");
         _stairsButton.Pressed  += () => OnModeSelected("stairs");
+        _fenceButton.Pressed   += () => OnModeSelected("fences");
         _noneButton.Pressed    += () => OnModeSelected("none");
 
         _floorUpButton.Pressed   += OnFloorUp;
         _floorDownButton.Pressed += OnFloorDown;
 
-        // Tile pickers
-        _tileTopPicker    = CreatePicker($"{Root}/TileMaterials/TopRow/TopPicker");
-        _tileBottomPicker = CreatePicker($"{Root}/TileMaterials/BottomRow/BottomPicker");
-        _tileSidesPicker  = CreatePicker($"{Root}/TileMaterials/SidesRow/SidesPicker");
+        // Material pickers — tile
+        _tileTopPicker    = CreatePicker($"{Stack}/TileMaterials/TopRow/TopPicker");
+        _tileBottomPicker = CreatePicker($"{Stack}/TileMaterials/BottomRow/BottomPicker");
+        _tileSidesPicker  = CreatePicker($"{Stack}/TileMaterials/SidesRow/SidesPicker");
 
-        // Wall pickers
-        _wallFaceAPicker = CreatePicker($"{Root}/WallMaterials/FaceARow/FaceAPicker");
-        _wallFaceBPicker = CreatePicker($"{Root}/WallMaterials/FaceBRow/FaceBPicker");
-        _wallEdgesPicker = CreatePicker($"{Root}/WallMaterials/EdgesRow/EdgesPicker");
+        // Material pickers — wall
+        _wallFaceAPicker = CreatePicker($"{Stack}/WallMaterials/FaceARow/FaceAPicker");
+        _wallFaceBPicker = CreatePicker($"{Stack}/WallMaterials/FaceBRow/FaceBPicker");
+        _wallEdgesPicker = CreatePicker($"{Stack}/WallMaterials/EdgesRow/EdgesPicker");
 
-        // Stair pickers
-        _stairTopPicker    = CreatePicker($"{Root}/StairMaterials/TopRow/TopPicker");
-        _stairBottomPicker = CreatePicker($"{Root}/StairMaterials/BottomRow/BottomPicker");
-        _stairSidesPicker  = CreatePicker($"{Root}/StairMaterials/SidesRow/SidesPicker");
+        // Material pickers — stair
+        _stairTopPicker    = CreatePicker($"{Stack}/StairMaterials/TopRow/TopPicker");
+        _stairBottomPicker = CreatePicker($"{Stack}/StairMaterials/BottomRow/BottomPicker");
+        _stairSidesPicker  = CreatePicker($"{Stack}/StairMaterials/SidesRow/SidesPicker");
 
-        // Roof pickers
-        _roofTopPicker    = CreatePicker($"{Root}/RoofMaterials/TopRow/TopPicker");
-        _roofBottomPicker = CreatePicker($"{Root}/RoofMaterials/BottomRow/BottomPicker");
-        _roofSidesPicker  = CreatePicker($"{Root}/RoofMaterials/SidesRow/SidesPicker");
+        // Material pickers — roof (nested under MaterialsRow)
+        _roofTopPicker    = CreatePicker($"{Stack}/RoofMaterials/MaterialsRow/TopRow/TopPicker");
+        _roofBottomPicker = CreatePicker($"{Stack}/RoofMaterials/MaterialsRow/BottomRow/BottomPicker");
+        _roofSidesPicker  = CreatePicker($"{Stack}/RoofMaterials/MaterialsRow/SidesRow/SidesPicker");
+
+        // Fence asset picker (PackedScene)
+        _fenceAssetPicker = CreatePicker($"{Stack}/FenceAssets/AssetRow/AssetPicker", "PackedScene");
 
         UpdateFloorLabel();
-        UpdateMaterialSectionsVisibility("none");
+        UpdateSectionsVisibility("none");
     }
 
     private void PopulateRoofTypeOptions()
     {
         _roofTypeOption.Clear();
-        _roofTypeOption.AddItem("Plano",         (int)RoofType.Flat);
-        _roofTypeOption.AddItem("A un agua",     (int)RoofType.Shed);
-        _roofTypeOption.AddItem("A dos aguas",   (int)RoofType.Gable);
-        _roofTypeOption.AddItem("A cuatro aguas",(int)RoofType.Hip);
+        _roofTypeOption.AddItem("Plano",          (int)RoofType.Flat);
+        _roofTypeOption.AddItem("A un agua",      (int)RoofType.Shed);
+        _roofTypeOption.AddItem("A dos aguas",    (int)RoofType.Gable);
+        _roofTypeOption.AddItem("A cuatro aguas", (int)RoofType.Hip);
     }
 
     private void PopulateRoofDirectionOptions()
@@ -184,26 +202,24 @@ public partial class HomeBuilderDock : Control
 
     private void UpdateRoofShapeControls()
     {
-        // Direction and pitch are only meaningful for non-flat roofs;
-        // hip ignores direction (rotational symmetry of a rectangular hip).
         var t = SelectedRoofType;
         bool needsPitch     = t != RoofType.Flat;
         bool needsDirection = t == RoofType.Shed || t == RoofType.Gable;
 
-        _roofPitchSpin.Editable      = needsPitch;
-        _roofPitchLabel.Modulate     = needsPitch ? Colors.White : new Color(1, 1, 1, 0.4f);
-        _roofDirectionOption.Disabled = !needsDirection;
-        _roofDirectionLabel.Modulate  = needsDirection ? Colors.White : new Color(1, 1, 1, 0.4f);
+        _roofPitchSpin.Editable        = needsPitch;
+        _roofPitchLabel.Modulate       = needsPitch     ? Colors.White : new Color(1, 1, 1, 0.4f);
+        _roofDirectionOption.Disabled  = !needsDirection;
+        _roofDirectionLabel.Modulate   = needsDirection ? Colors.White : new Color(1, 1, 1, 0.4f);
     }
 
-    private EditorResourcePicker CreatePicker(string containerPath)
+    private EditorResourcePicker CreatePicker(string containerPath, string baseType = "Material")
     {
         var container = GetNode<HBoxContainer>(containerPath);
         if (container == null) return null;
 
         var picker = new EditorResourcePicker
         {
-            BaseType            = "Material",
+            BaseType            = baseType,
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
         };
         container.AddChild(picker);
@@ -214,26 +230,18 @@ public partial class HomeBuilderDock : Control
     {
         _statusLabel.Text = mode == "none"
             ? "Sin modo activo"
-            : $"Modo activo: {ModeDisplayName(mode)}";
-        UpdateMaterialSectionsVisibility(mode);
+            : $"Modo: {ModeDisplayName(mode)}";
+        UpdateSectionsVisibility(mode);
         EmitSignal(SignalName.ModeChanged, mode);
     }
 
-    private void UpdateMaterialSectionsVisibility(string mode)
+    private void UpdateSectionsVisibility(string mode)
     {
-        bool showTile  = mode is "floor";
-        bool showWall  = mode is "walls" or "doors" or "windows";
-        bool showStair = mode is "stairs";
-        bool showRoof  = mode is "roof";
-
-        _tileSection.Visible    = showTile;
-        _tileSeparator.Visible  = showTile;
-        _wallSection.Visible    = showWall;
-        _wallSeparator.Visible  = showWall;
-        _stairSection.Visible   = showStair;
-        _stairSeparator.Visible = showStair;
-        _roofSection.Visible    = showRoof;
-        _roofSeparator.Visible  = showRoof;
+        _tileSection.Visible  = mode is "floor";
+        _wallSection.Visible  = mode is "walls" or "doors" or "windows";
+        _stairSection.Visible = mode is "stairs";
+        _roofSection.Visible  = mode is "roof";
+        _fenceSection.Visible = mode is "fences";
     }
 
     private static string ModeDisplayName(string mode) => mode switch
@@ -244,6 +252,7 @@ public partial class HomeBuilderDock : Control
         "doors"   => "Puertas",
         "windows" => "Ventanas",
         "stairs"  => "Escaleras",
+        "fences"  => "Vallas",
         _         => mode,
     };
 
@@ -261,8 +270,5 @@ public partial class HomeBuilderDock : Control
         EmitSignal(SignalName.FloorChanged, _currentFloor);
     }
 
-    private void UpdateFloorLabel()
-    {
-        _floorLabel.Text = $"Piso {_currentFloor}";
-    }
+    private void UpdateFloorLabel() => _floorLabel.Text = $"P {_currentFloor}";
 }
