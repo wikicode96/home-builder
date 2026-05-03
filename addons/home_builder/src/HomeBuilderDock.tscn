@@ -180,7 +180,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Superior"
+text = "Material Superior"
 
 [node name="TopPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/TopRow" unique_id=2134729]
 layout_mode = 2
@@ -195,7 +195,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Inferior"
+text = "Material Inferior"
 
 [node name="BottomPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/BottomRow" unique_id=118185774]
 layout_mode = 2
@@ -210,7 +210,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Laterales"
+text = "Material Lateral"
 
 [node name="SidesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/TileMaterials/SidesRow" unique_id=128321315]
 layout_mode = 2
@@ -233,7 +233,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Cara A"
+text = "Material Cara A"
 
 [node name="FaceAPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/FaceARow" unique_id=1598294150]
 layout_mode = 2
@@ -248,7 +248,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Cara B"
+text = "Material Cara B"
 
 [node name="FaceBPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/FaceBRow" unique_id=569371711]
 layout_mode = 2
@@ -263,7 +263,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Grosor"
+text = "Material Canto"
 
 [node name="EdgesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/EdgesRow" unique_id=638717137]
 layout_mode = 2
@@ -286,7 +286,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Superior"
+text = "Material Superior"
 
 [node name="TopPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/TopRow" unique_id=787363554]
 layout_mode = 2
@@ -301,7 +301,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Inferior"
+text = "Material Inferior"
 
 [node name="BottomPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/BottomRow" unique_id=1691188208]
 layout_mode = 2
@@ -316,7 +316,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Laterales"
+text = "Material Lateral"
 
 [node name="SidesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/StairMaterials/SidesRow" unique_id=1533889701]
 layout_mode = 2
@@ -422,7 +422,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Superior"
+text = "Material Superior"
 
 [node name="TopPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/TopRow" unique_id=511335985]
 layout_mode = 2
@@ -437,7 +437,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Inferior"
+text = "Material Inferior"
 
 [node name="BottomPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/BottomRow" unique_id=1671742694]
 layout_mode = 2
@@ -452,7 +452,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Laterales"
+text = "Material Lateral"
 
 [node name="SidesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/SidesRow" unique_id=637112245]
 layout_mode = 2
