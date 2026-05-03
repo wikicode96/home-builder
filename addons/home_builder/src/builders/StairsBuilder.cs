@@ -4,11 +4,11 @@ public class StairsBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    private const int   StairCount    = 17;
-    private const float StairRise     = WallBuilder.Height / StairCount;
-    private const float StairRun      = 0.28f;
+    private const int   StairCount    = 12;
+    private const float StairRise     = WallBuilder.Height / StairCount;  // 0.25 m per step
+    private const float StairRun      = 0.25f;                            // 0.25 m → 12 steps = exactly 3 m
     private const float StairWidth    = 1.0f;
-    private const float StairTotalRun = StairCount * StairRun;
+    private const float StairTotalRun = StairCount * StairRun;            // exactly 3.0 m = 3 tiles
 
     private CsgBox3D _ghost;
     private Vector3? _start;
@@ -105,9 +105,10 @@ public class StairsBuilder
         var basisY = Vector3.Up;
         var basisZ = dirXZ;
 
-        var center = start
-                   + dirXZ    * (StairTotalRun * 0.5f - 0.5f)
-                   + Vector3.Up * (WallBuilder.Height * 0.5f);
+        // Ghost center: half-run minus 0.5 forward (stairs start at tile edge, not tile center),
+        // and Y comes from floorBaseY directly (not from start.Y which has the -0.05 tile offset).
+        var centerXZ = start + dirXZ * (StairTotalRun * 0.5f - 0.5f);
+        var center   = new Vector3(centerXZ.X, floorBaseY + WallBuilder.Height * 0.5f, centerXZ.Z);
 
         _ghost.Size           = new Vector3(StairWidth, WallBuilder.Height, StairTotalRun);
         _ghost.GlobalPosition = center;
@@ -133,6 +134,10 @@ public class StairsBuilder
         var basisY = Vector3.Up;
         var stepBasis = new Basis(basisX, basisY, basisZ);
 
+        // Use floorBaseY directly so step bottoms sit flush with the floor,
+        // not at the tile-center Y which carries a -0.05 visual offset.
+        var origin = new Vector3(start.X, floorBaseY, start.Z);
+
         // Build the shared mesh once — all steps share the same mesh
         var stepMesh = StairsMeshBuilder.Build(StairWidth, StairRise, StairRun);
 
@@ -141,10 +146,12 @@ public class StairsBuilder
 
         for (int i = 0; i < StairCount; i++)
         {
+            // runOffset: step center along run axis.  The -0.5 shifts the whole flight so
+            // its back edge aligns with the tile edge behind the clicked tile center.
             float runOffset  = i * StairRun + StairRun * 0.5f - 0.5f;
             float riseOffset = (i + 0.5f) * StairRise;
 
-            var stepPos = start + dirXZ * runOffset + Vector3.Up * riseOffset;
+            var stepPos = origin + dirXZ * runOffset + Vector3.Up * riseOffset;
 
             // StaticBody3D is the root — holds position, basis and collision
             var body = new StaticBody3D
