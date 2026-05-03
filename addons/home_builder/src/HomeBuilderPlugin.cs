@@ -117,15 +117,13 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     public override int _Forward3DGuiInput(Camera3D camera, InputEvent inputEvent)
     {
-        var wallParent = GetOrCreateParentNode($"Walls_{_activeFloor}");
-
         return _activeMode switch
         {
             BuildMode.Floor   => _floorBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Walls   => _wallBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Roof    => _roofBuilder.HandleInput(camera, inputEvent, FloorBaseY),
-            BuildMode.Doors   => _openingBuilder.HandleInput(camera, inputEvent, isDoor: true,  wallParent),
-            BuildMode.Windows => _openingBuilder.HandleInput(camera, inputEvent, isDoor: false, wallParent),
+            BuildMode.Doors   => _openingBuilder.HandleInput(camera, inputEvent, isDoor: true,  GetOrCreateParentNode($"Walls_{_activeFloor}")),
+            BuildMode.Windows => _openingBuilder.HandleInput(camera, inputEvent, isDoor: false, GetOrCreateParentNode($"Walls_{_activeFloor}")),
             BuildMode.Stairs  => _stairsBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Fences  => _fenceBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             _                 => (int)AfterGuiInput.Pass,
