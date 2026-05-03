@@ -117,10 +117,12 @@ public class FloorBuilder
         // instance instead of 100 tiles.
         var slabMesh = FloorMeshBuilder.Build(cols, rows);
 
+        var zFighting = 0.001f; // Avoid z-fighting with the floor plane
+
         var body = new StaticBody3D
         {
             Name     = "FloorSlab",
-            Position = new Vector3(minX + cols * 0.5f, floorBaseY - 0.05f, minZ + rows * 0.5f),
+            Position = new Vector3(minX + cols * 0.5f, floorBaseY - 0.05f + zFighting, minZ + rows * 0.5f),
         };
         body.SetMeta("HB_FloorRect", new Vector4(minX, minZ, cols, rows));
 
