@@ -107,7 +107,7 @@ public class StairsBuilder
 
         var center = start
                    + dirXZ    * (StairTotalRun * 0.5f - 0.5f)
-                   + Vector3.Up * (floorBaseY + WallBuilder.Height * 0.5f);
+                   + Vector3.Up * (WallBuilder.Height * 0.5f);
 
         _ghost.Size           = new Vector3(StairWidth, WallBuilder.Height, StairTotalRun);
         _ghost.GlobalPosition = center;
@@ -142,7 +142,7 @@ public class StairsBuilder
         for (int i = 0; i < StairCount; i++)
         {
             float runOffset  = i * StairRun + StairRun * 0.5f - 0.5f;
-            float riseOffset = floorBaseY + (i + 0.5f) * StairRise;
+            float riseOffset = (i + 0.5f) * StairRise;
 
             var stepPos = start + dirXZ * runOffset + Vector3.Up * riseOffset;
 
