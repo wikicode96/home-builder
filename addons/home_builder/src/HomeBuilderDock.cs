@@ -238,7 +238,7 @@ public partial class HomeBuilderDock : Control
     private void UpdateSectionsVisibility(string mode)
     {
         _tileSection.Visible  = mode is "floor";
-        _wallSection.Visible  = mode is "walls" or "doors" or "windows";
+        _wallSection.Visible  = mode is "walls";
         _stairSection.Visible = mode is "stairs";
         _roofSection.Visible  = mode is "roof";
         _fenceSection.Visible = mode is "fences";
