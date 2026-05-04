@@ -85,20 +85,25 @@ public class RoofBuilder
         if (_ghost == null || !GodotObject.IsInstanceValid(_ghost)) return;
 
         var (minX, maxX, minZ, maxZ) = SnapHelper.HalfGridBounds(a, b);
-        int cols = maxX - minX + 1;
-        int rows = maxZ - minZ + 1;
-        float w = cols * 0.5f;
-        float d = rows * 0.5f;
+        float halfT = WallBuilder.Thickness * 0.5f;
+        float w = (maxX - minX + 1) * 0.5f + WallBuilder.Thickness;
+        float d = (maxZ - minZ + 1) * 0.5f + WallBuilder.Thickness;
 
         _ghost.Size     = new Vector3(w, 0.1f, d);
-        _ghost.Position = new Vector3(minX * 0.5f + w * 0.5f, baseY + 0.05f, minZ * 0.5f + d * 0.5f);
+        _ghost.Position = new Vector3(minX * 0.5f - halfT + w * 0.5f, baseY + 0.05f, minZ * 0.5f - halfT + d * 0.5f);
     }
 
     private void PlaceRoof(Vector3 a, Vector3 b, float baseY, int activeFloor)
     {
         var (minX, maxX, minZ, maxZ) = SnapHelper.HalfGridBounds(a, b);
-        float w = (maxX - minX + 1) * 0.5f;
-        float d = (maxZ - minZ + 1) * 0.5f;
+
+        // Extend the roof footprint by half the wall thickness on every side so
+        // that the roof covers the outer face of facade walls, not just their
+        // centre line. Walls are centred on grid lines, so the exterior half of
+        // any boundary wall would otherwise be left uncovered.
+        float halfT = WallBuilder.Thickness * 0.5f;
+        float w = (maxX - minX + 1) * 0.5f + WallBuilder.Thickness;
+        float d = (maxZ - minZ + 1) * 0.5f + WallBuilder.Thickness;
 
         var dock  = _plugin.Dock;
         var type  = dock?.SelectedRoofType      ?? RoofType.Flat;
@@ -116,7 +121,7 @@ public class RoofBuilder
         var body = new StaticBody3D
         {
             Name     = "Roof",
-            Position = new Vector3(minX * 0.5f, baseY, minZ * 0.5f),
+            Position = new Vector3(minX * 0.5f - halfT, baseY, minZ * 0.5f - halfT),
         };
 
         var inst = new MeshInstance3D { Mesh = mesh };
