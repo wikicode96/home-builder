@@ -24,9 +24,9 @@ public class StairsBuilder
         _ghost = PreviewHelper.CreateMarker(
             scene,
             "__HB_StairsGhost__",
-            new Vector3(StairWidth, StairRise, StairRun),
+            new Vector3(1f, 0.1f, 1f),
             new Color(0.9f, 0.8f, 0.1f, 0.4f),
-            new Vector3(0f, floorBaseY, 0f)
+            new Vector3(0f, floorBaseY - 0.05f, 0f)
         );
     }
 
@@ -78,7 +78,7 @@ public class StairsBuilder
 
                 if (_ghost != null && GodotObject.IsInstanceValid(_ghost))
                 {
-                    _ghost.Size  = new Vector3(StairWidth, StairRise, StairRun);
+                    _ghost.Size  = new Vector3(1f, 0.1f, 1f);
                     _ghost.Basis = Basis.Identity;
                 }
             }
@@ -105,12 +105,10 @@ public class StairsBuilder
         var basisY = Vector3.Up;
         var basisZ = dirXZ;
 
-        // Ghost center: half-run minus 0.5 forward (stairs start at tile edge, not tile center),
-        // and Y comes from floorBaseY directly (not from start.Y which has the -0.05 tile offset).
         var centerXZ = start + dirXZ * (StairTotalRun * 0.5f - 0.5f);
-        var center   = new Vector3(centerXZ.X, floorBaseY + WallBuilder.Height * 0.5f, centerXZ.Z);
+        var center   = new Vector3(centerXZ.X, floorBaseY - 0.05f, centerXZ.Z);
 
-        _ghost.Size           = new Vector3(StairWidth, WallBuilder.Height, StairTotalRun);
+        _ghost.Size           = new Vector3(StairWidth, 0.1f, StairTotalRun);
         _ghost.GlobalPosition = center;
         _ghost.Basis          = new Basis(basisX, basisY, basisZ);
     }
