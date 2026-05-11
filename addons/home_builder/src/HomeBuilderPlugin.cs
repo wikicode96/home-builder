@@ -22,6 +22,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private StairsBuilder  _stairsBuilder;
     private RoofBuilder    _roofBuilder;
     private FenceBuilder   _fenceBuilder;
+    private BakeBuilder    _bakeBuilder;
 
     public override void _EnterTree()
     {
@@ -31,6 +32,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _stairsBuilder  = new StairsBuilder(this);
         _roofBuilder    = new RoofBuilder(this);
         _fenceBuilder   = new FenceBuilder(this);
+        _bakeBuilder    = new BakeBuilder(this);
 
         var dockScene = GD.Load<PackedScene>("res://addons/home_builder/src/HomeBuilderDock.tscn");
         _dock = dockScene.Instantiate<Control>();
@@ -51,6 +53,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                     "stairs"  => BuildMode.Stairs,
                     "fences"  => BuildMode.Fences,
                     "none"    => BuildMode.None,
+                    "bake"    => BuildMode.None,
                     _         => BuildMode.None
                 };
                 CallDeferred(MethodName.CreateActivePreviews);
@@ -66,6 +69,11 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 ClearAllPreviews();
                 CallDeferred(MethodName.CreateActivePreviews);
             })
+        );
+
+        _dock.Connect(
+            HomeBuilderDock.SignalName.BakeRequested,
+            Callable.From(OnBakeRequested)
         );
 
         SceneChanged += OnSceneChanged;
@@ -193,6 +201,29 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 return idx;
         }
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Bake
+    // -------------------------------------------------------------------------
+
+    private void OnBakeRequested()
+    {
+        var scene = GetEditorInterface().GetEditedSceneRoot() as Node3D;
+        if (scene == null) return;
+
+        ClearAllPreviews();
+
+        var dock = Dock;
+        _bakeBuilder.Bake(
+            scene,
+            dock.BakeOutputPath,
+            dock.BakeLod0End,
+            dock.BakeLod1Begin,
+            dock.BakeFadeMode
+        );
+
+        CallDeferred(MethodName.CreateActivePreviews);
     }
 
     // -------------------------------------------------------------------------

@@ -9,6 +9,9 @@ public partial class HomeBuilderDock : Control
     [Signal]
     public delegate void FloorChangedEventHandler(int floor);
 
+    [Signal]
+    public delegate void BakeRequestedEventHandler();
+
     private const string Left   = "Background/Margin/MainHBox/LeftColumn";
     private const string Right  = "Background/Margin/MainHBox/RightColumn";
     private const string Stack  = "Background/Margin/MainHBox/RightColumn/ConfigStack";
@@ -22,6 +25,7 @@ public partial class HomeBuilderDock : Control
     private Button _stairsButton;
     private Button _fenceButton;
     private Button _noneButton;
+    private Button _bakeModeButton;
 
     // Floor selector
     private Button _floorUpButton;
@@ -38,6 +42,7 @@ public partial class HomeBuilderDock : Control
     private Container _stairSection;
     private Container _roofSection;
     private Container _fenceSection;
+    private Container _bakeSection;
 
     // Tile material pickers
     private EditorResourcePicker _tileTopPicker;
@@ -67,6 +72,15 @@ public partial class HomeBuilderDock : Control
     // Fence asset picker
     private EditorResourcePicker _fenceAssetPicker;
 
+    // Bake section controls
+    private LineEdit         _bakePathEdit;
+    private Button           _bakeBrowseButton;
+    private SpinBox          _bakeLod0EndSpin;
+    private SpinBox          _bakeLod1BeginSpin;
+    private OptionButton     _bakeFadeOption;
+    private Button           _bakeActionButton;
+    private EditorFileDialog _bakeFolderDialog;
+
     private int _currentFloor = 0;
 
     // ── Tile materials ────────────────────────────────────────────────────────
@@ -95,6 +109,13 @@ public partial class HomeBuilderDock : Control
     // ── Fence asset ───────────────────────────────────────────────────────────
     public PackedScene FenceAssetScene => _fenceAssetPicker?.EditedResource as PackedScene;
 
+    // ── Bake parameters ───────────────────────────────────────────────────────
+    public string BakeOutputPath => _bakePathEdit?.Text ?? "";
+    public float  BakeLod0End    => (float)(_bakeLod0EndSpin?.Value   ?? 60.0);
+    public float  BakeLod1Begin  => (float)(_bakeLod1BeginSpin?.Value ?? 50.0);
+    public GeometryInstance3D.VisibilityRangeFadeModeEnum BakeFadeMode =>
+        (GeometryInstance3D.VisibilityRangeFadeModeEnum)(_bakeFadeOption?.Selected ?? 1);
+
     public override void _Ready()
     {
         // Mode buttons
@@ -105,7 +126,8 @@ public partial class HomeBuilderDock : Control
         _windowButton  = GetNode<Button>($"{Left}/ModeGrid/WindowButton");
         _stairsButton  = GetNode<Button>($"{Left}/ModeGrid/StairsButton");
         _fenceButton   = GetNode<Button>($"{Left}/ModeGrid/FenceButton");
-        _noneButton    = GetNode<Button>($"{Left}/ModeGrid/NoneButton");
+        _noneButton      = GetNode<Button>($"{Left}/ModeGrid/NoneButton");
+        _bakeModeButton  = GetNode<Button>($"{Left}/ModeGrid/BakeModeButton");
 
         // Floor selector
         _floorUpButton   = GetNode<Button>($"{Left}/FloorSelector/FloorUpButton");
@@ -119,6 +141,7 @@ public partial class HomeBuilderDock : Control
         _stairSection = GetNode<Container>($"{Stack}/StairMaterials");
         _roofSection  = GetNode<Container>($"{Stack}/RoofMaterials");
         _fenceSection = GetNode<Container>($"{Stack}/FenceAssets");
+        _bakeSection  = GetNode<Container>($"{Stack}/BakeSection");
 
         // Roof config controls (now nested under ConfigRow)
         _roofTypeOption      = GetNode<OptionButton>($"{Stack}/RoofMaterials/ConfigRow/TypeRow/TypeOption");
@@ -134,23 +157,25 @@ public partial class HomeBuilderDock : Control
 
         // Button group (only one mode active at a time)
         var group = new ButtonGroup();
-        _floorButton.ButtonGroup   = group;
-        _wallButton.ButtonGroup    = group;
-        _ceilingButton.ButtonGroup = group;
-        _doorButton.ButtonGroup    = group;
-        _windowButton.ButtonGroup  = group;
-        _stairsButton.ButtonGroup  = group;
-        _fenceButton.ButtonGroup   = group;
-        _noneButton.ButtonGroup    = group;
+        _floorButton.ButtonGroup    = group;
+        _wallButton.ButtonGroup     = group;
+        _ceilingButton.ButtonGroup  = group;
+        _doorButton.ButtonGroup     = group;
+        _windowButton.ButtonGroup   = group;
+        _stairsButton.ButtonGroup   = group;
+        _fenceButton.ButtonGroup    = group;
+        _noneButton.ButtonGroup     = group;
+        _bakeModeButton.ButtonGroup = group;
 
-        _floorButton.Pressed   += () => OnModeSelected("floor");
-        _wallButton.Pressed    += () => OnModeSelected("walls");
-        _ceilingButton.Pressed += () => OnModeSelected("roof");
-        _doorButton.Pressed    += () => OnModeSelected("doors");
-        _windowButton.Pressed  += () => OnModeSelected("windows");
-        _stairsButton.Pressed  += () => OnModeSelected("stairs");
-        _fenceButton.Pressed   += () => OnModeSelected("fences");
-        _noneButton.Pressed    += () => OnModeSelected("none");
+        _floorButton.Pressed    += () => OnModeSelected("floor");
+        _wallButton.Pressed     += () => OnModeSelected("walls");
+        _ceilingButton.Pressed  += () => OnModeSelected("roof");
+        _doorButton.Pressed     += () => OnModeSelected("doors");
+        _windowButton.Pressed   += () => OnModeSelected("windows");
+        _stairsButton.Pressed   += () => OnModeSelected("stairs");
+        _fenceButton.Pressed    += () => OnModeSelected("fences");
+        _noneButton.Pressed     += () => OnModeSelected("none");
+        _bakeModeButton.Pressed += () => OnModeSelected("bake");
 
         _floorUpButton.Pressed   += OnFloorUp;
         _floorDownButton.Pressed += OnFloorDown;
@@ -177,6 +202,26 @@ public partial class HomeBuilderDock : Control
 
         // Fence asset picker (PackedScene)
         _fenceAssetPicker = CreatePicker($"{Stack}/FenceAssets/AssetRow/AssetPicker", "PackedScene");
+
+        // Bake section
+        _bakePathEdit      = GetNode<LineEdit>($"{Stack}/BakeSection/OutputRow/OutputPathEdit");
+        _bakeBrowseButton  = GetNode<Button>($"{Stack}/BakeSection/OutputRow/BrowseButton");
+        _bakeLod0EndSpin   = GetNode<SpinBox>($"{Stack}/BakeSection/ParamsRow/Lod0EndVBox/Lod0EndSpin");
+        _bakeLod1BeginSpin = GetNode<SpinBox>($"{Stack}/BakeSection/ParamsRow/Lod1BeginVBox/Lod1BeginSpin");
+        _bakeFadeOption    = GetNode<OptionButton>($"{Stack}/BakeSection/ParamsRow/FadeVBox/FadeOption");
+        _bakeActionButton  = GetNode<Button>($"{Stack}/BakeSection/BakeActionButton");
+
+        _bakeFolderDialog = new EditorFileDialog
+        {
+            Access   = EditorFileDialog.AccessEnum.Resources,
+            FileMode = EditorFileDialog.FileModeEnum.OpenDir,
+            Title    = "Seleccionar carpeta de salida",
+        };
+        AddChild(_bakeFolderDialog);
+        _bakeFolderDialog.DirSelected += dir => _bakePathEdit.Text = dir;
+
+        _bakeBrowseButton.Pressed += () => _bakeFolderDialog.PopupCentered(new Vector2I(800, 600));
+        _bakeActionButton.Pressed += () => EmitSignal(SignalName.BakeRequested);
 
         UpdateFloorLabel();
         UpdateSectionsVisibility("none");
@@ -242,6 +287,7 @@ public partial class HomeBuilderDock : Control
         _stairSection.Visible = mode is "stairs";
         _roofSection.Visible  = mode is "roof";
         _fenceSection.Visible = mode is "fences";
+        _bakeSection.Visible  = mode is "bake";
     }
 
     private static string ModeDisplayName(string mode) => mode switch
@@ -253,6 +299,7 @@ public partial class HomeBuilderDock : Control
         "windows" => "Ventanas",
         "stairs"  => "Escaleras",
         "fences"  => "Vallas",
+        "bake"    => "Bakear",
         _         => mode,
     };
 
