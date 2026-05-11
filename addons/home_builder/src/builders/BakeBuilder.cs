@@ -167,9 +167,8 @@ public partial class BakeBuilder
                 int newSurfIdx = result.GetSurfaceCount();
                 result.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 
-                Material mat = mi.GetActiveMaterial(s);
-                if (simplifyMaterials)
-                    mat = SimplifyMaterial(mat);
+                var mat = mi.GetActiveMaterial(s);
+                if (simplifyMaterials) mat = SimplifyMaterial(mat);
                 if (mat != null)
                     result.SurfaceSetMaterial(newSurfIdx, mat);
             }
@@ -180,12 +179,20 @@ public partial class BakeBuilder
 
     private static Material SimplifyMaterial(Material source)
     {
-        var simplified = new StandardMaterial3D();
-        if (source is StandardMaterial3D std)
-            simplified.AlbedoColor = std.AlbedoColor;
-        else
-            simplified.AlbedoColor = new Color(0.7f, 0.7f, 0.7f);
-        return simplified;
+        if (source is not StandardMaterial3D std)
+            return source;
+
+        var s = new StandardMaterial3D();
+        s.AlbedoTexture = std.AlbedoTexture;   // textura visible
+        s.AlbedoColor   = std.AlbedoColor;
+        s.Uv1Scale      = std.Uv1Scale;
+        s.Uv1Offset     = std.Uv1Offset;
+        s.Transparency  = std.Transparency;
+        // Roughness/metallic como valores escalares, sin texturas extra
+        s.Roughness     = std.RoughnessTexture != null ? 0.7f : std.Roughness;
+        s.Metallic      = std.MetallicTexture  != null ? 0.0f : std.Metallic;
+        // Normal map, AO, emisión y heightmap se descartan en LOD1
+        return s;
     }
 
     private static void SetOwnerRecursive(Node node, Node owner)
