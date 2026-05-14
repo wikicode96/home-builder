@@ -46,8 +46,12 @@ public partial class BakeBuilder
 
         var rootInverse = sceneRoot.GlobalTransform.AffineInverse();
 
-        var lod0Mesh = MergeMeshes(meshInstances, rootInverse, simplifyMaterials: false);
-        var lod1Mesh = MergeMeshes(meshInstances, rootInverse, simplifyMaterials: true);
+        // LOD0: geometría y materiales completos, una surface por surface original.
+        var lod0Mesh = MergeMeshesFlat(meshInstances, rootInverse, simplifyMaterials: false);
+
+        // LOD1: walls sin aperturas + materiales simplificados + surfaces fusionadas
+        // por material para minimizar draw calls al ver el edificio desde lejos.
+        var lod1Mesh = MergeMeshesByMaterial(meshInstances, rootInverse);
 
         var bakedRoot = new StaticBody3D { Name = sceneRoot.Name };
 
@@ -111,6 +115,10 @@ public partial class BakeBuilder
         bakedRoot.QueueFree();
     }
 
+    // -------------------------------------------------------------------------
+    // Geometry collection
+    // -------------------------------------------------------------------------
+
     private static void CollectGeometry(
         Node node,
         List<MeshInstance3D> meshes,
@@ -122,7 +130,11 @@ public partial class BakeBuilder
             CollectGeometry(child, meshes, cols);
     }
 
-    private static ArrayMesh MergeMeshes(
+    // -------------------------------------------------------------------------
+    // LOD0 merge — one ArrayMesh surface per source surface, original materials
+    // -------------------------------------------------------------------------
+
+    private static ArrayMesh MergeMeshesFlat(
         List<MeshInstance3D> instances,
         Transform3D rootInverse,
         bool simplifyMaterials)
@@ -140,73 +152,225 @@ public partial class BakeBuilder
             {
                 var arrays = mi.Mesh.SurfaceGetArrays(s);
                 if (arrays.Count == 0) continue;
-
-                var vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
-                if (vertices == null || vertices.Length == 0) continue;
-
-                for (int v = 0; v < vertices.Length; v++)
-                    vertices[v] = localToRoot * vertices[v];
-                arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-
-                var normalsVar = arrays[(int)Mesh.ArrayType.Normal];
-                if (normalsVar.VariantType == Variant.Type.PackedVector3Array)
-                {
-                    var normals = normalsVar.AsVector3Array();
-                    for (int v = 0; v < normals.Length; v++)
-                        normals[v] = (localToRoot.Basis * normals[v]).Normalized();
-                    arrays[(int)Mesh.ArrayType.Normal] = normals;
-                }
-
-                // When localToRoot has a negative determinant (e.g. walls use a
-                // reflected basis: basisZ = up×dir), applying it to vertex positions
-                // reverses CCW→CW winding. Godot auto-corrects this for live
-                // MeshInstances, but baked geometry loses that information.
-                if (flipWinding)
-                    FlipTriangleWinding(arrays);
+                if (!TransformArraysInPlace(arrays, localToRoot)) continue;
+                if (flipWinding) FlipTriangleWinding(arrays);
 
                 int newSurfIdx = result.GetSurfaceCount();
                 result.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 
                 var mat = mi.GetActiveMaterial(s);
                 if (simplifyMaterials) mat = SimplifyMaterial(mat);
-                if (mat != null)
-                    result.SurfaceSetMaterial(newSurfIdx, mat);
+                if (mat != null) result.SurfaceSetMaterial(newSurfIdx, mat);
             }
         }
 
         return result;
     }
 
+    // -------------------------------------------------------------------------
+    // LOD1 merge — surfaces grouped by material → one draw call per material
+    //
+    // Wall MeshInstances whose StaticBody3D parent carries the wall-length
+    // metadata are processed using a freshly built solid mesh (no openings),
+    // which removes the door/window frame triangles invisible at LOD1 distance.
+    // All surfaces sharing the same original material are concatenated into one
+    // surface in the output mesh to minimise draw calls over open terrain.
+    // -------------------------------------------------------------------------
+
+    private static ArrayMesh MergeMeshesByMaterial(
+        List<MeshInstance3D> instances,
+        Transform3D rootInverse)
+    {
+        // Key: original material InstanceId (ulong.MaxValue for null material).
+        var groupArrays    = new Dictionary<ulong, List<Godot.Collections.Array>>();
+        var groupMaterials = new Dictionary<ulong, Material>();
+        var groupOrder     = new List<ulong>();
+
+        const ulong nullKey = ulong.MaxValue;
+
+        foreach (var mi in instances)
+        {
+            if (mi.Mesh == null) continue;
+
+            // For wall MeshInstances, substitute a solid mesh (no openings) so
+            // that the baked LOD1 has fewer triangles. The original node stays
+            // in the scene tree; we only swap the Mesh resource used for baking.
+            Mesh bakeSource = mi.Mesh;
+            if (mi.GetParent() is StaticBody3D body && body.HasMeta(WallHelper.MetaWallLength))
+            {
+                float len = body.GetMeta(WallHelper.MetaWallLength).AsSingle();
+                bakeSource = WallMeshBuilder.Build(len, WallBuilder.Height, WallBuilder.Thickness);
+            }
+
+            var localToRoot = rootInverse * mi.GlobalTransform;
+            bool flipWinding = localToRoot.Basis.Determinant() < 0f;
+
+            int surfCount = bakeSource.GetSurfaceCount();
+            for (int s = 0; s < surfCount; s++)
+            {
+                var arrays = bakeSource.SurfaceGetArrays(s);
+                if (arrays.Count == 0) continue;
+                if (!TransformArraysInPlace(arrays, localToRoot)) continue;
+                if (flipWinding) FlipTriangleWinding(arrays);
+
+                // Material always comes from the original scene node so we pick
+                // up the user's configured surface overrides, not the raw mesh.
+                var origMat = mi.GetActiveMaterial(s);
+                ulong key   = origMat != null ? origMat.GetInstanceId() : nullKey;
+
+                if (!groupArrays.ContainsKey(key))
+                {
+                    groupArrays[key]    = new List<Godot.Collections.Array>();
+                    groupMaterials[key] = SimplifyMaterial(origMat);
+                    groupOrder.Add(key);
+                }
+                groupArrays[key].Add(arrays);
+            }
+        }
+
+        var result = new ArrayMesh();
+        foreach (var key in groupOrder)
+        {
+            var merged = ConcatenateArrays(groupArrays[key]);
+            if (merged == null) continue;
+
+            int surfIdx = result.GetSurfaceCount();
+            result.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, merged);
+
+            var mat = groupMaterials[key];
+            if (mat != null) result.SurfaceSetMaterial(surfIdx, mat);
+        }
+        return result;
+    }
+
+    // -------------------------------------------------------------------------
+    // Material simplification
+    //
+    // Duplicate() copies ALL properties — Uv1Scale, Uv1Triplanar, CullMode,
+    // TextureFilter, etc. — so UV tiling and material look are preserved.
+    // Only the expensive per-pixel textures (normal, AO, heightmap) are stripped
+    // because they contribute nothing at LOD1 viewing distances.
+    // -------------------------------------------------------------------------
+
     private static Material SimplifyMaterial(Material source)
     {
-        if (source is not StandardMaterial3D std)
-            return source;
+        if (source == null) return null;
+        if (source is not StandardMaterial3D std) return source;
 
-        var s = new StandardMaterial3D();
-        s.AlbedoTexture = std.AlbedoTexture;   // textura visible
-        s.AlbedoColor   = std.AlbedoColor;
-        s.Uv1Scale      = std.Uv1Scale;
-        s.Uv1Offset     = std.Uv1Offset;
-        s.Transparency  = std.Transparency;
-        // Roughness/metallic como valores escalares, sin texturas extra
-        s.Roughness     = std.RoughnessTexture != null ? 0.7f : std.Roughness;
-        s.Metallic      = std.MetallicTexture  != null ? 0.0f : std.Metallic;
-        // Normal map, AO, emisión y heightmap se descartan en LOD1
+        var s = (StandardMaterial3D)std.Duplicate();
+        s.NormalEnabled    = false;
+        s.NormalTexture    = null;
+        s.AOEnabled        = false;
+        s.AOTexture        = null;
+        s.HeightmapEnabled = false;
+        s.HeightmapTexture = null;
+        if (std.RoughnessTexture != null) { s.Roughness = 0.7f; s.RoughnessTexture = null; }
+        if (std.MetallicTexture  != null) { s.Metallic  = 0.0f; s.MetallicTexture  = null; }
         return s;
     }
 
-    private static void SetOwnerRecursive(Node node, Node owner)
+    // -------------------------------------------------------------------------
+    // Array helpers
+    // -------------------------------------------------------------------------
+
+    // Transforms vertex positions and normals in-place using localToRoot.
+    // Returns false when the surface has no vertices (caller should skip it).
+    private static bool TransformArraysInPlace(Godot.Collections.Array arrays, Transform3D t)
     {
-        foreach (Node child in node.GetChildren())
+        var verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        if (verts == null || verts.Length == 0) return false;
+
+        for (int v = 0; v < verts.Length; v++)
+            verts[v] = t * verts[v];
+        arrays[(int)Mesh.ArrayType.Vertex] = verts;
+
+        var nVar = arrays[(int)Mesh.ArrayType.Normal];
+        if (nVar.VariantType == Variant.Type.PackedVector3Array)
         {
-            if (child != owner) child.Owner = owner;
-            SetOwnerRecursive(child, owner);
+            var norms = nVar.AsVector3Array();
+            for (int v = 0; v < norms.Length; v++)
+                norms[v] = (t.Basis * norms[v]).Normalized();
+            arrays[(int)Mesh.ArrayType.Normal] = norms;
         }
+        return true;
     }
 
-    // Reverses the winding of every triangle in the surface arrays so that faces
-    // remain front-facing after a transform with negative determinant is applied.
-    // Handles both indexed meshes (swap index pairs) and non-indexed (swap per-vertex data).
+    // Concatenates a list of surface arrays into one, expanding indexed meshes
+    // to non-indexed before concatenation so all sources can be merged uniformly.
+    private static Godot.Collections.Array ConcatenateArrays(List<Godot.Collections.Array> list)
+    {
+        var verts    = new List<Vector3>();
+        var normals  = new List<Vector3>();
+        var uvs      = new List<Vector2>();
+        var tangents = new List<float>();
+        bool hasNormals = false, hasUVs = false, hasTangents = false;
+
+        foreach (var arrays in list)
+        {
+            var srcVerts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+
+            int[] indices = null;
+            var idxVar = arrays[(int)Mesh.ArrayType.Index];
+            if (idxVar.VariantType == Variant.Type.PackedInt32Array)
+                indices = idxVar.AsInt32Array();
+
+            if (indices != null)
+                foreach (int i in indices) verts.Add(srcVerts[i]);
+            else
+                verts.AddRange(srcVerts);
+
+            var normVar = arrays[(int)Mesh.ArrayType.Normal];
+            if (normVar.VariantType == Variant.Type.PackedVector3Array)
+            {
+                hasNormals = true;
+                var srcN = normVar.AsVector3Array();
+                if (indices != null)
+                    foreach (int i in indices) normals.Add(srcN[i]);
+                else
+                    normals.AddRange(srcN);
+            }
+
+            var uvVar = arrays[(int)Mesh.ArrayType.TexUV];
+            if (uvVar.VariantType == Variant.Type.PackedVector2Array)
+            {
+                hasUVs = true;
+                var srcUV = uvVar.AsVector2Array();
+                if (indices != null)
+                    foreach (int i in indices) uvs.Add(srcUV[i]);
+                else
+                    uvs.AddRange(srcUV);
+            }
+
+            var tanVar = arrays[(int)Mesh.ArrayType.Tangent];
+            if (tanVar.VariantType == Variant.Type.PackedFloat32Array)
+            {
+                hasTangents = true;
+                var srcT = tanVar.AsFloat32Array();
+                if (indices != null)
+                    foreach (int i in indices)
+                        for (int k = 0; k < 4; k++)
+                            tangents.Add(srcT[i * 4 + k]);
+                else
+                    tangents.AddRange(srcT);
+            }
+        }
+
+        if (verts.Count == 0) return null;
+
+        var result = new Godot.Collections.Array();
+        result.Resize((int)Mesh.ArrayType.Max);
+        result[(int)Mesh.ArrayType.Vertex] = verts.ToArray();
+        if (hasNormals  && normals.Count  == verts.Count)     result[(int)Mesh.ArrayType.Normal]  = normals.ToArray();
+        if (hasUVs      && uvs.Count      == verts.Count)     result[(int)Mesh.ArrayType.TexUV]   = uvs.ToArray();
+        if (hasTangents && tangents.Count == verts.Count * 4) result[(int)Mesh.ArrayType.Tangent] = tangents.ToArray();
+        return result;
+    }
+
+    // -------------------------------------------------------------------------
+    // Winding flip — needed when localToRoot has a negative determinant
+    // (walls use a reflected basis: basisZ = up × dir).
+    // -------------------------------------------------------------------------
+
     private static void FlipTriangleWinding(Godot.Collections.Array arrays)
     {
         var idxVariant = arrays[(int)Mesh.ArrayType.Index];
@@ -219,7 +383,6 @@ public partial class BakeBuilder
             return;
         }
 
-        // Non-indexed: swap per-vertex data at positions 3k+1 ↔ 3k+2
         SwapVector3Every3(arrays, Mesh.ArrayType.Vertex);
         SwapVector3Every3(arrays, Mesh.ArrayType.Normal);
         SwapVector2Every3(arrays, Mesh.ArrayType.TexUV);
@@ -261,5 +424,18 @@ public partial class BakeBuilder
                 (arr[p1 + k], arr[p2 + k]) = (arr[p2 + k], arr[p1 + k]);
         }
         arrays[(int)Mesh.ArrayType.Tangent] = arr;
+    }
+
+    // -------------------------------------------------------------------------
+    // Utilities
+    // -------------------------------------------------------------------------
+
+    private static void SetOwnerRecursive(Node node, Node owner)
+    {
+        foreach (Node child in node.GetChildren())
+        {
+            if (child != owner) child.Owner = owner;
+            SetOwnerRecursive(child, owner);
+        }
     }
 }
