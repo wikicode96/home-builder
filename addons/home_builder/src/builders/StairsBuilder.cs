@@ -195,19 +195,22 @@ public class StairsBuilder
             Basis    = stepBasis,
         };
 
-        // CollisionPolygon3D with the staircase slab profile.
-        // Rotated 90° on Y so the polygon aligns with the mesh geometry.
-        // Depth extrudes symmetrically ±halfWidth along X_parent.
-        var collisionPoly = new CollisionPolygon3D
+        float halfWidth = StairWidth * 0.5f;
+        var collisionPoly = new CollisionShape3D
         {
-            Depth   = StairWidth,
-            Basis   = Basis.Identity.Rotated(Vector3.Up, Mathf.Pi / 2f),
-            Polygon = new[]
+            Shape = new ConvexPolygonShape3D
             {
-                new Vector2(-2.25f,  3.0f),
-                new Vector2(-2.5f,   3.0f),
-                new Vector2( 0.5f,   0.0f),
-                new Vector2( 0.75f,  0.0f),
+                Points = new[]
+                {
+                    new Vector3(-halfWidth, 3.0f,  2.25f),
+                    new Vector3( halfWidth, 3.0f,  2.25f),
+                    new Vector3(-halfWidth, 3.0f,  2.5f),
+                    new Vector3( halfWidth, 3.0f,  2.5f),
+                    new Vector3(-halfWidth, 0.0f, -0.5f),
+                    new Vector3( halfWidth, 0.0f, -0.5f),
+                    new Vector3(-halfWidth, 0.0f, -0.75f),
+                    new Vector3( halfWidth, 0.0f, -0.75f),
+                }
             }
         };
 
