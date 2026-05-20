@@ -170,11 +170,9 @@ public partial class BakeBuilder
     // -------------------------------------------------------------------------
     // LOD1 merge — surfaces grouped by material → one draw call per material
     //
-    // Wall MeshInstances whose StaticBody3D parent carries the wall-length
-    // metadata are processed using a freshly built solid mesh (no openings),
-    // which removes the door/window frame triangles invisible at LOD1 distance.
-    // All surfaces sharing the same original material are concatenated into one
-    // surface in the output mesh to minimise draw calls over open terrain.
+    // Same geometry as LOD0 (openings and frames preserved) but with simplified
+    // materials (no normal/AO/roughmap textures) and surfaces concatenated by
+    // material to minimise draw calls when viewing the building from a distance.
     // -------------------------------------------------------------------------
 
     private static ArrayMesh MergeMeshesByMaterial(
@@ -192,23 +190,13 @@ public partial class BakeBuilder
         {
             if (mi.Mesh == null) continue;
 
-            // For wall MeshInstances, substitute a solid mesh (no openings) so
-            // that the baked LOD1 has fewer triangles. The original node stays
-            // in the scene tree; we only swap the Mesh resource used for baking.
-            Mesh bakeSource = mi.Mesh;
-            if (mi.GetParent() is StaticBody3D body && body.HasMeta(WallHelper.MetaWallLength))
-            {
-                float len = body.GetMeta(WallHelper.MetaWallLength).AsSingle();
-                bakeSource = WallMeshBuilder.Build(len, WallBuilder.Height, WallBuilder.Thickness);
-            }
-
             var localToRoot = rootInverse * mi.GlobalTransform;
             bool flipWinding = localToRoot.Basis.Determinant() < 0f;
 
-            int surfCount = bakeSource.GetSurfaceCount();
+            int surfCount = mi.Mesh.GetSurfaceCount();
             for (int s = 0; s < surfCount; s++)
             {
-                var arrays = bakeSource.SurfaceGetArrays(s);
+                var arrays = mi.Mesh.SurfaceGetArrays(s);
                 if (arrays.Count == 0) continue;
                 if (!TransformArraysInPlace(arrays, localToRoot)) continue;
                 if (flipWinding) FlipTriangleWinding(arrays);
