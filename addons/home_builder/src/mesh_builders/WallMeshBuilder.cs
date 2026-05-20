@@ -288,12 +288,17 @@ public static class WallMeshBuilder
         EmitEndCap(st, xEndMZ, xEndPZ, hy, hz);
 
         // ── Opening frames ────────────────────────────────────────────────────
-        foreach (var op in ops)
+        const float adjacentEpsilon = 0.001f;
+        for (int i = 0; i < ops.Count; i++)
         {
+            var op = ops[i];
             float oLeft   = op.Left;
             float oRight  = op.Right;
             float oBottom = op.LocalBottom(hy);
             float oTop    = op.LocalTop(hy);
+
+            bool leftAdjacentToPrev  = i > 0              && Mathf.Abs(oLeft  - ops[i - 1].Right) < adjacentEpsilon;
+            bool rightAdjacentToNext = i < ops.Count - 1  && Mathf.Abs(oRight - ops[i + 1].Left)  < adjacentEpsilon;
 
             // Top lintel
             MeshHelper.AddQuad(st,
@@ -324,31 +329,37 @@ public static class WallMeshBuilder
                 );
             }
 
-            // Left jamb
-            MeshHelper.AddQuad(st,
-                new Vector3(oLeft, oTop,     hz),
-                new Vector3(oLeft, oBottom,  hz),
-                new Vector3(oLeft, oBottom, -hz),
-                new Vector3(oLeft, oTop,    -hz),
-                Vector3.Right,
-                new Vector2(0, UvY(oTop,    hy)),
-                new Vector2(0, UvY(oBottom, hy)),
-                new Vector2(1, UvY(oBottom, hy)),
-                new Vector2(1, UvY(oTop,    hy))
-            );
+            // Left jamb — omitted when the previous opening is flush against this one
+            if (!leftAdjacentToPrev)
+            {
+                MeshHelper.AddQuad(st,
+                    new Vector3(oLeft, oTop,     hz),
+                    new Vector3(oLeft, oBottom,  hz),
+                    new Vector3(oLeft, oBottom, -hz),
+                    new Vector3(oLeft, oTop,    -hz),
+                    Vector3.Right,
+                    new Vector2(0, UvY(oTop,    hy)),
+                    new Vector2(0, UvY(oBottom, hy)),
+                    new Vector2(1, UvY(oBottom, hy)),
+                    new Vector2(1, UvY(oTop,    hy))
+                );
+            }
 
-            // Right jamb
-            MeshHelper.AddQuad(st,
-                new Vector3(oRight, oBottom,  hz),
-                new Vector3(oRight, oTop,     hz),
-                new Vector3(oRight, oTop,    -hz),
-                new Vector3(oRight, oBottom, -hz),
-                Vector3.Left,
-                new Vector2(0, UvY(oBottom, hy)),
-                new Vector2(0, UvY(oTop,    hy)),
-                new Vector2(1, UvY(oTop,    hy)),
-                new Vector2(1, UvY(oBottom, hy))
-            );
+            // Right jamb — omitted when the next opening is flush against this one
+            if (!rightAdjacentToNext)
+            {
+                MeshHelper.AddQuad(st,
+                    new Vector3(oRight, oBottom,  hz),
+                    new Vector3(oRight, oTop,     hz),
+                    new Vector3(oRight, oTop,    -hz),
+                    new Vector3(oRight, oBottom, -hz),
+                    Vector3.Left,
+                    new Vector2(0, UvY(oBottom, hy)),
+                    new Vector2(0, UvY(oTop,    hy)),
+                    new Vector2(1, UvY(oTop,    hy)),
+                    new Vector2(1, UvY(oBottom, hy))
+                );
+            }
         }
 
         return st;
