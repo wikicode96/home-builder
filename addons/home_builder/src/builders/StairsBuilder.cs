@@ -132,36 +132,60 @@ public class StairsBuilder
         var basisY = Vector3.Up;
         var stepBasis = new Basis(basisX, basisY, basisZ);
 
-        // Use floorBaseY directly so step bottoms sit flush with the floor,
-        // not at the tile-center Y which carries a -0.05 visual offset.
+        // Use floorBaseY directly so step bottoms sit flush with the floor.
         var origin = new Vector3(start.X, floorBaseY, start.Z);
 
         // Build the shared mesh once — all steps share the same mesh
         var stepMesh = StairsMeshBuilder.Build(StairWidth, StairRise, StairRun);
 
+        // Single StaticBody3D for the whole staircase
+        var body = new StaticBody3D
+        {
+            Name     = "Staircase",
+            Position = origin,
+            Basis    = stepBasis,
+        };
+
+        // CollisionPolygon3D with the staircase slab profile.
+        // Rotated 90° on Y so the polygon aligns with the mesh geometry.
+        // Depth extrudes symmetrically ±halfWidth along X_parent.
+        var collisionPoly = new CollisionPolygon3D
+        {
+            Depth   = StairWidth,
+            Basis   = Basis.Identity.Rotated(Vector3.Up, Mathf.Pi / 2f),
+            Polygon = new[]
+            {
+                new Vector2(-2.25f,  3.0f),
+                new Vector2(-2.5f,   3.0f),
+                new Vector2( 0.5f,   0.0f),
+                new Vector2( 0.75f,  0.0f),
+            }
+        };
+
         var undo = _plugin.GetUndoRedo();
         undo.CreateAction("Place Stairs");
 
+        stairsParent.AddChild(body);
+        body.Owner = scene;
+
+        body.AddChild(collisionPoly);
+        collisionPoly.Owner = scene;
+
+        // One MeshInstance3D per step as child of the single body, positioned in local space
+        var dock = _plugin.Dock;
         for (int i = 0; i < StairCount; i++)
         {
-            // runOffset: step center along run axis.  The -0.5 shifts the whole flight so
-            // its back edge aligns with the tile edge behind the clicked tile center.
+            // runOffset: step center along local Z. The -0.5 aligns the back edge with the tile edge.
             float runOffset  = i * StairRun + StairRun * 0.5f - 0.5f;
             float riseOffset = (i + 0.5f) * StairRise;
 
-            var stepPos = origin + dirXZ * runOffset + Vector3.Up * riseOffset;
-
-            // StaticBody3D is the root — holds position, basis and collision
-            var body = new StaticBody3D
+            var step = new MeshInstance3D
             {
                 Name     = $"Step_{i + 1}",
-                Position = stepPos,
-                Basis    = stepBasis,
+                Mesh     = stepMesh,
+                Position = new Vector3(0f, riseOffset, runOffset),
             };
 
-            // Visual mesh as child
-            var step = new MeshInstance3D { Mesh = stepMesh };
-            var dock = _plugin.Dock;
             step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceTop,
                 dock?.StairTopMaterial    ?? MaterialHelper.MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
             step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceBottom,
@@ -169,25 +193,12 @@ public class StairsBuilder
             step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceSides,
                 dock?.StairSidesMaterial  ?? MaterialHelper.MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
 
-            // Collision shape as child — BoxShape3D matches step dimensions exactly
-            var shape = new CollisionShape3D
-            {
-                Shape = new BoxShape3D { Size = new Vector3(StairWidth, StairRise, StairRun) }
-            };
-
-            stairsParent.AddChild(body);
-            body.Owner = scene;
-
             body.AddChild(step);
             step.Owner = scene;
-
-            body.AddChild(shape);
-            shape.Owner = scene;
-
-            undo.AddDoMethod(stairsParent,   Node.MethodName.AddChild,    body);
-            undo.AddUndoMethod(stairsParent, Node.MethodName.RemoveChild, body);
         }
 
+        undo.AddDoMethod(stairsParent,   Node.MethodName.AddChild,    body);
+        undo.AddUndoMethod(stairsParent, Node.MethodName.RemoveChild, body);
         undo.CommitAction(false);
     }
 }
