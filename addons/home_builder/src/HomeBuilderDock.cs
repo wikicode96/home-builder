@@ -12,6 +12,9 @@ public partial class HomeBuilderDock : Control
     [Signal]
     public delegate void BakeRequestedEventHandler();
 
+    [Signal]
+    public delegate void OpeningConfigChangedEventHandler();
+
     private const string Left   = "Background/Margin/MainHBox/LeftColumn";
     private const string Right  = "Background/Margin/MainHBox/RightColumn";
     private const string Stack  = "Background/Margin/MainHBox/RightColumn/ConfigStack";
@@ -69,6 +72,19 @@ public partial class HomeBuilderDock : Control
     private Label                _roofDirectionLabel;
     private Label                _roofPitchLabel;
 
+    // Door config spins
+    private SpinBox _doorWidthSpin;
+    private SpinBox _doorHeightSpin;
+
+    // Window config spins
+    private SpinBox _winWidthSpin;
+    private SpinBox _winHeightSpin;
+    private SpinBox _winSillSpin;
+
+    // Door / Window config sections
+    private Container _doorSection;
+    private Container _windowSection;
+
     // Fence asset picker
     private EditorResourcePicker _fenceAssetPicker;
 
@@ -106,6 +122,15 @@ public partial class HomeBuilderDock : Control
     public RoofDirection SelectedRoofDirection => (RoofDirection)(_roofDirectionOption?.Selected ?? 0);
     public float         RoofPitch             => (float)(_roofPitchSpin?.Value ?? 1.5f);
 
+    // ── Door config ───────────────────────────────────────────────────────────
+    public float DoorWidth  => (float)(_doorWidthSpin?.Value  ?? 1.0);
+    public float DoorHeight => (float)(_doorHeightSpin?.Value ?? 2.0);
+
+    // ── Window config ─────────────────────────────────────────────────────────
+    public float WinWidth  => (float)(_winWidthSpin?.Value  ?? 1.0);
+    public float WinHeight => (float)(_winHeightSpin?.Value ?? 1.0);
+    public float WinSill   => (float)(_winSillSpin?.Value   ?? 0.9);
+
     // ── Fence asset ───────────────────────────────────────────────────────────
     public PackedScene FenceAssetScene => _fenceAssetPicker?.EditedResource as PackedScene;
 
@@ -135,13 +160,15 @@ public partial class HomeBuilderDock : Control
         _floorLabel      = GetNode<Label>($"{Left}/FloorSelector/FloorLabel");
 
         // Status + sections
-        _statusLabel  = GetNode<Label>($"{Right}/StatusLabel");
-        _tileSection  = GetNode<Container>($"{Stack}/TileMaterials");
-        _wallSection  = GetNode<Container>($"{Stack}/WallMaterials");
-        _stairSection = GetNode<Container>($"{Stack}/StairMaterials");
-        _roofSection  = GetNode<Container>($"{Stack}/RoofMaterials");
-        _fenceSection = GetNode<Container>($"{Stack}/FenceAssets");
-        _bakeSection  = GetNode<Container>($"{Stack}/BakeSection");
+        _statusLabel   = GetNode<Label>($"{Right}/StatusLabel");
+        _tileSection   = GetNode<Container>($"{Stack}/TileMaterials");
+        _wallSection   = GetNode<Container>($"{Stack}/WallMaterials");
+        _stairSection  = GetNode<Container>($"{Stack}/StairMaterials");
+        _roofSection   = GetNode<Container>($"{Stack}/RoofMaterials");
+        _fenceSection  = GetNode<Container>($"{Stack}/FenceAssets");
+        _doorSection   = GetNode<Container>($"{Stack}/DoorConfig");
+        _windowSection = GetNode<Container>($"{Stack}/WindowConfig");
+        _bakeSection   = GetNode<Container>($"{Stack}/BakeSection");
 
         // Roof config controls (now nested under ConfigRow)
         _roofTypeOption      = GetNode<OptionButton>($"{Stack}/RoofMaterials/ConfigRow/TypeRow/TypeOption");
@@ -199,6 +226,20 @@ public partial class HomeBuilderDock : Control
         _roofTopPicker    = CreatePicker($"{Stack}/RoofMaterials/MaterialsRow/TopRow/TopPicker");
         _roofBottomPicker = CreatePicker($"{Stack}/RoofMaterials/MaterialsRow/BottomRow/BottomPicker");
         _roofSidesPicker  = CreatePicker($"{Stack}/RoofMaterials/MaterialsRow/SidesRow/SidesPicker");
+
+        // Door config spins
+        _doorWidthSpin  = GetNode<SpinBox>($"{Stack}/DoorConfig/ConfigRow/WidthVBox/WidthSpin");
+        _doorHeightSpin = GetNode<SpinBox>($"{Stack}/DoorConfig/ConfigRow/HeightVBox/HeightSpin");
+        _doorWidthSpin.ValueChanged  += _ => EmitSignal(SignalName.OpeningConfigChanged);
+        _doorHeightSpin.ValueChanged += _ => EmitSignal(SignalName.OpeningConfigChanged);
+
+        // Window config spins
+        _winWidthSpin  = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/WidthVBox/WidthSpin");
+        _winHeightSpin = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/HeightVBox/HeightSpin");
+        _winSillSpin   = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/SillVBox/SillSpin");
+        _winWidthSpin.ValueChanged  += _ => EmitSignal(SignalName.OpeningConfigChanged);
+        _winHeightSpin.ValueChanged += _ => EmitSignal(SignalName.OpeningConfigChanged);
+        _winSillSpin.ValueChanged   += _ => EmitSignal(SignalName.OpeningConfigChanged);
 
         // Fence asset picker (PackedScene)
         _fenceAssetPicker = CreatePicker($"{Stack}/FenceAssets/AssetRow/AssetPicker", "PackedScene");
@@ -282,12 +323,14 @@ public partial class HomeBuilderDock : Control
 
     private void UpdateSectionsVisibility(string mode)
     {
-        _tileSection.Visible  = mode is "floor";
-        _wallSection.Visible  = mode is "walls";
-        _stairSection.Visible = mode is "stairs";
-        _roofSection.Visible  = mode is "roof";
-        _fenceSection.Visible = mode is "fences";
-        _bakeSection.Visible  = mode is "bake";
+        _tileSection.Visible   = mode is "floor";
+        _wallSection.Visible   = mode is "walls";
+        _stairSection.Visible  = mode is "stairs";
+        _roofSection.Visible   = mode is "roof";
+        _fenceSection.Visible  = mode is "fences";
+        _doorSection.Visible   = mode is "doors";
+        _windowSection.Visible = mode is "windows";
+        _bakeSection.Visible   = mode is "bake";
     }
 
     private static string ModeDisplayName(string mode) => mode switch

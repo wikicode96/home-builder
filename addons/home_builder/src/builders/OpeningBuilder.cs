@@ -5,18 +5,18 @@ public class OpeningBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    private const float DoorWidth  = 1.0f;
-    private const float DoorHeight = 2.0f;
-    private const float WinWidth   = 1.0f;
-    private const float WinHeight  = 1.0f;
-    private const float WinSill    = 0.9f;
-
     // Metadata key stored on each StaticBody3D wall node to persist openings
     private const string MetaKey = "hb_openings";
 
     private CsgBox3D _marker;
 
     public OpeningBuilder(HomeBuilderPlugin plugin) => _plugin = plugin;
+
+    private float DoorWidth  => _plugin.Dock?.DoorWidth  ?? 1.0f;
+    private float DoorHeight => _plugin.Dock?.DoorHeight ?? 2.0f;
+    private float WinWidth   => _plugin.Dock?.WinWidth   ?? 1.0f;
+    private float WinHeight  => _plugin.Dock?.WinHeight  ?? 1.0f;
+    private float WinSill    => _plugin.Dock?.WinSill    ?? 0.9f;
 
     // -------------------------------------------------------------------------
     // Preview

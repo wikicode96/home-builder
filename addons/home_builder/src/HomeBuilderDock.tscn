@@ -489,6 +489,132 @@ text = "Asset (1m, +X)"
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="DoorConfig" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=4000000001]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_constants/separation = 6
+
+[node name="ConfigRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig" unique_id=4000000002]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="WidthVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/ConfigRow" unique_id=4000000003]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="WidthLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/ConfigRow/WidthVBox" unique_id=4000000004]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Ancho"
+
+[node name="WidthSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/ConfigRow/WidthVBox" unique_id=4000000005]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.5
+max_value = 5.0
+step = 0.1
+value = 1.0
+suffix = "m"
+
+[node name="HeightVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/ConfigRow" unique_id=4000000006]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="HeightLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/ConfigRow/HeightVBox" unique_id=4000000007]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Alto"
+
+[node name="HeightSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/ConfigRow/HeightVBox" unique_id=4000000008]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 4.0
+step = 0.1
+value = 2.0
+suffix = "m"
+
+[node name="WindowConfig" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=4000000009]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_constants/separation = 6
+
+[node name="ConfigRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig" unique_id=4000000010]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="WidthVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow" unique_id=4000000011]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="WidthLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow/WidthVBox" unique_id=4000000012]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Ancho"
+
+[node name="WidthSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow/WidthVBox" unique_id=4000000013]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.5
+max_value = 5.0
+step = 0.1
+value = 1.0
+suffix = "m"
+
+[node name="HeightVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow" unique_id=4000000014]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="HeightLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow/HeightVBox" unique_id=4000000015]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Alto"
+
+[node name="HeightSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow/HeightVBox" unique_id=4000000016]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.5
+max_value = 4.0
+step = 0.1
+value = 1.0
+suffix = "m"
+
+[node name="SillVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow" unique_id=4000000017]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SillLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow/SillVBox" unique_id=4000000018]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Alféizar"
+
+[node name="SillSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/ConfigRow/SillVBox" unique_id=4000000019]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 3.0
+step = 0.1
+value = 0.9
+suffix = "m"
+
 [node name="BakeSection" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=3000000001]
 visible = false
 layout_mode = 0

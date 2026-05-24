@@ -76,6 +76,18 @@ public partial class HomeBuilderPlugin : EditorPlugin
             Callable.From(OnBakeRequested)
         );
 
+        _dock.Connect(
+            HomeBuilderDock.SignalName.OpeningConfigChanged,
+            Callable.From(() =>
+            {
+                if (_activeMode is BuildMode.Doors or BuildMode.Windows)
+                {
+                    ClearAllPreviews();
+                    CallDeferred(MethodName.CreateActivePreviews);
+                }
+            })
+        );
+
         SceneChanged += OnSceneChanged;
 
         // If a scene is already open when the plugin activates, SceneChanged
