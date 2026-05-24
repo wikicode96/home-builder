@@ -22,7 +22,7 @@ public static class SnapHelper
         if (wallLen == 0f) return localHit.X;
 
         float halfLen = wallLen * 0.5f;
-        float snapped = Mathf.Round(localHit.X);
+        float snapped = Mathf.Floor(localHit.X) + 0.5f;
         return Mathf.Clamp(snapped, -halfLen + openingWidth * 0.5f, halfLen - openingWidth * 0.5f);
     }
 
