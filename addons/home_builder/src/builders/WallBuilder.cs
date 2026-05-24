@@ -5,8 +5,8 @@ public class WallBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    public const float Height    = 3.0f;
-    public const float Thickness = 0.1f;
+    public static float Height    { get; set; } = 3.0f;
+    public static float Thickness { get; set; } = 0.1f;
 
     private CsgBox3D _pointMarker;
     private Vector3? _start;

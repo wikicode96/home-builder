@@ -4,6 +4,8 @@ public class FloorBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
+    public static float SlabThickness { get; set; } = 0.1f;
+
     private CsgBox3D _ghost;
     private Vector3? _dragStart;
 
@@ -15,12 +17,13 @@ public class FloorBuilder
 
     public void CreateGhost(Node3D scene, float floorBaseY)
     {
+        float ht = SlabThickness;
         _ghost = PreviewHelper.CreateMarker(
             scene,
             "__HB_GhostFloor__",
-            new Vector3(1f, 0.1f, 1f),
+            new Vector3(1f, ht, 1f),
             new Color(0.2f, 0.9f, 0.3f, 0.4f),
-            new Vector3(0f, floorBaseY - 0.05f, 0f)
+            new Vector3(0f, floorBaseY - ht * 0.5f, 0f)
         );
     }
 
@@ -49,7 +52,7 @@ public class FloorBuilder
             }
             else if (_ghost != null && GodotObject.IsInstanceValid(_ghost))
             {
-                _ghost.Size     = new Vector3(1f, 0.1f, 1f);
+                _ghost.Size     = new Vector3(1f, SlabThickness, 1f);
                 _ghost.Position = cell;
             }
 
@@ -75,7 +78,7 @@ public class FloorBuilder
                     _dragStart = null;
 
                     if (_ghost != null && GodotObject.IsInstanceValid(_ghost))
-                        _ghost.Size = new Vector3(1f, 0.1f, 1f);
+                        _ghost.Size = new Vector3(1f, SlabThickness, 1f);
                 }
                 return 1;
             }
@@ -96,8 +99,9 @@ public class FloorBuilder
         int cols = maxX - minX + 1;
         int rows = maxZ - minZ + 1;
 
-        _ghost.Size     = new Vector3(cols, 0.1f, rows);
-        _ghost.Position = new Vector3(minX + cols * 0.5f, floorBaseY - 0.05f, minZ + rows * 0.5f);
+        float ht = SlabThickness;
+        _ghost.Size     = new Vector3(cols, ht, rows);
+        _ghost.Position = new Vector3(minX + cols * 0.5f, floorBaseY - ht * 0.5f, minZ + rows * 0.5f);
     }
 
     // -------------------------------------------------------------------------
@@ -117,12 +121,13 @@ public class FloorBuilder
         // instance instead of 100 tiles.
         var slabMesh = FloorMeshBuilder.Build(cols, rows);
 
-        var zFighting = 0.001f; // Avoid z-fighting with the floor plane
+        float ht       = SlabThickness;
+        float zFighting = 0.001f;
 
         var body = new StaticBody3D
         {
             Name     = "FloorSlab",
-            Position = new Vector3(minX + cols * 0.5f, floorBaseY - 0.05f + zFighting, minZ + rows * 0.5f),
+            Position = new Vector3(minX + cols * 0.5f, floorBaseY - ht * 0.5f + zFighting, minZ + rows * 0.5f),
         };
         body.SetMeta("HB_FloorRect", new Vector4(minX, minZ, cols, rows));
 
@@ -137,7 +142,7 @@ public class FloorBuilder
 
         var shape = new CollisionShape3D
         {
-            Shape = new BoxShape3D { Size = new Vector3(cols, 0.1f, rows) }
+            Shape = new BoxShape3D { Size = new Vector3(cols, ht, rows) }
         };
 
         floorParent.AddChild(body);

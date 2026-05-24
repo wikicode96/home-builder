@@ -88,6 +88,11 @@ public partial class HomeBuilderPlugin : EditorPlugin
             })
         );
 
+        _dock.Connect(
+            HomeBuilderDock.SignalName.BuildingConfigChanged,
+            Callable.From(OnBuildingConfigChanged)
+        );
+
         SceneChanged += OnSceneChanged;
 
         // If a scene is already open when the plugin activates, SceneChanged
@@ -218,6 +223,24 @@ public partial class HomeBuilderPlugin : EditorPlugin
     // -------------------------------------------------------------------------
     // Bake
     // -------------------------------------------------------------------------
+
+    private void OnBuildingConfigChanged()
+    {
+        var dock = Dock;
+        if (dock == null) return;
+
+        WallBuilder.Height           = dock.WallHeight;
+        StairsBuilder.StairCount     = dock.StairCount;
+        StairsBuilder.StairWidth     = dock.StairWidth;
+        StairsBuilder.StairRun       = dock.StairRun;
+        FloorBuilder.SlabThickness   = dock.FloorThickness;
+
+        if (_activeMode != BuildMode.None)
+        {
+            ClearAllPreviews();
+            CallDeferred(MethodName.CreateActivePreviews);
+        }
+    }
 
     private void OnBakeRequested()
     {

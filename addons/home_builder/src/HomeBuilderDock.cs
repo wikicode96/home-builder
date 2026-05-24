@@ -15,6 +15,9 @@ public partial class HomeBuilderDock : Control
     [Signal]
     public delegate void OpeningConfigChangedEventHandler();
 
+    [Signal]
+    public delegate void BuildingConfigChangedEventHandler();
+
     private const string Left   = "Background/Margin/MainHBox/LeftColumn";
     private const string Right  = "Background/Margin/MainHBox/RightColumn";
     private const string Stack  = "Background/Margin/MainHBox/RightColumn/ConfigStack";
@@ -72,6 +75,17 @@ public partial class HomeBuilderDock : Control
     private Label                _roofDirectionLabel;
     private Label                _roofPitchLabel;
 
+    // Wall config spin
+    private SpinBox _wallHeightSpin;
+
+    // Stair config spins
+    private SpinBox _stairCountSpin;
+    private SpinBox _stairWidthSpin;
+    private SpinBox _stairRunSpin;
+
+    // Floor config spin
+    private SpinBox _floorThicknessSpin;
+
     // Door config spins
     private SpinBox _doorWidthSpin;
     private SpinBox _doorHeightSpin;
@@ -121,6 +135,17 @@ public partial class HomeBuilderDock : Control
     public RoofType      SelectedRoofType      => (RoofType)(_roofTypeOption?.Selected ?? 0);
     public RoofDirection SelectedRoofDirection => (RoofDirection)(_roofDirectionOption?.Selected ?? 0);
     public float         RoofPitch             => (float)(_roofPitchSpin?.Value ?? 1.5f);
+
+    // ── Wall config ───────────────────────────────────────────────────────────
+    public float WallHeight     => (float)(_wallHeightSpin?.Value     ?? 3.0);
+
+    // ── Stair config ──────────────────────────────────────────────────────────
+    public int   StairCount => (int)(_stairCountSpin?.Value ?? 12);
+    public float StairWidth => (float)(_stairWidthSpin?.Value ?? 1.0);
+    public float StairRun   => (float)(_stairRunSpin?.Value   ?? 0.25);
+
+    // ── Floor config ──────────────────────────────────────────────────────────
+    public float FloorThickness => (float)(_floorThicknessSpin?.Value ?? 0.1);
 
     // ── Door config ───────────────────────────────────────────────────────────
     public float DoorWidth  => (float)(_doorWidthSpin?.Value  ?? 1.0);
@@ -207,20 +232,36 @@ public partial class HomeBuilderDock : Control
         _floorUpButton.Pressed   += OnFloorUp;
         _floorDownButton.Pressed += OnFloorDown;
 
+        // Floor config spin
+        _floorThicknessSpin = GetNode<SpinBox>($"{Stack}/TileMaterials/ConfigRow/ThicknessVBox/ThicknessSpin");
+        _floorThicknessSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+
+        // Wall config spin
+        _wallHeightSpin = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/HeightVBox/HeightSpin");
+        _wallHeightSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+
+        // Stair config spins
+        _stairCountSpin = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/CountVBox/CountSpin");
+        _stairWidthSpin = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/WidthVBox/WidthSpin");
+        _stairRunSpin   = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/RunVBox/RunSpin");
+        _stairCountSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        _stairWidthSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        _stairRunSpin.ValueChanged   += _ => EmitSignal(SignalName.BuildingConfigChanged);
+
         // Material pickers — tile
-        _tileTopPicker    = CreatePicker($"{Stack}/TileMaterials/TopRow/TopPicker");
-        _tileBottomPicker = CreatePicker($"{Stack}/TileMaterials/BottomRow/BottomPicker");
-        _tileSidesPicker  = CreatePicker($"{Stack}/TileMaterials/SidesRow/SidesPicker");
+        _tileTopPicker    = CreatePicker($"{Stack}/TileMaterials/MaterialsRow/TopRow/TopPicker");
+        _tileBottomPicker = CreatePicker($"{Stack}/TileMaterials/MaterialsRow/BottomRow/BottomPicker");
+        _tileSidesPicker  = CreatePicker($"{Stack}/TileMaterials/MaterialsRow/SidesRow/SidesPicker");
 
         // Material pickers — wall
-        _wallFaceAPicker = CreatePicker($"{Stack}/WallMaterials/FaceARow/FaceAPicker");
-        _wallFaceBPicker = CreatePicker($"{Stack}/WallMaterials/FaceBRow/FaceBPicker");
-        _wallEdgesPicker = CreatePicker($"{Stack}/WallMaterials/EdgesRow/EdgesPicker");
+        _wallFaceAPicker = CreatePicker($"{Stack}/WallMaterials/MaterialsRow/FaceARow/FaceAPicker");
+        _wallFaceBPicker = CreatePicker($"{Stack}/WallMaterials/MaterialsRow/FaceBRow/FaceBPicker");
+        _wallEdgesPicker = CreatePicker($"{Stack}/WallMaterials/MaterialsRow/EdgesRow/EdgesPicker");
 
         // Material pickers — stair
-        _stairTopPicker    = CreatePicker($"{Stack}/StairMaterials/TopRow/TopPicker");
-        _stairBottomPicker = CreatePicker($"{Stack}/StairMaterials/BottomRow/BottomPicker");
-        _stairSidesPicker  = CreatePicker($"{Stack}/StairMaterials/SidesRow/SidesPicker");
+        _stairTopPicker    = CreatePicker($"{Stack}/StairMaterials/MaterialsRow/TopRow/TopPicker");
+        _stairBottomPicker = CreatePicker($"{Stack}/StairMaterials/MaterialsRow/BottomRow/BottomPicker");
+        _stairSidesPicker  = CreatePicker($"{Stack}/StairMaterials/MaterialsRow/SidesRow/SidesPicker");
 
         // Material pickers — roof (nested under MaterialsRow)
         _roofTopPicker    = CreatePicker($"{Stack}/RoofMaterials/MaterialsRow/TopRow/TopPicker");

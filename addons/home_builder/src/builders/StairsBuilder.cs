@@ -4,11 +4,12 @@ public class StairsBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    private const int   StairCount    = 12;
-    private const float StairRise     = WallBuilder.Height / StairCount;  // 0.25 m per step
-    private const float StairRun      = 0.25f;                            // 0.25 m → 12 steps = exactly 3 m
-    private const float StairWidth    = 1.0f;
-    private const float StairTotalRun = StairCount * StairRun;            // exactly 3.0 m = 3 tiles
+    public static int   StairCount { get; set; } = 12;
+    public static float StairRun   { get; set; } = 0.25f;
+    public static float StairWidth { get; set; } = 1.0f;
+
+    private static float StairRise     => WallBuilder.Height / StairCount;
+    private static float StairTotalRun => StairCount * StairRun;
 
     private static readonly Color GhostColor = new(0.9f, 0.8f, 0.1f, 0.4f);
 
@@ -196,20 +197,22 @@ public class StairsBuilder
         };
 
         float halfWidth = StairWidth * 0.5f;
+        float h  = WallBuilder.Height;
+        float tr = StairTotalRun;
         var collisionPoly = new CollisionShape3D
         {
             Shape = new ConvexPolygonShape3D
             {
                 Points = new[]
                 {
-                    new Vector3(-halfWidth, 3.0f,  2.25f),
-                    new Vector3( halfWidth, 3.0f,  2.25f),
-                    new Vector3(-halfWidth, 3.0f,  2.5f),
-                    new Vector3( halfWidth, 3.0f,  2.5f),
-                    new Vector3(-halfWidth, 0.0f, -0.5f),
-                    new Vector3( halfWidth, 0.0f, -0.5f),
-                    new Vector3(-halfWidth, 0.0f, -0.75f),
-                    new Vector3( halfWidth, 0.0f, -0.75f),
+                    new Vector3(-halfWidth, h,  tr - 0.75f),
+                    new Vector3( halfWidth, h,  tr - 0.75f),
+                    new Vector3(-halfWidth, h,  tr - 0.5f),
+                    new Vector3( halfWidth, h,  tr - 0.5f),
+                    new Vector3(-halfWidth, 0f, -0.5f),
+                    new Vector3( halfWidth, 0f, -0.5f),
+                    new Vector3(-halfWidth, 0f, -0.75f),
+                    new Vector3( halfWidth, 0f, -0.75f),
                 }
             }
         };
