@@ -44,6 +44,15 @@ public partial class BakeBuilder
             return;
         }
 
+        // Guard: if lod1Begin > lod0End there would be a dead zone where neither
+        // LOD is visible. Clamp lod1Begin so it never exceeds lod0End.
+        if (lod1Begin > lod0End)
+        {
+            GD.PrintErr($"[BakeBuilder] lod1Begin ({lod1Begin}m) > lod0End ({lod0End}m): " +
+                        "habría una franja invisible. Se iguala lod1Begin a lod0End.");
+            lod1Begin = lod0End;
+        }
+
         var rootInverse = sceneRoot.GlobalTransform.AffineInverse();
 
         // LOD0: geometría y materiales completos, una surface por surface original.
@@ -194,10 +203,19 @@ public partial class BakeBuilder
             var localToRoot = rootInverse * mi.GlobalTransform;
             bool flipWinding = localToRoot.Basis.Determinant() < 0f;
 
-            int surfCount = mi.Mesh.GetSurfaceCount();
+            // For wall bodies, replace the original mesh (which has opening holes
+            // and complex geometry) with a solid rectangular mesh — just FaceA and
+            // FaceB, no holes, no edge surfaces. Materials are still taken from the
+            // original MeshInstance3D so the user's assignments are preserved.
+            var simplifiedWall = GetSimplifiedWallMesh(mi);
+            var sourceMesh     = simplifiedWall ?? mi.Mesh;
+            int surfCount      = simplifiedWall != null
+                ? WallMeshBuilder.SurfaceFaceB + 1   // only FaceA (0) and FaceB (1)
+                : sourceMesh.GetSurfaceCount();
+
             for (int s = 0; s < surfCount; s++)
             {
-                var arrays = mi.Mesh.SurfaceGetArrays(s);
+                var arrays = sourceMesh.SurfaceGetArrays(s);
                 if (arrays.Count == 0) continue;
                 if (!TransformArraysInPlace(arrays, localToRoot)) continue;
                 if (flipWinding) FlipTriangleWinding(arrays);
@@ -428,18 +446,31 @@ public partial class BakeBuilder
         }
     }
 
-    // Returns true when the node is inside a Stairs_* or Fences_* subtree,
-    // so it gets skipped in LOD1 to reduce polygon count at distance.
+    // Returns true when the node is inside a Stairs_*, Fences_*, or Floor_*
+    // subtree, so it gets skipped in LOD1 to reduce polygon count at distance.
     private static bool IsLod1Excluded(Node node)
     {
         var current = node.GetParent();
         while (current != null && GodotObject.IsInstanceValid(current))
         {
             string name = (string)current.Name;
-            if (name.StartsWith("Stairs_") || name.StartsWith("Fences_"))
+            if (name.StartsWith("Stairs_") || name.StartsWith("Fences_") || name.StartsWith("Floor_"))
                 return true;
             current = current.GetParent();
         }
         return false;
+    }
+
+    // If mi belongs to a wall body (parent StaticBody3D has hb_wall_length meta),
+    // returns a solid rectangular wall mesh with no openings and no edge surfaces,
+    // so LOD1 walls are clean flat faces. Returns null for non-wall meshes.
+    private static ArrayMesh GetSimplifiedWallMesh(MeshInstance3D mi)
+    {
+        if (mi.GetParent() is StaticBody3D body && body.HasMeta("hb_wall_length"))
+        {
+            float length = (float)body.GetMeta("hb_wall_length");
+            return WallMeshBuilder.Build(length, WallBuilder.Height, WallBuilder.Thickness);
+        }
+        return null;
     }
 }
