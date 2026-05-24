@@ -49,9 +49,10 @@ public partial class BakeBuilder
         // LOD0: geometría y materiales completos, una surface por surface original.
         var lod0Mesh = MergeMeshesFlat(meshInstances, rootInverse, simplifyMaterials: false);
 
-        // LOD1: walls sin aperturas + materiales simplificados + surfaces fusionadas
-        // por material para minimizar draw calls al ver el edificio desde lejos.
-        var lod1Mesh = MergeMeshesByMaterial(meshInstances, rootInverse);
+        // LOD1: igual que LOD0 pero sin escaleras ni vallas (menos polígonos a distancia)
+        // y con materiales simplificados + surfaces fusionadas por material.
+        var lod1Instances = meshInstances.FindAll(mi => !IsLod1Excluded(mi));
+        var lod1Mesh = MergeMeshesByMaterial(lod1Instances, rootInverse);
 
         var bakedRoot = new StaticBody3D { Name = sceneRoot.Name };
 
@@ -425,5 +426,20 @@ public partial class BakeBuilder
             if (child != owner) child.Owner = owner;
             SetOwnerRecursive(child, owner);
         }
+    }
+
+    // Returns true when the node is inside a Stairs_* or Fences_* subtree,
+    // so it gets skipped in LOD1 to reduce polygon count at distance.
+    private static bool IsLod1Excluded(Node node)
+    {
+        var current = node.GetParent();
+        while (current != null && GodotObject.IsInstanceValid(current))
+        {
+            string name = (string)current.Name;
+            if (name.StartsWith("Stairs_") || name.StartsWith("Fences_"))
+                return true;
+            current = current.GetParent();
+        }
+        return false;
     }
 }

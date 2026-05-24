@@ -215,6 +215,12 @@ public partial class HomeBuilderPlugin : EditorPlugin
         ClearAllPreviews();
 
         var dock = Dock;
+        if (dock == null)
+        {
+            GD.PrintErr("[HomeBuilder] Dock no disponible al bakear");
+            return;
+        }
+
         _bakeBuilder.Bake(
             scene,
             dock.BakeOutputPath,
