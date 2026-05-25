@@ -34,9 +34,9 @@ public partial class BakeBuilder
             return;
         }
 
-        var meshInstances   = new List<MeshInstance3D>();
-        var collisionShapes = new List<CollisionShape3D>();
-        CollectGeometry(sceneRoot, meshInstances, collisionShapes);
+        var meshInstances = new List<MeshInstance3D>();
+        var convexShapes  = new List<CollisionShape3D>();
+        CollectGeometry(sceneRoot, meshInstances, convexShapes);
 
         if (meshInstances.Count == 0)
         {
@@ -91,17 +91,34 @@ public partial class BakeBuilder
 
         bakedRoot.AddChild(BuildOccluder(lod1Mesh));
 
-        int colIdx = 0;
-        foreach (var col in collisionShapes)
+        // Main collision: visual mesh without stair steps.
+        var colInstances = meshInstances.FindAll(mi => !IsStairsMesh(mi));
+        var colMesh      = MergeMeshesFlat(colInstances, rootInverse, simplifyMaterials: false);
+        bakedRoot.AddChild(new CollisionShape3D
         {
-            if (col.Shape == null) continue;
-            var newCol = new CollisionShape3D
+            Name  = "Collision",
+            Shape = BuildConcaveShape(colMesh),
+        });
+
+        // Staircase ramps: kept as ConvexPolygonShape3D (not merged into the
+        // ConcavePolygonShape3D) so CharacterBody3D slides up smoothly.
+        // Merging them causes an internal edge at the floor/ramp junction that
+        // makes the character catch and stop.
+        int stairIdx = 0;
+        foreach (var cs in convexShapes)
+        {
+            if (cs.Shape is not ConvexPolygonShape3D convex) continue;
+            var localToRoot = rootInverse * cs.GlobalTransform;
+            var pts         = convex.Points;
+            var transformed = new Vector3[pts.Length];
+            for (int p = 0; p < pts.Length; p++)
+                transformed[p] = localToRoot * pts[p];
+
+            bakedRoot.AddChild(new CollisionShape3D
             {
-                Name      = $"Collision_{colIdx++}",
-                Shape     = col.Shape,
-                Transform = rootInverse * col.GlobalTransform,
-            };
-            bakedRoot.AddChild(newCol);
+                Name  = $"Staircase_{stairIdx++}",
+                Shape = new ConvexPolygonShape3D { Points = transformed },
+            });
         }
 
         SetOwnerRecursive(bakedRoot, bakedRoot);
@@ -134,12 +151,15 @@ public partial class BakeBuilder
     private static void CollectGeometry(
         Node node,
         List<MeshInstance3D> meshes,
-        List<CollisionShape3D> cols)
+        List<CollisionShape3D> convexShapes)
     {
-        if (node is MeshInstance3D mi)   meshes.Add(mi);
-        if (node is CollisionShape3D cs) cols.Add(cs);
+        if (node is MeshInstance3D mi) meshes.Add(mi);
+        // Only ConvexPolygonShape3D matters here — that is exclusively the
+        // staircase ramp. Box/ConcavePolygon shapes are replaced by the visual mesh.
+        if (node is CollisionShape3D cs && cs.Shape is ConvexPolygonShape3D)
+            convexShapes.Add(cs);
         foreach (Node child in node.GetChildren())
-            CollectGeometry(child, meshes, cols);
+            CollectGeometry(child, meshes, convexShapes);
     }
 
     // -------------------------------------------------------------------------
@@ -548,6 +568,66 @@ public partial class BakeBuilder
             return WallMeshBuilder.Build(length, WallBuilder.Height, WallBuilder.Thickness);
         }
         return null;
+    }
+
+    // Returns true when the node is a step mesh inside a Stairs_* subtree.
+    // Used to exclude stair visuals from the collision mesh — the ramp
+    // ConvexPolygonShape3D handles walkability instead.
+    private static bool IsStairsMesh(Node node)
+    {
+        var current = node.GetParent();
+        while (current != null && GodotObject.IsInstanceValid(current))
+        {
+            if (((string)current.Name).StartsWith("Stairs_"))
+                return true;
+            current = current.GetParent();
+        }
+        return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collision — single ConcavePolygonShape3D.
+    //
+    // Uses the visual mesh (walls, floors, roof — no stair steps) so
+    // door/window openings are real holes and the geometry is exact.
+    // Staircases are kept as separate ConvexPolygonShape3D nodes.
+    // -------------------------------------------------------------------------
+
+    private static ConcavePolygonShape3D BuildConcaveShape(ArrayMesh mesh)
+    {
+        var faces = new List<Vector3>();
+
+        for (int s = 0; s < mesh.GetSurfaceCount(); s++)
+        {
+            var arrays = mesh.SurfaceGetArrays(s);
+            if (arrays.Count == 0) continue;
+
+            var verts  = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            var idxVar = arrays[(int)Mesh.ArrayType.Index];
+
+            if (idxVar.VariantType == Variant.Type.PackedInt32Array)
+            {
+                var indices = idxVar.AsInt32Array();
+                for (int i = 0; i + 2 < indices.Length; i += 3)
+                {
+                    faces.Add(verts[indices[i]]);
+                    faces.Add(verts[indices[i + 1]]);
+                    faces.Add(verts[indices[i + 2]]);
+                }
+            }
+            else
+            {
+                for (int i = 0; i + 2 < verts.Length; i += 3)
+                {
+                    faces.Add(verts[i]);
+                    faces.Add(verts[i + 1]);
+                    faces.Add(verts[i + 2]);
+                }
+            }
+        }
+
+        GD.Print($"[BakeBuilder] BuildConcaveShape: {faces.Count / 3} triángulos");
+        return new ConcavePolygonShape3D { Data = faces.ToArray() };
     }
 
     // -------------------------------------------------------------------------
