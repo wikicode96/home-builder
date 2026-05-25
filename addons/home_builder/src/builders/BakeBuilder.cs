@@ -370,6 +370,80 @@ public partial class BakeBuilder
         if (hasNormals  && normals.Count  == verts.Count)     result[(int)Mesh.ArrayType.Normal]  = normals.ToArray();
         if (hasUVs      && uvs.Count      == verts.Count)     result[(int)Mesh.ArrayType.TexUV]   = uvs.ToArray();
         if (hasTangents && tangents.Count == verts.Count * 4) result[(int)Mesh.ArrayType.Tangent] = tangents.ToArray();
+        return ReindexSurface(result);
+    }
+
+    // -------------------------------------------------------------------------
+    // Re-indexing — duplicates vertices shared between merged surfaces.
+    // ConcatenateArrays expands all surfaces to non-indexed, so seam vertices
+    // between adjacent surfaces are duplicated. This pass rebuilds an index
+    // buffer and removes those duplicates, reducing vertex count and improving
+    // GPU vertex cache performance.
+    // -------------------------------------------------------------------------
+
+    private static Godot.Collections.Array ReindexSurface(Godot.Collections.Array arrays)
+    {
+        var srcVerts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+
+        Vector3[] srcNormals  = null;
+        Vector2[] srcUVs      = null;
+        float[]   srcTangents = null;
+
+        var normVar = arrays[(int)Mesh.ArrayType.Normal];
+        if (normVar.VariantType == Variant.Type.PackedVector3Array)
+            srcNormals = normVar.AsVector3Array();
+
+        var uvVar = arrays[(int)Mesh.ArrayType.TexUV];
+        if (uvVar.VariantType == Variant.Type.PackedVector2Array)
+            srcUVs = uvVar.AsVector2Array();
+
+        var tanVar = arrays[(int)Mesh.ArrayType.Tangent];
+        if (tanVar.VariantType == Variant.Type.PackedFloat32Array)
+            srcTangents = tanVar.AsFloat32Array();
+
+        var uniqueVerts    = new List<Vector3>(srcVerts.Length);
+        var uniqueNormals  = srcNormals  != null ? new List<Vector3>(srcVerts.Length) : null;
+        var uniqueUVs      = srcUVs      != null ? new List<Vector2>(srcVerts.Length) : null;
+        var uniqueTangents = srcTangents != null ? new List<float>(srcVerts.Length * 4) : null;
+        var indices        = new int[srcVerts.Length];
+
+        // Key: (position, normal, uv) — exact float equality is intentional here
+        // because all duplicates originate from the same source data and share
+        // the exact same bit pattern, not from independent calculations.
+        var keyMap = new Dictionary<(Vector3, Vector3, Vector2), int>(srcVerts.Length);
+
+        for (int i = 0; i < srcVerts.Length; i++)
+        {
+            var key = (
+                srcVerts[i],
+                srcNormals != null ? srcNormals[i] : Vector3.Zero,
+                srcUVs     != null ? srcUVs[i]     : Vector2.Zero
+            );
+
+            if (!keyMap.TryGetValue(key, out int idx))
+            {
+                idx = uniqueVerts.Count;
+                keyMap[key] = idx;
+                uniqueVerts.Add(srcVerts[i]);
+                uniqueNormals?.Add(srcNormals[i]);
+                uniqueUVs?.Add(srcUVs[i]);
+                if (srcTangents != null)
+                    for (int k = 0; k < 4; k++)
+                        uniqueTangents.Add(srcTangents[i * 4 + k]);
+            }
+            indices[i] = idx;
+        }
+
+        GD.Print($"[BakeBuilder] ReindexSurface: {srcVerts.Length} → {uniqueVerts.Count} vértices " +
+                 $"({srcVerts.Length - uniqueVerts.Count} duplicados eliminados)");
+
+        var result = new Godot.Collections.Array();
+        result.Resize((int)Mesh.ArrayType.Max);
+        result[(int)Mesh.ArrayType.Vertex]  = uniqueVerts.ToArray();
+        if (uniqueNormals  != null) result[(int)Mesh.ArrayType.Normal]  = uniqueNormals.ToArray();
+        if (uniqueUVs      != null) result[(int)Mesh.ArrayType.TexUV]   = uniqueUVs.ToArray();
+        if (uniqueTangents != null) result[(int)Mesh.ArrayType.Tangent] = uniqueTangents.ToArray();
+        result[(int)Mesh.ArrayType.Index]   = indices;
         return result;
     }
 
