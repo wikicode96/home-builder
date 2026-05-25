@@ -29,8 +29,11 @@ Clic en el viewport para colocar una loseta de suelo. El tamaño de la loseta es
 ### Paredes
 - Primer clic: punto de inicio de la pared.
 - Segundo clic: punto final. La pared se alinea automáticamente al centro de las losetas del suelo.
+- Las intersecciones entre paredes (esquinas en L, T o X) se resuelven automáticamente con juntas en inglete, sin huecos visibles en ningún ángulo.
 - Las paredes soportan **puertas y ventanas** (ver más abajo).
 - Configurable: **altura** de la pared y material de **cara A**, **cara B** y **cantos**.
+
+> El grosor de la pared es fijo (0.1 m) y no se expone en el panel.
 
 ### Puertas y ventanas
 Con el modo Puertas o Ventanas activo, haz clic sobre una pared existente para abrir un hueco. El hueco se recorta en la geometría y en la colisión de la pared.
@@ -50,7 +53,21 @@ Clic en el viewport para colocar el tejado sobre la planta activa. Tipos disponi
 - **A cuatro aguas** (hip) — configurable: pendiente
 
 ### Vallas / Barandillas
-Requiere asignar una `PackedScene` como asset de valla. Los segmentos se instancian a lo largo del borde indicado.
+- Primer clic: esquina inicial del segmento.
+- Segundo clic: esquina final. Los módulos se instancian a lo largo del eje dominante (X o Z).
+- Requiere asignar una `PackedScene` como asset de valla en el panel.
+
+> **Limitación**: las vallas solo admiten ejes alineados (X o Z). No se pueden colocar en diagonal.
+
+#### Convención del asset de valla
+
+El asset debe seguir este contrato para que los módulos encajen correctamente:
+
+| Propiedad | Valor |
+|---|---|
+| Anchura | 1 m (eje X) |
+| Pivot | Centro de la base (0, 0, 0) |
+| Orientación | Mirando hacia +X |
 
 ---
 
