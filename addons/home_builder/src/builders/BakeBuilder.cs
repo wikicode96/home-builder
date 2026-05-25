@@ -89,6 +89,8 @@ public partial class BakeBuilder
         };
         bakedRoot.AddChild(lod1Inst);
 
+        bakedRoot.AddChild(BuildOccluder(lod1Mesh));
+
         int colIdx = 0;
         foreach (var col in collisionShapes)
         {
@@ -546,5 +548,45 @@ public partial class BakeBuilder
             return WallMeshBuilder.Build(length, WallBuilder.Height, WallBuilder.Thickness);
         }
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Occluder — built from LOD1 geometry (already simplified: flat walls,
+    // no stairs/fences) so the polygon count is low and the shape is accurate.
+    // The OccluderInstance3D tells Godot's occlusion system which fragments can
+    // be skipped when this building is blocking the view.
+    // -------------------------------------------------------------------------
+
+    private static OccluderInstance3D BuildOccluder(ArrayMesh sourceMesh)
+    {
+        var allVerts   = new List<Vector3>();
+        var allIndices = new List<int>();
+
+        for (int s = 0; s < sourceMesh.GetSurfaceCount(); s++)
+        {
+            var arrays = sourceMesh.SurfaceGetArrays(s);
+            if (arrays.Count == 0) continue;
+
+            var verts   = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            int baseIdx = allVerts.Count;
+            allVerts.AddRange(verts);
+
+            var idxVar = arrays[(int)Mesh.ArrayType.Index];
+            if (idxVar.VariantType == Variant.Type.PackedInt32Array)
+            {
+                foreach (int i in idxVar.AsInt32Array())
+                    allIndices.Add(baseIdx + i);
+            }
+            else
+            {
+                for (int i = 0; i < verts.Length; i++)
+                    allIndices.Add(baseIdx + i);
+            }
+        }
+
+        var occluder = new ArrayOccluder3D();
+        occluder.SetArrays(allVerts.ToArray(), allIndices.ToArray());
+
+        return new OccluderInstance3D { Name = "Occluder", Occluder = occluder };
     }
 }
