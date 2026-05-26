@@ -22,7 +22,7 @@ Plugin para Godot 4 (C#) que permite construir edificios directamente en el edit
 ## Modos de construcción
 
 ### Suelos
-Clic en el viewport para colocar una loseta de suelo. El tamaño de la loseta es siempre 1×1 m. Puedes configurar:
+Mantén pulsado y arrastra en el viewport para rellenar un rectángulo de losetas. Una sola pulsación coloca una loseta de 1×1 m; arrastrando se cubre toda la habitación de golpe (un único `MeshInstance3D` para todo el rectángulo, no una loseta por celda). El snap es a la celda de 1 m. Puedes configurar:
 - **Grosor** de la losa
 - Material de la **cara superior**, **inferior** y **laterales**
 
@@ -43,14 +43,15 @@ Con el modo Puertas o Ventanas activo, haz clic sobre una pared existente para a
 ### Escaleras
 - Primer clic: base de la escalera.
 - Segundo clic: dirección y longitud. La escalera conecta la planta actual con la siguiente.
-- Configurable: número de escalones, anchura y profundidad de cada escalón.
+- Configurable: número de escalones, anchura y profundidad (huella) de cada escalón.
+- La **altura de cada escalón** se calcula automáticamente como `altura de pared / número de escalones`, de forma que la escalera siempre conecta exactamente con la planta superior. Subir el número de escalones los hace más bajos; bajarlo, más altos.
 
 ### Tejados
-Clic en el viewport para colocar el tejado sobre la planta activa. Tipos disponibles:
+Mantén pulsado y arrastra en el viewport para definir el footprint del tejado sobre la planta activa. El snap es a media loseta (0.5 m), para que el tejado pueda alinearse con caras exteriores de pared, no solo con el centro de la celda. El footprint se extiende automáticamente medio grosor de pared hacia fuera por cada lado, de modo que el alero cubre la cara exterior de las paredes perimetrales. Tipos disponibles:
 - **Plano**
 - **A un agua** (shed) — configurable: dirección y pendiente
 - **A dos aguas** (gable) — configurable: dirección y pendiente
-- **A cuatro aguas** (hip) — configurable: pendiente
+- **A cuatro aguas** (hip) — configurable: pendiente. La cumbrera se orienta automáticamente al lado más largo del rectángulo.
 
 ### Vallas / Barandillas
 - Primer clic: esquina inicial del segmento.
