@@ -9,7 +9,7 @@ public static class RaycastHelper
     }
 
     // -------------------------------------------------------------------------
-    // Floor plane intersection (unchanged)
+    // Floor plane intersection
     // -------------------------------------------------------------------------
 
     public static Vector3? ToFloorPlane(Camera3D camera, Vector2 screenPos, float floorBaseY)
@@ -135,11 +135,6 @@ public static class RaycastHelper
         }
         return true;
     }
-
-    // -------------------------------------------------------------------------
-    // Read wall half-length from metadata (written by WallBuilder) or
-    // fall back to BoxShape3D for walls created before this update.
-    // -------------------------------------------------------------------------
 
     private static float GetWallHalfLength(StaticBody3D body) => WallHelper.GetWallHalfLength(body);
 }

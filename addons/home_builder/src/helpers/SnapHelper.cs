@@ -56,9 +56,5 @@ public static class SnapHelper
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Internal helper — shared with OpeningBuilder via the metadata key
-    // -------------------------------------------------------------------------
-
     private static float GetWallLength(StaticBody3D wallBody) => WallHelper.GetWallLength(wallBody);
 }

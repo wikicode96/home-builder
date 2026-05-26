@@ -12,7 +12,7 @@ public class FloorBuilder
     public FloorBuilder(HomeBuilderPlugin plugin) => _plugin = plugin;
 
     // -------------------------------------------------------------------------
-    // Preview (still CsgBox3D — previews don't need materials)
+    // Preview
     // -------------------------------------------------------------------------
 
     public void CreateGhost(Node3D scene, float floorBaseY)
@@ -105,7 +105,7 @@ public class FloorBuilder
     }
 
     // -------------------------------------------------------------------------
-    // Placement — MeshInstance3D with 3 surfaces
+    // Placement — single MeshInstance3D for the whole rectangle
     // -------------------------------------------------------------------------
 
     private void FillFloorRect(Vector3 a, Vector3 b, float floorBaseY, int activeFloor)
@@ -117,8 +117,6 @@ public class FloorBuilder
         var floorParent = _plugin.GetOrCreateParentNode($"Floor_{activeFloor}");
         if (floorParent == null) return;
 
-        // One mesh for the entire rectangle — a 10x10 room is now a single
-        // instance instead of 100 tiles.
         var slabMesh = FloorMeshBuilder.Build(cols, rows);
 
         float ht       = SlabThickness;

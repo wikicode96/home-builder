@@ -55,11 +55,11 @@ public partial class BakeBuilder
 
         var rootInverse = sceneRoot.GlobalTransform.AffineInverse();
 
-        // LOD0: geometría y materiales completos, una surface por surface original.
+        // LOD0: full geometry and materials, one surface per source surface.
         var lod0Mesh = MergeMeshesFlat(meshInstances, rootInverse, simplifyMaterials: false);
 
-        // LOD1: igual que LOD0 pero sin escaleras ni vallas (menos polígonos a distancia)
-        // y con materiales simplificados + surfaces fusionadas por material.
+        // LOD1: same shape as LOD0 minus stairs and fences (fewer polys at
+        // distance), with simplified materials and surfaces merged by material.
         var lod1Instances = meshInstances.FindAll(mi => !IsLod1Excluded(mi));
         var lod1Mesh = MergeMeshesByMaterial(lod1Instances, rootInverse);
 

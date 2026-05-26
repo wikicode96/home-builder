@@ -175,9 +175,9 @@ public partial class HomeBuilderDock : Control
         _doorButton    = GetNode<Button>($"{Left}/ModeGrid/DoorButton");
         _windowButton  = GetNode<Button>($"{Left}/ModeGrid/WindowButton");
         _stairsButton  = GetNode<Button>($"{Left}/ModeGrid/StairsButton");
-        _fenceButton   = GetNode<Button>($"{Left}/ModeGrid/FenceButton");
-        _noneButton      = GetNode<Button>($"{Left}/ModeGrid/NoneButton");
-        _bakeModeButton  = GetNode<Button>($"{Left}/ModeGrid/BakeModeButton");
+        _fenceButton    = GetNode<Button>($"{Left}/ModeGrid/FenceButton");
+        _noneButton     = GetNode<Button>($"{Left}/ModeGrid/NoneButton");
+        _bakeModeButton = GetNode<Button>($"{Left}/ModeGrid/BakeModeButton");
 
         // Floor selector
         _floorUpButton   = GetNode<Button>($"{Left}/FloorSelector/FloorUpButton");

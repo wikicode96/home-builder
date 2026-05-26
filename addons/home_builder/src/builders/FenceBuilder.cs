@@ -5,12 +5,12 @@ public class FenceBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    // Convención del asset: 1 m de ancho, pivote en el centro de la base,
-    // mirando hacia +X. Cualquier asset que cumpla esto es plug-and-play.
+    // Asset convention: 1 m wide, pivot at the centre of the base, facing +X.
+    // Any asset that follows this is plug-and-play.
     public const float ModuleLength = 1.0f;
 
-    // Metadata por segmento — permite refactorizar el segmento en el futuro
-    // (postes, esquinas, cambio de asset) leyendo la información original.
+    // Per-segment metadata — lets future passes (posts, corners, asset swap)
+    // reconstruct the segment from the original placement data.
     public const string MetaStart     = "HB_FenceStart";
     public const string MetaEnd       = "HB_FenceEnd";
     public const string MetaAxis      = "HB_FenceAxis";
@@ -84,15 +84,12 @@ public class FenceBuilder
     }
 
     // -------------------------------------------------------------------------
-    // Eje dominante
+    // Dominant axis
     //
-    // El happy-path 0.4.0 solo admite segmentos paralelos a X o Z. En vez de
-    // rechazar clicks "diagonales", proyectamos el segundo click sobre el eje
-    // dominante (el que tenga mayor delta). Si los dos deltas son cero
-    // devolvemos Axis.None y el placement se cancela silenciosamente.
-    //
-    // Cuando en el futuro queramos diagonales, este método cambia a devolver
-    // un vector libre y EnumerateModulePlacements se adapta.
+    // Only segments parallel to X or Z are supported. Rather than rejecting
+    // diagonal clicks, we project the second click onto whichever axis has the
+    // larger delta. If both deltas are near zero we return Axis.None and the
+    // placement is cancelled silently.
     // -------------------------------------------------------------------------
 
     private enum Axis { None, X, Z }
@@ -121,7 +118,7 @@ public class FenceBuilder
         var assetScene = _plugin.Dock?.FenceAssetScene;
         if (assetScene == null)
         {
-            GD.PushWarning("FenceBuilder: no hay asset seleccionado en el dock.");
+            GD.PushWarning("FenceBuilder: no asset selected in the dock.");
             return;
         }
 
@@ -132,9 +129,9 @@ public class FenceBuilder
         var fenceParent = _plugin.GetOrCreateParentNode($"Fences_{_plugin.ActiveFloor}");
         if (fenceParent == null) return;
 
-        // El segmento se posiciona en `start` y se rota para que su +X local
-        // apunte a `end`. Así cada módulo se coloca en local x = (i + 0.5)
-        // sin pensar en el eje global.
+        // The segment is placed at `start` and rotated so its local +X points
+        // toward `end`. Each module is then positioned at local x = (i + 0.5)
+        // without caring about the global axis.
         var dir   = (end - start).Normalized();
         var basisX = dir;
         var basisY = Vector3.Up;
@@ -171,11 +168,11 @@ public class FenceBuilder
     }
 
     // -------------------------------------------------------------------------
-    // Enumeración de módulos
+    // Module enumeration
     //
-    // Punto único de extensión: hoy devuelve N transforms locales alineados en
-    // X. Mañana, aquí entran postes intercalados, módulos de longitud variable,
-    // esquinas, etc. El resto del builder es agnóstico.
+    // Single extension point: returns N local transforms aligned along X.
+    // Posts, variable-length modules, corners and similar additions all go
+    // here; the rest of the builder is agnostic.
     // -------------------------------------------------------------------------
 
     private static IEnumerable<Transform3D> EnumerateModulePlacements(int nModules)

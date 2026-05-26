@@ -14,7 +14,7 @@ public class WallBuilder
     public WallBuilder(HomeBuilderPlugin plugin) => _plugin = plugin;
 
     // -------------------------------------------------------------------------
-    // Preview (CsgBox3D — previews don't need materials)
+    // Preview
     // -------------------------------------------------------------------------
 
     public void CreateMarker(Node3D scene, float floorBaseY)
@@ -171,7 +171,7 @@ public class WallBuilder
 
     private static void RebuildJunctionFills(
         Node3D wallParent,
-        System.Collections.Generic.List<WallJunctionSolver.JunctionFill> fills)
+        List<WallJunctionSolver.JunctionFill> fills)
     {
         MeshInstance3D fillNode = null;
         foreach (Node child in wallParent.GetChildren())

@@ -23,12 +23,15 @@ public class StairsBuilder
     // Preview
     // -------------------------------------------------------------------------
 
+    // floorBaseY is unused at creation: the ghost is moved into place on the
+    // first mouse-motion event. The parameter is kept for symmetry with the
+    // other builder ghosts.
     public void CreateGhost(Node3D scene, float floorBaseY)
     {
         _ghost = new Node3D { Name = "__HB_StairsGhost__" };
         scene.AddChild(_ghost);
         _ghostIsStaircase = false;
-        AddTileChild(floorBaseY);
+        AddTileChild();
     }
 
     public void ClearPreview()
@@ -79,7 +82,7 @@ public class StairsBuilder
                 if (!_start.Value.IsEqualApprox(corner))
                     PlaceStairs(_start.Value, corner, floorBaseY);
                 _start = null;
-                ResetGhostToTile(floorBaseY);
+                ResetGhostToTile();
             }
 
             return 1;
@@ -92,7 +95,7 @@ public class StairsBuilder
     // Ghost helpers
     // -------------------------------------------------------------------------
 
-    private void AddTileChild(float floorBaseY)
+    private void AddTileChild()
     {
         var tile = new CsgBox3D
         {
@@ -104,12 +107,12 @@ public class StairsBuilder
         _ghost.AddChild(tile);
     }
 
-    private void ResetGhostToTile(float floorBaseY)
+    private void ResetGhostToTile()
     {
         if (_ghost == null || !GodotObject.IsInstanceValid(_ghost)) return;
         foreach (var child in _ghost.GetChildren()) child.Free();
         _ghostIsStaircase = false;
-        AddTileChild(floorBaseY);
+        AddTileChild();
     }
 
     // -------------------------------------------------------------------------

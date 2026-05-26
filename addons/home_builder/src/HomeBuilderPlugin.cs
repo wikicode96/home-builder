@@ -202,10 +202,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             int? nodeIndex = ParseNodeIndex(child.Name);
             if (nodeIndex == null) continue;
 
-            if (nodeIndex > _activeFloor)
-                node3D.Visible = false;
-            else
-                node3D.Visible = true;
+            node3D.Visible = nodeIndex <= _activeFloor;
         }
     }
 
