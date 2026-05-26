@@ -139,7 +139,13 @@ public partial class BakeBuilder
         if (saveResult != Error.Ok)
             GD.PrintErr($"[BakeBuilder] Save falló: {saveResult}");
         else
+        {
             GD.Print($"[BakeBuilder] Guardado: {fullPath}");
+            ResourceLoader.Load(fullPath, "", ResourceLoader.CacheMode.Replace);
+            #if TOOLS
+            EditorInterface.Singleton.GetResourceFilesystem().UpdateFile(fullPath);
+            #endif
+        }
 
         bakedRoot.QueueFree();
     }
