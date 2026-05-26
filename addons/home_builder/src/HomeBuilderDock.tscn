@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" path="res://addons/home_builder/icons/escaleras.svg" id="7"]
 [ext_resource type="Texture2D" path="res://addons/home_builder/icons/vallas.svg" id="8"]
 [ext_resource type="Texture2D" path="res://addons/home_builder/icons/bake.svg" id="9"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/none.svg" id="10"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_r3gl0"]
 
@@ -119,7 +120,8 @@ layout_mode = 2
 tooltip_text = "Desactivar edición"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_r3gl0")
-text = "✕"
+icon = ExtResource("10")
+expand_icon = true
 
 [node name="BakeModeButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=3000000018]
 custom_minimum_size = Vector2(50, 50)
