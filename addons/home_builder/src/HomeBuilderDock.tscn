@@ -114,15 +114,6 @@ button_group = SubResource("ButtonGroup_r3gl0")
 icon = ExtResource("8")
 expand_icon = true
 
-[node name="NoneButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=907469383]
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-tooltip_text = "Desactivar edición"
-toggle_mode = true
-button_group = SubResource("ButtonGroup_r3gl0")
-icon = ExtResource("10")
-expand_icon = true
-
 [node name="BakeModeButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=3000000018]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
@@ -130,6 +121,15 @@ tooltip_text = "Bakear"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_r3gl0")
 icon = ExtResource("9")
+expand_icon = true
+
+[node name="NoneButton" type="Button" parent="Background/Margin/MainHBox/LeftColumn/ModeGrid" unique_id=907469383]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+tooltip_text = "Desactivar edición"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_r3gl0")
+icon = ExtResource("10")
 expand_icon = true
 
 [node name="FloorSelector" type="VBoxContainer" parent="Background/Margin/MainHBox/LeftColumn" unique_id=1134372724]
