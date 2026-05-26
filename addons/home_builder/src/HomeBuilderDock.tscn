@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://dg6x8m1v7mxm1" path="res://addons/home_builder/icons/ventanas.svg" id="6"]
 [ext_resource type="Texture2D" uid="uid://ckcup2xplhuco" path="res://addons/home_builder/icons/escaleras.svg" id="7"]
 [ext_resource type="Texture2D" uid="uid://kwj7rsbch684" path="res://addons/home_builder/icons/vallas.svg" id="8"]
+[ext_resource type="Texture2D" uid="uid://bakemodiconv1" path="res://addons/home_builder/icons/bake.svg" id="9"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_r3gl0"]
 
@@ -126,7 +127,8 @@ layout_mode = 2
 tooltip_text = "Bakear"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_r3gl0")
-text = "🏗"
+icon = ExtResource("9")
+expand_icon = true
 
 [node name="FloorSelector" type="VBoxContainer" parent="Background/Margin/MainHBox/LeftColumn" unique_id=1134372724]
 layout_mode = 2
