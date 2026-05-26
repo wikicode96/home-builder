@@ -784,7 +784,7 @@ text = "LOD0 fin"
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 10000.0
-value = 80.0
+value = 81.0
 suffix = "m"
 
 [node name="Lod1BeginVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/BakeSection/ParamsRow" unique_id=3000000011]
@@ -802,7 +802,7 @@ text = "LOD1 inicio"
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 10000.0
-value = 81.0
+value = 80.0
 suffix = "m"
 
 [node name="FadeVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/BakeSection/ParamsRow" unique_id=3000000014]
