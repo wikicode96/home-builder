@@ -1,14 +1,14 @@
 [gd_scene format=3 uid="uid://bsh1q0iona6a5"]
 
-[ext_resource type="Script" uid="uid://cepw2jiiilfh6" path="res://addons/home_builder/src/HomeBuilderDock.cs" id="1"]
-[ext_resource type="Texture2D" uid="uid://cacmv1peq5la6" path="res://addons/home_builder/icons/suelos.svg" id="2"]
-[ext_resource type="Texture2D" uid="uid://b4dqptsmvtd2c" path="res://addons/home_builder/icons/paredes.svg" id="3"]
-[ext_resource type="Texture2D" uid="uid://cf8fusl4a48ah" path="res://addons/home_builder/icons/techos.svg" id="4"]
-[ext_resource type="Texture2D" uid="uid://dng5a2ygrx1mg" path="res://addons/home_builder/icons/puertas.svg" id="5"]
-[ext_resource type="Texture2D" uid="uid://dg6x8m1v7mxm1" path="res://addons/home_builder/icons/ventanas.svg" id="6"]
-[ext_resource type="Texture2D" uid="uid://ckcup2xplhuco" path="res://addons/home_builder/icons/escaleras.svg" id="7"]
-[ext_resource type="Texture2D" uid="uid://kwj7rsbch684" path="res://addons/home_builder/icons/vallas.svg" id="8"]
-[ext_resource type="Texture2D" uid="uid://bakemodiconv1" path="res://addons/home_builder/icons/bake.svg" id="9"]
+[ext_resource type="Script" path="res://addons/home_builder/src/HomeBuilderDock.cs" id="1"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/suelos.svg" id="2"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/paredes.svg" id="3"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/techos.svg" id="4"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/puertas.svg" id="5"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/ventanas.svg" id="6"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/escaleras.svg" id="7"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/vallas.svg" id="8"]
+[ext_resource type="Texture2D" path="res://addons/home_builder/icons/bake.svg" id="9"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_r3gl0"]
 
