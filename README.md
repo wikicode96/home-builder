@@ -63,11 +63,11 @@ Clic en el viewport para colocar el tejado sobre la planta activa. Tipos disponi
 
 El asset debe seguir este contrato para que los módulos encajen correctamente:
 
-| Propiedad | Valor |
-|---|---|
-| Anchura | 1 m (eje X) |
-| Pivot | Centro de la base (0, 0, 0) |
-| Orientación | Mirando hacia +X |
+| Propiedad     | Valor                         |
+|---------------|-------------------------------|
+| Anchura       | 1 m (eje X)                   |
+| Pivot         | Centro de la base (0, 0, 0)   |
+| Orientación   | Mirando hacia +X              |
 
 ---
 
@@ -81,12 +81,23 @@ El selector de planta (▲ / ▼ junto al número de planta) controla en qué ni
 
 El modo **Bakear** genera una escena `.tscn` lista para usar en un nivel. Abre el panel de bake y configura:
 
-| Parámetro | Descripción |
-|---|---|
-| **Carpeta de salida** | Ruta `res://` donde se guarda el `.tscn` |
-| **LOD0 distancia fin** | Distancia máxima (metros) a la que se muestra la geometría completa |
-| **LOD1 distancia inicio** | Distancia a partir de la cual se muestra la versión simplificada |
-| **Fade** | Modo de transición entre LOD0 y LOD1 (desactivado / self / opaque) |
+| Parámetro                 | Descripción                                                           |
+|---------------------------|-----------------------------------------------------------------------|
+| **Carpeta de salida**     | Ruta `res://` donde se guarda el `.tscn`                              |
+| **LOD0 distancia fin**    | Distancia máxima (metros) a la que se muestra la geometría completa   |
+| **LOD1 distancia inicio** | Distancia a partir de la cual se muestra la versión simplificada      |
+| **Fade**                  | Modo de transición entre LOD0 y LOD1: `Sin fade` o `Self` (ver abajo) |
+
+#### Distancias de LOD
+
+Se recomienda usar valores a partir de **80 m** para que el cambio de LOD ocurra cuando el edificio ya es pequeño en pantalla y el jugador no aprecie la diferencia de detalle. Con distancias cortas el cambio es claramente visible.
+
+Si LOD0 fin y LOD1 inicio coinciden (p. ej. 80 m y 81 m), el margen de transición es mínimo y el efecto equivale a un cambio casi instantáneo.
+
+#### Modos de Fade
+
+- **Sin fade** — el cambio entre LOD0 y LOD1 es instantáneo. Sin artefactos visuales. Recomendado cuando los valores de distancia son suficientemente altos para que el cambio pase desapercibido.
+- **Self** — se aplica una transición suave entre ambos LODs. Puede producir artefactos visuales si el edificio tiene geometría interior (escaleras, elementos en el interior) que se hace visible a través de las paredes durante la transición, ya que éstas se vuelven semitransparentes. También puede interactuar con materiales transparentes de la escena (agua, cristales). Úsalo si los edificios son principalmente exteriores o si la transición ocurre a distancia suficiente.
 
 ### Qué contiene la escena bakeada
 
