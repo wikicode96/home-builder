@@ -3,9 +3,12 @@
 Plugin para Godot 4 (C#) que permite construir edificios directamente en el editor de escenas mediante clics en el viewport 3D.
 
 ## Requisitos
+Godot 4.x con soporte .NET (Mono)
 
-- Godot 4.x con soporte .NET (Mono)
-- El plugin se activa en **Project → Project Settings → Plugins**
+---
+
+## Instalación
+Tener el plugin en la carpeta de addons del proyecto. El plugin se activa en **Project → Project Settings → Plugins**
 
 ---
 
@@ -63,7 +66,9 @@ Mantén pulsado y arrastra en el viewport para definir el footprint del tejado s
 
 ## Plantas múltiples
 
-El selector de planta (▲ / ▼ junto al número de planta) controla en qué nivel se colocan los nuevos elementos. Al subir de planta, las plantas inferiores se ocultan automáticamente en el editor para facilitar el trabajo. La altura entre plantas es la misma que la altura de pared configurada.
+El selector de planta (▲ / ▼ junto al número de planta) controla en qué nivel se colocan los nuevos elementos. Al subir de planta, las plantas inferiores se ocultan automáticamente en el editor para facilitar el trabajo. 
+
+> La altura entre plantas es la misma que la altura de pared configurada.
 
 ---
 
@@ -114,13 +119,3 @@ StaticBody3D  (nombre del edificio)
 ## Materiales
 
 Cada modo expone selectores de material en el panel. Los materiales se asignan antes de colocar elementos; los elementos ya colocados no se ven afectados al cambiar el material activo. Los materiales se conservan en el bake y se simplifican en LOD1 (se eliminan mapas de normales, AO y roughness para reducir el coste a distancia).
-
----
-
-## Roadmap
-
-- ✅ 0.1.0 Generar casas de una planta
-- ✅ 0.2.0 Construir varias plantas
-- ✅ 0.3.0 Construir tejados
-- ✅ 0.4.0 Usar vallas y barandillas
-- ✅ 1.0.0 Bake optimizado (LOD, oclusión, colisión unificada)
