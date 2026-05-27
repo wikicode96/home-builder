@@ -1,132 +1,133 @@
 # Home Builder
 
-Plugin para Godot 4 (C#) que permite construir edificios directamente en el editor de escenas mediante clics en el viewport 3D.
+A Godot 4 plugin (C#) for building structures directly in the scene editor by clicking in the 3D viewport.
 
-## Requisitos e Instalación
-Requieres Godot 4.x con soporte .NET (Mono). Para instalar el plugin solo tienes que copiar la carpeta addons del repositorio en la carpeta de addons de tu proyecto. A continuación tendrás que activarlo en **Project → Project Settings → Plugins**.
+## Requirements & Installation
+
+Requires Godot 4.x with .NET (Mono) support. To install the plugin, copy the `addons` folder from this repository into your project's `addons` folder. Then enable it under **Project → Project Settings → Plugins**.
 
 ![house](./addons/home_builder/imgs/house1.png)
 
 ---
 
-## Flujo de trabajo
+## Workflow
 
-1. Abre o crea una escena 3D.
-2. Activa un modo de construcción en el panel **Home Builder** (parte inferior del editor).
-3. Construye el edificio planta por planta usando el selector de planta.
-4. Cuando el edificio esté listo, usa el modo **Bakear** para exportarlo como escena optimizada.
-5. Instancia la escena bakeada en tu nivel.
-
----
-
-## Modos de construcción
-
-### Suelos
-Mantén pulsado y arrastra en el viewport para rellenar un rectángulo de losetas. Una sola pulsación coloca una loseta de 1×1 m; arrastrando se cubre toda la habitación de golpe (un único `MeshInstance3D` para todo el rectángulo, no una loseta por celda). El snap es a la celda de 1 m. Puedes configurar:
-- **Grosor** de la losa
-- Material de la **cara superior**, **inferior** y **laterales**
-
-### Paredes
-- Primer clic: punto de inicio de la pared.
-- Segundo clic: punto final. La pared se alinea automáticamente al centro de las losetas del suelo.
-- Las intersecciones entre paredes (esquinas en L, T o X) se resuelven automáticamente con juntas en inglete, sin huecos visibles en ningún ángulo.
-- Las paredes soportan **puertas y ventanas** (ver más abajo).
-- Configurable: **altura** y **grosor** de la pared, y material de **cara A**, **cara B** y **cantos**.
-
-### Puertas y ventanas
-Con el modo Puertas o Ventanas activo, haz clic sobre una pared existente para abrir un hueco. El hueco se recorta en la geometría y en la colisión de la pared.
-- Puertas: ancho y alto configurables.
-- Ventanas: ancho, alto y altura del alféizar configurables.
-
-### Escaleras
-- Primer clic: base de la escalera.
-- Segundo clic: dirección y longitud. La escalera conecta la planta actual con la siguiente.
-- Configurable: número de escalones, anchura y profundidad (huella) de cada escalón.
-- La **altura de cada escalón** se calcula automáticamente como `altura de pared / número de escalones`, de forma que la escalera siempre conecta exactamente con la planta superior. Subir el número de escalones los hace más bajos; bajarlo, más altos.
-
-### Tejados
-Mantén pulsado y arrastra en el viewport para definir el footprint del tejado sobre la planta activa. El snap es a media loseta (0.5 m), para que el tejado pueda alinearse con caras exteriores de pared, no solo con el centro de la celda. El footprint se extiende automáticamente medio grosor de pared hacia fuera por cada lado, de modo que el alero cubre la cara exterior de las paredes perimetrales. Tipos disponibles:
-- **Plano**
-- **A un agua** (shed) — configurable: dirección y pendiente
-- **A dos aguas** (gable) — configurable: dirección y pendiente
-- **A cuatro aguas** (hip) — configurable: pendiente. La cumbrera se orienta automáticamente al lado más largo del rectángulo.
-
-### Vallas / Barandillas
-- Primer clic: esquina inicial del segmento.
-- Segundo clic: esquina final. Los módulos se instancian a lo largo del eje dominante (X o Z).
-- Requiere asignar una `PackedScene` como asset de valla en el panel.
-- Configurable: **medida** del módulo. El asset se escala en X hasta esa longitud, así que cualquier anchura nativa funciona siempre que el pivot esté en el centro de la base y el asset mire hacia +X.
-
-> **Limitación**: las vallas solo admiten ejes alineados (X o Z). No se pueden colocar en diagonal.
+1. Open or create a 3D scene.
+2. Activate a build mode in the **Home Builder** panel (bottom of the editor).
+3. Build the structure floor by floor using the floor selector.
+4. Once the building is ready, use **Bake** mode to export it as an optimised scene.
+5. Instance the baked scene in your level.
 
 ---
 
-## Plantas múltiples
+## Build Modes
 
-El selector de planta (▲ / ▼ junto al número de planta) controla en qué nivel se colocan los nuevos elementos. Al subir de planta, las plantas inferiores se ocultan automáticamente en el editor para facilitar el trabajo. 
+### Floors
+Hold and drag in the viewport to fill a rectangle of tiles. A single click places a 1×1 m tile; dragging covers the whole room at once (a single `MeshInstance3D` for the entire rectangle, not one tile per cell). Snapping is to the 1 m grid. Configurable:
+- **Thickness** of the slab
+- Material for the **top face**, **bottom face**, and **sides**
 
-> La altura entre plantas es la misma que la altura de pared configurada.
+### Walls
+- First click: wall start point.
+- Second click: wall end point. The wall automatically aligns to the centre of floor tiles.
+- Intersections between walls (L, T, or X corners) are resolved automatically with mitre joints — no visible gaps at any angle.
+- Walls support **doors and windows** (see below).
+- Configurable: wall **height** and **thickness**, and materials for **face A**, **face B**, and **edges**.
+
+### Doors & Windows
+With Doors or Windows mode active, click on an existing wall to open a cutout. The gap is carved into both the wall geometry and its collision shape.
+- Doors: configurable width and height.
+- Windows: configurable width, height, and sill height.
+
+### Stairs
+- First click: staircase base.
+- Second click: direction and length. The staircase connects the current floor to the one above.
+- Configurable: number of steps, width, and depth (tread) of each step.
+- **Step height** is calculated automatically as `wall height / number of steps`, so the staircase always meets the upper floor exactly. More steps make them shorter; fewer steps make them taller.
+
+### Roofs
+Hold and drag in the viewport to define the roof footprint on the active floor. Snapping is to half a tile (0.5 m) so the roof can align with wall outer faces, not just cell centres. The footprint is automatically extended outward by half the wall thickness on each side, so the eave covers the exterior face of perimeter walls. Available types:
+- **Flat**
+- **Shed** — configurable: direction and pitch
+- **Gable** — configurable: direction and pitch
+- **Hip** — configurable: pitch. The ridge is automatically oriented along the longest side of the rectangle.
+
+### Fences / Railings
+- First click: starting corner of the segment.
+- Second click: ending corner. Modules are instantiated along the dominant axis (X or Z).
+- Requires assigning a `PackedScene` as the fence asset in the panel.
+- Configurable: **module size**. The asset is scaled in X to that length, so any native width works as long as the pivot is at the centre of the base and the asset faces +X.
+
+> **Limitation**: fences only support axis-aligned placement (X or Z). Diagonal placement is not supported.
 
 ---
 
-## Bake (exportación optimizada)
+## Multiple Floors
 
-El modo **Bakear** genera una escena `.tscn` lista para usar en un nivel. Abre el panel de bake y configura:
+The floor selector (▲ / ▼ next to the floor number) controls which level new elements are placed on. When moving up a floor, lower floors are automatically hidden in the editor to keep the workspace clean.
 
-| Parámetro                 | Descripción                                                           |
-|---------------------------|-----------------------------------------------------------------------|
-| **Carpeta de salida**     | Ruta `res://` donde se guarda el `.tscn`                              |
-| **LOD0 distancia fin**    | Distancia máxima (metros) a la que se muestra la geometría completa   |
-| **LOD1 distancia inicio** | Distancia a partir de la cual se muestra la versión simplificada      |
-| **Fade**                  | Modo de transición entre LOD0 y LOD1: `Sin fade` o `Self` (ver abajo) |
+> Floor height equals the configured wall height.
 
-#### Distancias de LOD
+---
 
-Se recomienda usar valores a partir de **80 m** para que el cambio de LOD ocurra cuando el edificio ya es pequeño en pantalla y el jugador no aprecie la diferencia de detalle. Con distancias cortas el cambio es claramente visible.
+## Bake (Optimised Export)
 
-Si LOD0 fin y LOD1 inicio coinciden (p. ej. 80 m y 81 m), el margen de transición es mínimo y el efecto equivale a un cambio casi instantáneo.
+**Bake** mode generates a `.tscn` scene ready to use in a level. Open the bake panel and configure:
 
-#### Modos de Fade
+| Parameter               | Description                                                                 |
+|-------------------------|-----------------------------------------------------------------------------|
+| **Output folder**       | `res://` path where the `.tscn` is saved                                    |
+| **LOD0 end distance**   | Maximum distance (metres) at which full geometry is shown                   |
+| **LOD1 start distance** | Distance from which the simplified version is shown                         |
+| **Fade**                | Transition mode between LOD0 and LOD1: `No fade` or `Self` (see below)     |
 
-- **Sin fade** — el cambio entre LOD0 y LOD1 es instantáneo. Sin artefactos visuales. Recomendado cuando los valores de distancia son suficientemente altos para que el cambio pase desapercibido.
-- **Self** — se aplica una transición suave entre ambos LODs. Puede producir artefactos visuales si el edificio tiene geometría interior (escaleras, elementos en el interior) que se hace visible a través de las paredes durante la transición, ya que éstas se vuelven semitransparentes. También puede interactuar con materiales transparentes de la escena (agua, cristales). Úsalo si los edificios son principalmente exteriores o si la transición ocurre a distancia suficiente.
+#### LOD Distances
 
-### Qué contiene la escena bakeada
+Values of **80 m or above** are recommended so the LOD switch happens when the building is already small on screen and the player cannot notice the detail difference. Short distances make the switch clearly visible.
+
+If LOD0 end and LOD1 start are close together (e.g. 80 m and 81 m), the transition window is minimal and the effect is nearly instantaneous.
+
+#### Fade Modes
+
+- **No fade** — the switch between LOD0 and LOD1 is instantaneous. No visual artefacts. Recommended when distance values are high enough for the change to go unnoticed.
+- **Self** — a smooth transition is applied between both LODs. May produce visual artefacts if the building has interior geometry (stairs, interior elements) that becomes visible through the walls during the transition, since they turn semi-transparent. It may also interact with transparent materials in the scene (water, glass). Use it for predominantly exterior buildings or when the transition occurs at a sufficient distance.
+
+### Contents of the Baked Scene
 
 ```
-StaticBody3D  (nombre del edificio)
-├── LOD0           — geometría completa, un surface por material original
-├── LOD1           — geometría simplificada, un draw call por material
-├── Occluder       — OccluderInstance3D para occlusion culling
-├── Collision      — ConcavePolygonShape3D (paredes, suelo, tejado)
-└── Staircase_N    — ConvexPolygonShape3D por cada escalera
+StaticBody3D  (building name)
+├── LOD0           — full geometry, one surface per original material
+├── LOD1           — simplified geometry, one draw call per material
+├── Occluder       — OccluderInstance3D for occlusion culling
+├── Collision      — ConcavePolygonShape3D (walls, floor, roof)
+└── Staircase_N    — ConvexPolygonShape3D per staircase
 ```
 
-**LOD0 / LOD1** usa el sistema `VisibilityRange` nativo de Godot. A distancia, las escaleras, vallas y suelo se eliminan del LOD1 para reducir polígonos, y las paredes se simplifican a caras planas sin huecos.
+**LOD0 / LOD1** uses Godot's native `VisibilityRange` system. At distance, stairs, fences, and floors are removed from LOD1 to reduce polygon count, and walls are simplified to flat faces without openings.
 
-**Occluder** permite a Godot descartar objetos que quedan detrás del edificio sin renderizarlos. Para que tenga efecto debes activarlo en el proyecto:
+**Occluder** allows Godot to cull objects hidden behind the building without rendering them. To enable it, activate it in your project:
 > `Project Settings → Rendering → Occlusion Culling → Use Occlusion Culling = ON`
-> 
-> Para visualizar los occluders en el editor: `Debug → Visible Occlusion Culling Debug`
+>
+> To visualise occluders in the editor: `Debug → Visible Occlusion Culling Debug`
 
-**Collision** es un único `ConcavePolygonShape3D` construido a partir de la geometría visual, de modo que los huecos de puertas y ventanas son colisión real. Las escaleras se mantienen como `ConvexPolygonShape3D` independientes para que `CharacterBody3D` pueda subir por ellas correctamente mediante `move_and_slide`.
-
----
-
-## Materiales
-
-Cada modo expone selectores de material en el panel. Los materiales se asignan antes de colocar elementos; los elementos ya colocados no se ven afectados al cambiar el material activo. Los materiales se conservan en el bake y se simplifican en LOD1 (se eliminan mapas de normales, AO y roughness para reducir el coste a distancia).
+**Collision** is a single `ConcavePolygonShape3D` built from the visual geometry, so door and window openings are real collision cutouts. Stairs are kept as independent `ConvexPolygonShape3D` shapes so `CharacterBody3D` can climb them correctly via `move_and_slide`.
 
 ---
 
-## Imagenes de muestra
+## Materials
 
-### Interiores
-![Interiores](./addons/home_builder/imgs/inside.png)
+Each mode exposes material selectors in the panel. Materials are assigned before placing elements; already-placed elements are not affected when the active material changes. Materials are preserved in the bake and simplified in LOD1 (normal maps, AO, and roughness maps are removed to reduce cost at distance).
 
 ---
 
-### LOD0 y LOD1
+## Sample Images
+
+### Interiors
+![Interiors](./addons/home_builder/imgs/inside.png)
+
+---
+
+### LOD0 and LOD1
 ![LOD0](./addons/home_builder/imgs/lod0.png)
 ![LOD1](./addons/home_builder/imgs/lod1.png)
 

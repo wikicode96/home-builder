@@ -1,0 +1,26 @@
+# Godot 4 specific
+.godot/
+*.uid
+
+# C# / .NET
+.mono/
+data_*/
+mono_crash.*.json
+.csproj.user
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+
+# OS generated
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
