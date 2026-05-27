@@ -227,10 +227,12 @@ public partial class HomeBuilderPlugin : EditorPlugin
         if (dock == null) return;
 
         WallBuilder.Height           = dock.WallHeight;
+        WallBuilder.Thickness        = dock.WallThickness;
         StairsBuilder.StairCount     = dock.StairCount;
         StairsBuilder.StairWidth     = dock.StairWidth;
         StairsBuilder.StairRun       = dock.StairRun;
         FloorBuilder.SlabThickness   = dock.FloorThickness;
+        FenceBuilder.ModuleLength    = dock.FenceModuleLength;
 
         if (_activeMode != BuildMode.None)
         {

@@ -5,9 +5,9 @@ public class FenceBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    // Asset convention: 1 m wide, pivot at the centre of the base, facing +X.
-    // Any asset that follows this is plug-and-play.
-    public const float ModuleLength = 1.0f;
+    // Width of the user-supplied asset along its local +X. The dock exposes
+    // this so any asset width works; we use it to space modules edge-to-edge.
+    public static float ModuleLength { get; set; } = 1.0f;
 
     // Per-segment metadata — lets future passes (posts, corners, asset swap)
     // reconstruct the segment from the original placement data.

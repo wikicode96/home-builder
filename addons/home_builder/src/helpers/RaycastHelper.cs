@@ -57,8 +57,8 @@ public static class RaycastHelper
             float halfLen = GetWallHalfLength(body);
             if (halfLen <= 0f) continue;
 
-            float halfH = WallBuilder.Height    * 0.5f;
-            float halfT = WallBuilder.Thickness * 0.5f;
+            float halfH = WallHelper.GetWallHeight(body)    * 0.5f;
+            float halfT = WallHelper.GetWallThickness(body) * 0.5f;
 
             // Transform ray to body local space
             var invTransform = body.GlobalTransform.AffineInverse();

@@ -291,6 +291,26 @@ step = 0.1
 value = 3.0
 suffix = "m"
 
+[node name="ThicknessVBox" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/ConfigRow" unique_id=5000000050]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="ThicknessLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/ConfigRow/ThicknessVBox" unique_id=5000000051]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Grosor pared"
+
+[node name="ThicknessSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials/ConfigRow/ThicknessVBox" unique_id=5000000052]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.05
+max_value = 0.5
+step = 0.01
+value = 0.1
+suffix = "m"
+
 [node name="MaterialsRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WallMaterials" unique_id=5000000010]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -616,11 +636,31 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
-text = "Asset (1m, +X)"
+text = "Asset (pivot base, +X)"
 
 [node name="AssetPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/FenceAssets/AssetRow" unique_id=319725219]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="LengthRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/FenceAssets" unique_id=5000000060]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="LengthLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/FenceAssets/LengthRow" unique_id=5000000061]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Medida módulo"
+
+[node name="LengthSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/FenceAssets/LengthRow" unique_id=5000000062]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.25
+max_value = 4.0
+step = 0.05
+value = 1.0
+suffix = "m"
 
 [node name="DoorConfig" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=4000000001]
 visible = false

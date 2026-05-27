@@ -77,6 +77,10 @@ public partial class HomeBuilderDock : Control
 
     // Wall config spin
     private SpinBox _wallHeightSpin;
+    private SpinBox _wallThicknessSpin;
+
+    // Fence config spin
+    private SpinBox _fenceLengthSpin;
 
     // Stair config spins
     private SpinBox _stairCountSpin;
@@ -138,6 +142,10 @@ public partial class HomeBuilderDock : Control
 
     // ── Wall config ───────────────────────────────────────────────────────────
     public float WallHeight     => (float)(_wallHeightSpin?.Value     ?? 3.0);
+    public float WallThickness  => (float)(_wallThicknessSpin?.Value  ?? 0.1);
+
+    // ── Fence config ──────────────────────────────────────────────────────────
+    public float FenceModuleLength => (float)(_fenceLengthSpin?.Value ?? 1.0);
 
     // ── Stair config ──────────────────────────────────────────────────────────
     public int   StairCount => (int)(_stairCountSpin?.Value ?? 12);
@@ -236,9 +244,11 @@ public partial class HomeBuilderDock : Control
         _floorThicknessSpin = GetNode<SpinBox>($"{Stack}/TileMaterials/ConfigRow/ThicknessVBox/ThicknessSpin");
         _floorThicknessSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
 
-        // Wall config spin
-        _wallHeightSpin = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/HeightVBox/HeightSpin");
-        _wallHeightSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        // Wall config spins
+        _wallHeightSpin    = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/HeightVBox/HeightSpin");
+        _wallThicknessSpin = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/ThicknessVBox/ThicknessSpin");
+        _wallHeightSpin.ValueChanged    += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        _wallThicknessSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
 
         // Stair config spins
         _stairCountSpin = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/CountVBox/CountSpin");
@@ -282,8 +292,10 @@ public partial class HomeBuilderDock : Control
         _winHeightSpin.ValueChanged += _ => EmitSignal(SignalName.OpeningConfigChanged);
         _winSillSpin.ValueChanged   += _ => EmitSignal(SignalName.OpeningConfigChanged);
 
-        // Fence asset picker (PackedScene)
+        // Fence asset picker (PackedScene) and module length spin
         _fenceAssetPicker = CreatePicker($"{Stack}/FenceAssets/AssetRow/AssetPicker", "PackedScene");
+        _fenceLengthSpin  = GetNode<SpinBox>($"{Stack}/FenceAssets/LengthRow/LengthSpin");
+        _fenceLengthSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
 
         // Bake section
         _bakePathEdit      = GetNode<LineEdit>($"{Stack}/BakeSection/OutputRow/OutputPathEdit");

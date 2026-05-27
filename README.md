@@ -31,9 +31,7 @@ Mantén pulsado y arrastra en el viewport para rellenar un rectángulo de loseta
 - Segundo clic: punto final. La pared se alinea automáticamente al centro de las losetas del suelo.
 - Las intersecciones entre paredes (esquinas en L, T o X) se resuelven automáticamente con juntas en inglete, sin huecos visibles en ningún ángulo.
 - Las paredes soportan **puertas y ventanas** (ver más abajo).
-- Configurable: **altura** de la pared y material de **cara A**, **cara B** y **cantos**.
-
-> El grosor de la pared es fijo (0.1 m) y no se expone en el panel.
+- Configurable: **altura** y **grosor** de la pared, y material de **cara A**, **cara B** y **cantos**.
 
 ### Puertas y ventanas
 Con el modo Puertas o Ventanas activo, haz clic sobre una pared existente para abrir un hueco. El hueco se recorta en la geometría y en la colisión de la pared.
@@ -57,18 +55,9 @@ Mantén pulsado y arrastra en el viewport para definir el footprint del tejado s
 - Primer clic: esquina inicial del segmento.
 - Segundo clic: esquina final. Los módulos se instancian a lo largo del eje dominante (X o Z).
 - Requiere asignar una `PackedScene` como asset de valla en el panel.
+- Configurable: **medida** del módulo. El asset se escala en X hasta esa longitud, así que cualquier anchura nativa funciona siempre que el pivot esté en el centro de la base y el asset mire hacia +X.
 
 > **Limitación**: las vallas solo admiten ejes alineados (X o Z). No se pueden colocar en diagonal.
-
-#### Convención del asset de valla
-
-El asset debe seguir este contrato para que los módulos encajen correctamente:
-
-| Propiedad     | Valor                         |
-|---------------|-------------------------------|
-| Anchura       | 1 m (eje X)                   |
-| Pivot         | Centro de la base (0, 0, 0)   |
-| Orientación   | Mirando hacia +X              |
 
 ---
 

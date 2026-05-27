@@ -571,7 +571,7 @@ public partial class BakeBuilder
         if (mi.GetParent() is StaticBody3D body && body.HasMeta("hb_wall_length"))
         {
             float length = (float)body.GetMeta("hb_wall_length");
-            return WallMeshBuilder.Build(length, WallBuilder.Height, WallBuilder.Thickness);
+            return WallMeshBuilder.Build(length, WallHelper.GetWallHeight(body), WallHelper.GetWallThickness(body));
         }
         return null;
     }

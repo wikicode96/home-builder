@@ -55,9 +55,14 @@ public class OpeningBuilder
 
                 if (_marker != null && GodotObject.IsInstanceValid(_marker))
                 {
+                    float wallH = WallHelper.GetWallHeight(wallBody);
+                    float wallT = WallHelper.GetWallThickness(wallBody);
+
                     float markerLocalY = isDoor
-                        ? DoorHeight * 0.5f - WallBuilder.Height * 0.5f
-                        : WinSill + WinHeight * 0.5f - WallBuilder.Height * 0.5f;
+                        ? DoorHeight * 0.5f - wallH * 0.5f
+                        : WinSill + WinHeight * 0.5f - wallH * 0.5f;
+
+                    _marker.Size = new Vector3(_marker.Size.X, _marker.Size.Y, wallT + 0.05f);
 
                     var axisX = wallBody.GlobalTransform.Basis.X.Normalized();
                     var axisY = wallBody.GlobalTransform.Basis.Y.Normalized();
@@ -139,8 +144,8 @@ public class OpeningBuilder
         var joins = SolveJoinsFor(wallBody);
         var newMesh = WallMeshBuilder.BuildWithOpeningsAndJoins(
             wallLen,
-            WallBuilder.Height,
-            WallBuilder.Thickness,
+            WallHelper.GetWallHeight(wallBody),
+            WallHelper.GetWallThickness(wallBody),
             openings,
             joins
         );
