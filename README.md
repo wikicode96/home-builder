@@ -2,13 +2,10 @@
 
 Plugin para Godot 4 (C#) que permite construir edificios directamente en el editor de escenas mediante clics en el viewport 3D.
 
-## Requisitos
-Godot 4.x con soporte .NET (Mono)
+## Requisitos e Instalación
+Requieres Godot 4.x con soporte .NET (Mono). Para instalar el plugin solo tienes que copiar la carpeta addons del repositorio en la carpeta de addons de tu proyecto. A continuación tendrás que activarlo en **Project → Project Settings → Plugins**.
 
----
-
-## Instalación
-Tener el plugin en la carpeta de addons del proyecto. El plugin se activa en **Project → Project Settings → Plugins**
+![house](./addons/home_builder/imgs/house1.png)
 
 ---
 
@@ -119,3 +116,22 @@ StaticBody3D  (nombre del edificio)
 ## Materiales
 
 Cada modo expone selectores de material en el panel. Los materiales se asignan antes de colocar elementos; los elementos ya colocados no se ven afectados al cambiar el material activo. Los materiales se conservan en el bake y se simplifican en LOD1 (se eliminan mapas de normales, AO y roughness para reducir el coste a distancia).
+
+---
+
+## Imagenes de muestra
+
+### Interiores
+![Interiores](./addons/home_builder/imgs/inside.png)
+
+---
+
+### LOD0 y LOD1
+![LOD0](./addons/home_builder/imgs/lod0.png)
+![LOD1](./addons/home_builder/imgs/lod1.png)
+
+---
+
+### Occlusion Culling
+![Occlusion Culling 1](./addons/home_builder/imgs/oc1.png)
+![Occlusion Culling 2](./addons/home_builder/imgs/oc2.png)
