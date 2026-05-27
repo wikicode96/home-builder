@@ -22,6 +22,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private StairsBuilder  _stairsBuilder;
     private RoofBuilder    _roofBuilder;
     private FenceBuilder   _fenceBuilder;
+    private BakeBuilder    _bakeBuilder;
 
     public override void _EnterTree()
     {
@@ -31,6 +32,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _stairsBuilder  = new StairsBuilder(this);
         _roofBuilder    = new RoofBuilder(this);
         _fenceBuilder   = new FenceBuilder(this);
+        _bakeBuilder    = new BakeBuilder(this);
 
         var dockScene = GD.Load<PackedScene>("res://addons/home_builder/src/HomeBuilderDock.tscn");
         _dock = dockScene.Instantiate<Control>();
@@ -51,6 +53,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
                     "stairs"  => BuildMode.Stairs,
                     "fences"  => BuildMode.Fences,
                     "none"    => BuildMode.None,
+                    "bake"    => BuildMode.None,
                     _         => BuildMode.None
                 };
                 CallDeferred(MethodName.CreateActivePreviews);
@@ -66,6 +69,28 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 ClearAllPreviews();
                 CallDeferred(MethodName.CreateActivePreviews);
             })
+        );
+
+        _dock.Connect(
+            HomeBuilderDock.SignalName.BakeRequested,
+            Callable.From(OnBakeRequested)
+        );
+
+        _dock.Connect(
+            HomeBuilderDock.SignalName.OpeningConfigChanged,
+            Callable.From(() =>
+            {
+                if (_activeMode is BuildMode.Doors or BuildMode.Windows)
+                {
+                    ClearAllPreviews();
+                    CallDeferred(MethodName.CreateActivePreviews);
+                }
+            })
+        );
+
+        _dock.Connect(
+            HomeBuilderDock.SignalName.BuildingConfigChanged,
+            Callable.From(OnBuildingConfigChanged)
         );
 
         SceneChanged += OnSceneChanged;
@@ -117,15 +142,13 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     public override int _Forward3DGuiInput(Camera3D camera, InputEvent inputEvent)
     {
-        var wallParent = GetOrCreateParentNode($"Walls_{_activeFloor}");
-
         return _activeMode switch
         {
             BuildMode.Floor   => _floorBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Walls   => _wallBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Roof    => _roofBuilder.HandleInput(camera, inputEvent, FloorBaseY),
-            BuildMode.Doors   => _openingBuilder.HandleInput(camera, inputEvent, isDoor: true,  wallParent),
-            BuildMode.Windows => _openingBuilder.HandleInput(camera, inputEvent, isDoor: false, wallParent),
+            BuildMode.Doors   => _openingBuilder.HandleInput(camera, inputEvent, isDoor: true,  GetOrCreateParentNode($"Walls_{_activeFloor}")),
+            BuildMode.Windows => _openingBuilder.HandleInput(camera, inputEvent, isDoor: false, GetOrCreateParentNode($"Walls_{_activeFloor}")),
             BuildMode.Stairs  => _stairsBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             BuildMode.Fences  => _fenceBuilder.HandleInput(camera, inputEvent, FloorBaseY),
             _                 => (int)AfterGuiInput.Pass,
@@ -179,10 +202,7 @@ public partial class HomeBuilderPlugin : EditorPlugin
             int? nodeIndex = ParseNodeIndex(child.Name);
             if (nodeIndex == null) continue;
 
-            if (nodeIndex > _activeFloor)
-                node3D.Visible = false;
-            else
-                node3D.Visible = true;
+            node3D.Visible = nodeIndex <= _activeFloor;
         }
     }
 
@@ -195,6 +215,55 @@ public partial class HomeBuilderPlugin : EditorPlugin
                 return idx;
         }
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Bake
+    // -------------------------------------------------------------------------
+
+    private void OnBuildingConfigChanged()
+    {
+        var dock = Dock;
+        if (dock == null) return;
+
+        WallBuilder.Height           = dock.WallHeight;
+        WallBuilder.Thickness        = dock.WallThickness;
+        StairsBuilder.StairCount     = dock.StairCount;
+        StairsBuilder.StairWidth     = dock.StairWidth;
+        StairsBuilder.StairRun       = dock.StairRun;
+        FloorBuilder.SlabThickness   = dock.FloorThickness;
+        FenceBuilder.ModuleLength    = dock.FenceModuleLength;
+
+        if (_activeMode != BuildMode.None)
+        {
+            ClearAllPreviews();
+            CallDeferred(MethodName.CreateActivePreviews);
+        }
+    }
+
+    private void OnBakeRequested()
+    {
+        var scene = GetEditorInterface().GetEditedSceneRoot() as Node3D;
+        if (scene == null) return;
+
+        ClearAllPreviews();
+
+        var dock = Dock;
+        if (dock == null)
+        {
+            GD.PrintErr("[HomeBuilder] Dock no disponible al bakear");
+            return;
+        }
+
+        _bakeBuilder.Bake(
+            scene,
+            dock.BakeOutputPath,
+            dock.BakeLod0End,
+            dock.BakeLod1Begin,
+            dock.BakeFadeMode
+        );
+
+        CallDeferred(MethodName.CreateActivePreviews);
     }
 
     // -------------------------------------------------------------------------

@@ -5,7 +5,9 @@ public static class WallHelper
     // Metadata key written by WallBuilder when the wall is first created.
     // We read it here because after the first opening the CollisionShape3D
     // becomes a ConcavePolygonShape3D and BoxShape3D is no longer available.
-    public const string MetaWallLength = "hb_wall_length";
+    public const string MetaWallLength    = "hb_wall_length";
+    public const string MetaWallThickness = "hb_wall_thickness";
+    public const string MetaWallHeight    = "hb_wall_height";
 
     public static float GetWallLength(StaticBody3D wallBody)
     {
@@ -25,5 +27,21 @@ public static class WallHelper
     public static float GetWallHalfLength(StaticBody3D body)
     {
         return GetWallLength(body) * 0.5f;
+    }
+
+    // Per-wall thickness and height — frozen at placement time so changing the
+    // dock value afterwards does not rewrite walls that were built earlier.
+    public static float GetWallThickness(StaticBody3D wallBody)
+    {
+        if (wallBody != null && wallBody.HasMeta(MetaWallThickness))
+            return wallBody.GetMeta(MetaWallThickness).AsSingle();
+        return WallBuilder.Thickness;
+    }
+
+    public static float GetWallHeight(StaticBody3D wallBody)
+    {
+        if (wallBody != null && wallBody.HasMeta(MetaWallHeight))
+            return wallBody.GetMeta(MetaWallHeight).AsSingle();
+        return WallBuilder.Height;
     }
 }

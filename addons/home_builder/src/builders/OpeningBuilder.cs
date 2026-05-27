@@ -5,18 +5,18 @@ public class OpeningBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    private const float DoorWidth  = 1.0f;
-    private const float DoorHeight = 2.0f;
-    private const float WinWidth   = 1.0f;
-    private const float WinHeight  = 1.0f;
-    private const float WinSill    = 0.9f;
-
     // Metadata key stored on each StaticBody3D wall node to persist openings
     private const string MetaKey = "hb_openings";
 
     private CsgBox3D _marker;
 
     public OpeningBuilder(HomeBuilderPlugin plugin) => _plugin = plugin;
+
+    private float DoorWidth  => _plugin.Dock?.DoorWidth  ?? 1.0f;
+    private float DoorHeight => _plugin.Dock?.DoorHeight ?? 2.0f;
+    private float WinWidth   => _plugin.Dock?.WinWidth   ?? 1.0f;
+    private float WinHeight  => _plugin.Dock?.WinHeight  ?? 1.0f;
+    private float WinSill    => _plugin.Dock?.WinSill    ?? 0.9f;
 
     // -------------------------------------------------------------------------
     // Preview
@@ -55,9 +55,14 @@ public class OpeningBuilder
 
                 if (_marker != null && GodotObject.IsInstanceValid(_marker))
                 {
+                    float wallH = WallHelper.GetWallHeight(wallBody);
+                    float wallT = WallHelper.GetWallThickness(wallBody);
+
                     float markerLocalY = isDoor
-                        ? DoorHeight * 0.5f - WallBuilder.Height * 0.5f
-                        : WinSill + WinHeight * 0.5f - WallBuilder.Height * 0.5f;
+                        ? DoorHeight * 0.5f - wallH * 0.5f
+                        : WinSill + WinHeight * 0.5f - wallH * 0.5f;
+
+                    _marker.Size = new Vector3(_marker.Size.X, _marker.Size.Y, wallT + 0.05f);
 
                     var axisX = wallBody.GlobalTransform.Basis.X.Normalized();
                     var axisY = wallBody.GlobalTransform.Basis.Y.Normalized();
@@ -139,8 +144,8 @@ public class OpeningBuilder
         var joins = SolveJoinsFor(wallBody);
         var newMesh = WallMeshBuilder.BuildWithOpeningsAndJoins(
             wallLen,
-            WallBuilder.Height,
-            WallBuilder.Thickness,
+            WallHelper.GetWallHeight(wallBody),
+            WallHelper.GetWallThickness(wallBody),
             openings,
             joins
         );

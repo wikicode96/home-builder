@@ -4,13 +4,17 @@ public class StairsBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    private const int   StairCount    = 17;
-    private const float StairRise     = WallBuilder.Height / StairCount;
-    private const float StairRun      = 0.28f;
-    private const float StairWidth    = 1.0f;
-    private const float StairTotalRun = StairCount * StairRun;
+    public static int   StairCount { get; set; } = 12;
+    public static float StairRun   { get; set; } = 0.25f;
+    public static float StairWidth { get; set; } = 1.0f;
 
-    private CsgBox3D _ghost;
+    private static float StairRise     => WallBuilder.Height / StairCount;
+    private static float StairTotalRun => StairCount * StairRun;
+
+    private static readonly Color GhostColor = new(0.9f, 0.8f, 0.1f, 0.4f);
+
+    private Node3D   _ghost;
+    private bool     _ghostIsStaircase;
     private Vector3? _start;
 
     public StairsBuilder(HomeBuilderPlugin plugin) => _plugin = plugin;
@@ -19,20 +23,23 @@ public class StairsBuilder
     // Preview
     // -------------------------------------------------------------------------
 
+    // floorBaseY is unused at creation: the ghost is moved into place on the
+    // first mouse-motion event. The parameter is kept for symmetry with the
+    // other builder ghosts.
     public void CreateGhost(Node3D scene, float floorBaseY)
     {
-        _ghost = PreviewHelper.CreateMarker(
-            scene,
-            "__HB_StairsGhost__",
-            new Vector3(StairWidth, StairRise, StairRun),
-            new Color(0.9f, 0.8f, 0.1f, 0.4f),
-            new Vector3(0f, floorBaseY, 0f)
-        );
+        _ghost = new Node3D { Name = "__HB_StairsGhost__" };
+        scene.AddChild(_ghost);
+        _ghostIsStaircase = false;
+        AddTileChild();
     }
 
     public void ClearPreview()
     {
-        PreviewHelper.Free(ref _ghost);
+        if (_ghost != null && GodotObject.IsInstanceValid(_ghost))
+            _ghost.Free();
+        _ghost = null;
+        _ghostIsStaircase = false;
         _start = null;
     }
 
@@ -75,18 +82,37 @@ public class StairsBuilder
                 if (!_start.Value.IsEqualApprox(corner))
                     PlaceStairs(_start.Value, corner, floorBaseY);
                 _start = null;
-
-                if (_ghost != null && GodotObject.IsInstanceValid(_ghost))
-                {
-                    _ghost.Size  = new Vector3(StairWidth, StairRise, StairRun);
-                    _ghost.Basis = Basis.Identity;
-                }
+                ResetGhostToTile();
             }
 
             return 1;
         }
 
         return 0;
+    }
+
+    // -------------------------------------------------------------------------
+    // Ghost helpers
+    // -------------------------------------------------------------------------
+
+    private void AddTileChild()
+    {
+        var tile = new CsgBox3D
+        {
+            Size             = new Vector3(1f, WallBuilder.Height, 1f),
+            Position         = new Vector3(0f, WallBuilder.Height * 0.5f, 0f),
+            MaterialOverride = PreviewHelper.MakeMaterial(GhostColor),
+            UseCollision     = false,
+        };
+        _ghost.AddChild(tile);
+    }
+
+    private void ResetGhostToTile()
+    {
+        if (_ghost == null || !GodotObject.IsInstanceValid(_ghost)) return;
+        foreach (var child in _ghost.GetChildren()) child.Free();
+        _ghostIsStaircase = false;
+        AddTileChild();
     }
 
     // -------------------------------------------------------------------------
@@ -100,18 +126,44 @@ public class StairsBuilder
         var dir = cursor - start;
         if (dir.LengthSquared() < 0.001f) return;
 
-        var dirXZ  = new Vector3(dir.X, 0f, dir.Z).Normalized();
-        var basisX = Vector3.Up.Cross(dirXZ).Normalized();
-        var basisY = Vector3.Up;
-        var basisZ = dirXZ;
+        var dirXZ     = new Vector3(dir.X, 0f, dir.Z).Normalized();
+        var stepBasis = new Basis(Vector3.Up.Cross(dirXZ).Normalized(), Vector3.Up, dirXZ);
+        var origin    = new Vector3(start.X, floorBaseY, start.Z);
 
-        var center = start
-                   + dirXZ    * (StairTotalRun * 0.5f - 0.5f)
-                   + Vector3.Up * (floorBaseY + WallBuilder.Height * 0.5f);
+        if (!_ghostIsStaircase)
+        {
+            // Switch from single tile to full staircase preview
+            _ghost.Position = Vector3.Zero;
+            foreach (var child in _ghost.GetChildren()) child.Free();
 
-        _ghost.Size           = new Vector3(StairWidth, WallBuilder.Height, StairTotalRun);
-        _ghost.GlobalPosition = center;
-        _ghost.Basis          = new Basis(basisX, basisY, basisZ);
+            var stepMesh = StairsMeshBuilder.Build(StairWidth, StairRise, StairRun);
+            var mat      = PreviewHelper.MakeMaterial(GhostColor);
+
+            for (int i = 0; i < StairCount; i++)
+            {
+                var step = new MeshInstance3D { Mesh = stepMesh };
+                step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceTop,    mat);
+                step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceBottom, mat);
+                step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceSides,  mat);
+                _ghost.AddChild(step);
+            }
+
+            _ghostIsStaircase = true;
+        }
+
+        // Update each step position/orientation (world space, container is at zero)
+        var children = _ghost.GetChildren();
+        for (int i = 0; i < StairCount; i++)
+        {
+            float runOffset  = i * StairRun + StairRun * 0.5f - 0.5f;
+            float riseOffset = (i + 0.5f) * StairRise;
+
+            if (children[i] is MeshInstance3D step)
+            {
+                step.Position = origin + dirXZ * runOffset + Vector3.Up * riseOffset;
+                step.Basis    = stepBasis;
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -133,30 +185,65 @@ public class StairsBuilder
         var basisY = Vector3.Up;
         var stepBasis = new Basis(basisX, basisY, basisZ);
 
+        // Use floorBaseY directly so step bottoms sit flush with the floor.
+        var origin = new Vector3(start.X, floorBaseY, start.Z);
+
         // Build the shared mesh once — all steps share the same mesh
         var stepMesh = StairsMeshBuilder.Build(StairWidth, StairRise, StairRun);
+
+        // Single StaticBody3D for the whole staircase
+        var body = new StaticBody3D
+        {
+            Name     = "Staircase",
+            Position = origin,
+            Basis    = stepBasis,
+        };
+
+        float halfWidth = StairWidth * 0.5f;
+        float h  = WallBuilder.Height;
+        float tr = StairTotalRun;
+        var collisionPoly = new CollisionShape3D
+        {
+            Shape = new ConvexPolygonShape3D
+            {
+                Points = new[]
+                {
+                    new Vector3(-halfWidth, h,  tr - 0.75f),
+                    new Vector3( halfWidth, h,  tr - 0.75f),
+                    new Vector3(-halfWidth, h,  tr - 0.5f),
+                    new Vector3( halfWidth, h,  tr - 0.5f),
+                    new Vector3(-halfWidth, 0f, -0.5f),
+                    new Vector3( halfWidth, 0f, -0.5f),
+                    new Vector3(-halfWidth, 0f, -0.75f),
+                    new Vector3( halfWidth, 0f, -0.75f),
+                }
+            }
+        };
 
         var undo = _plugin.GetUndoRedo();
         undo.CreateAction("Place Stairs");
 
+        stairsParent.AddChild(body);
+        body.Owner = scene;
+
+        body.AddChild(collisionPoly);
+        collisionPoly.Owner = scene;
+
+        // One MeshInstance3D per step as child of the single body, positioned in local space
+        var dock = _plugin.Dock;
         for (int i = 0; i < StairCount; i++)
         {
+            // runOffset: step center along local Z. The -0.5 aligns the back edge with the tile edge.
             float runOffset  = i * StairRun + StairRun * 0.5f - 0.5f;
-            float riseOffset = floorBaseY + (i + 0.5f) * StairRise;
+            float riseOffset = (i + 0.5f) * StairRise;
 
-            var stepPos = start + dirXZ * runOffset + Vector3.Up * riseOffset;
-
-            // StaticBody3D is the root — holds position, basis and collision
-            var body = new StaticBody3D
+            var step = new MeshInstance3D
             {
                 Name     = $"Step_{i + 1}",
-                Position = stepPos,
-                Basis    = stepBasis,
+                Mesh     = stepMesh,
+                Position = new Vector3(0f, riseOffset, runOffset),
             };
 
-            // Visual mesh as child
-            var step = new MeshInstance3D { Mesh = stepMesh };
-            var dock = _plugin.Dock;
             step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceTop,
                 dock?.StairTopMaterial    ?? MaterialHelper.MakeDefaultMaterial(new Color(0.8f, 0.7f, 0.5f)));
             step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceBottom,
@@ -164,25 +251,12 @@ public class StairsBuilder
             step.SetSurfaceOverrideMaterial(StairsMeshBuilder.SurfaceSides,
                 dock?.StairSidesMaterial  ?? MaterialHelper.MakeDefaultMaterial(new Color(0.5f, 0.5f, 0.5f)));
 
-            // Collision shape as child — BoxShape3D matches step dimensions exactly
-            var shape = new CollisionShape3D
-            {
-                Shape = new BoxShape3D { Size = new Vector3(StairWidth, StairRise, StairRun) }
-            };
-
-            stairsParent.AddChild(body);
-            body.Owner = scene;
-
             body.AddChild(step);
             step.Owner = scene;
-
-            body.AddChild(shape);
-            shape.Owner = scene;
-
-            undo.AddDoMethod(stairsParent,   Node.MethodName.AddChild,    body);
-            undo.AddUndoMethod(stairsParent, Node.MethodName.RemoveChild, body);
         }
 
+        undo.AddDoMethod(stairsParent,   Node.MethodName.AddChild,    body);
+        undo.AddUndoMethod(stairsParent, Node.MethodName.RemoveChild, body);
         undo.CommitAction(false);
     }
 }

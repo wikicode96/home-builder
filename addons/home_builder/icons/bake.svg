@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bakeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F0A830" />
+      <stop offset="100%" stop-color="#C06A10" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#7A4A00" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Rayos de bakeado -->
+  <g stroke="#F5C830" stroke-width="1.7" stroke-linecap="round" opacity="0.9">
+    <line x1="16" y1="1" x2="16" y2="3.5" />
+    <line x1="7" y1="2.5" x2="9.5" y2="5" />
+    <line x1="25" y1="2.5" x2="22.5" y2="5" />
+    <line x1="1" y1="18.5" x2="4.5" y2="18.5" />
+    <line x1="31" y1="18.5" x2="27.5" y2="18.5" />
+    <line x1="2.5" y1="28" x2="5" y2="26" />
+    <line x1="29.5" y1="28" x2="27" y2="26" />
+  </g>
+
+  <!-- Paredes -->
+  <rect x="8" y="17" width="16" height="11" rx="1" fill="url(#bakeGrad)" stroke="#8B5E10" stroke-width="1.2" filter="url(#shadow)" />
+
+  <!-- Tejado -->
+  <polygon points="5,17 16,6 27,17" fill="url(#bakeGrad)" stroke="#8B5E10" stroke-width="1.2" stroke-linejoin="round" />
+
+  <!-- Puerta -->
+  <rect x="13" y="22" width="6" height="6" rx="0.5" fill="#7A4A00" opacity="0.55" />
+
+  <!-- Brillo en tejado -->
+  <polygon points="5,17 16,6 27,17" fill="white" opacity="0.12" />
+  <!-- Brillo en paredes -->
+  <rect x="8" y="17" width="16" height="4" fill="white" opacity="0.1" />
+</svg>

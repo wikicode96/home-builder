@@ -92,6 +92,7 @@ public static class WallJunctionSolver
         var endPos    = new Dictionary<StaticBody3D, Vector3>();
         var wallDir   = new Dictionary<StaticBody3D, Vector2>();
         var wallLen   = new Dictionary<StaticBody3D, float>();
+        var wallThk   = new Dictionary<StaticBody3D, float>();
 
         foreach (Node child in wallParent.GetChildren())
         {
@@ -110,6 +111,7 @@ public static class WallJunctionSolver
             endPos[b]   = tr.Origin + axis * (len * 0.5f);
             wallDir[b]  = d2;
             wallLen[b]  = len;
+            wallThk[b]  = WallHelper.GetWallThickness(b);
             result[b]   = default;
         }
 
@@ -125,7 +127,7 @@ public static class WallJunctionSolver
                 NodePos = startPos[w],
                 Dir = wallDir[w],                    // Start inward = +axis
                 WallLength = wallLen[w],
-                Thickness = WallBuilder.Thickness,
+                Thickness = wallThk[w],
             });
             halfEdges.Add(new HalfEdge
             {
@@ -133,7 +135,7 @@ public static class WallJunctionSolver
                 NodePos = endPos[w],
                 Dir = -wallDir[w],                   // End inward = -axis
                 WallLength = wallLen[w],
-                Thickness = WallBuilder.Thickness,
+                Thickness = wallThk[w],
             });
         }
 
@@ -184,14 +186,14 @@ public static class WallJunctionSolver
                     Wall = w, Kind = Kind.MidVirtual,
                     NodePos = P, Dir = dir,
                     WallLength = L - tAlong,
-                    Thickness = WallBuilder.Thickness,
+                    Thickness = wallThk[w],
                 });
                 node.Add(new HalfEdge
                 {
                     Wall = w, Kind = Kind.MidVirtual,
                     NodePos = P, Dir = -dir,
                     WallLength = tAlong,
-                    Thickness = WallBuilder.Thickness,
+                    Thickness = wallThk[w],
                 });
             }
         }

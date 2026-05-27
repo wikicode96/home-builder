@@ -5,8 +5,8 @@ public class WallBuilder
 {
     private readonly HomeBuilderPlugin _plugin;
 
-    public const float Height    = 3.0f;
-    public const float Thickness = 0.3f;
+    public static float Height    { get; set; } = 3.0f;
+    public static float Thickness { get; set; } = 0.1f;
 
     private CsgBox3D _pointMarker;
     private Vector3? _start;
@@ -14,7 +14,7 @@ public class WallBuilder
     public WallBuilder(HomeBuilderPlugin plugin) => _plugin = plugin;
 
     // -------------------------------------------------------------------------
-    // Preview (CsgBox3D — previews don't need materials)
+    // Preview
     // -------------------------------------------------------------------------
 
     public void CreateMarker(Node3D scene, float floorBaseY)
@@ -108,19 +108,25 @@ public class WallBuilder
 
         // Store wall length as metadata so OpeningBuilder can read it later,
         // even after the collision shape is replaced by ConcavePolygonShape3D.
-        body.SetMeta(WallHelper.MetaWallLength, length);
+        // Thickness/height are frozen at placement so later dock edits don't
+        // retroactively change this wall.
+        float wallThickness = Thickness;
+        float wallHeight    = Height;
+        body.SetMeta(WallHelper.MetaWallLength,    length);
+        body.SetMeta(WallHelper.MetaWallThickness, wallThickness);
+        body.SetMeta(WallHelper.MetaWallHeight,    wallHeight);
 
         // Visual mesh as child
         var wall = new MeshInstance3D
         {
-            Mesh = WallMeshBuilder.Build(length, Height, Thickness),
+            Mesh = WallMeshBuilder.Build(length, wallHeight, wallThickness),
         };
         ApplyMaterials(wall);
 
         // Collision shape — BoxShape3D matches wall dimensions exactly
         var shape = new CollisionShape3D
         {
-            Shape = new BoxShape3D { Size = new Vector3(length, Height, Thickness) }
+            Shape = new BoxShape3D { Size = new Vector3(length, wallHeight, wallThickness) }
         };
 
         wallParent.AddChild(body);
@@ -171,7 +177,7 @@ public class WallBuilder
 
     private static void RebuildJunctionFills(
         Node3D wallParent,
-        System.Collections.Generic.List<WallJunctionSolver.JunctionFill> fills)
+        List<WallJunctionSolver.JunctionFill> fills)
     {
         MeshInstance3D fillNode = null;
         foreach (Node child in wallParent.GetChildren())
@@ -229,11 +235,14 @@ public class WallBuilder
         float wallLen = WallHelper.GetWallLength(wallBody);
         if (wallLen <= 0f) return;
 
+        float wallHeight    = WallHelper.GetWallHeight(wallBody);
+        float wallThickness = WallHelper.GetWallThickness(wallBody);
+
         var openings = OpeningBuilder.LoadOpenings(wallBody);
         var joins    = WallJunctionSolver.ToMeshJoins(off);
 
         var newMesh = WallMeshBuilder.BuildWithOpeningsAndJoins(
-            wallLen, Height, Thickness, openings, joins);
+            wallLen, wallHeight, wallThickness, openings, joins);
 
         MeshInstance3D meshInstance = null;
         CollisionShape3D collisionShape = null;

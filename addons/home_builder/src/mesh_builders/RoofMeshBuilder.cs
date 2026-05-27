@@ -128,7 +128,7 @@ public static class RoofMeshBuilder
             new Vector2(length, 0), new Vector2(0, 0));
     }
 
-    // ── Shed (a un agua) — high edge at -Z ───────────────────────────────────
+    // ── Shed — high edge at -Z ───────────────────────────────────────────────
 
     private static void BuildShed(SurfaceTool top, SurfaceTool bot, SurfaceTool sides,
         float w, float d, float p, Transform3D tf)
@@ -169,7 +169,7 @@ public static class RoofMeshBuilder
             new Vector2(0, 0), new Vector2(0, p), new Vector2(d, 0));
     }
 
-    // ── Gable (a dos aguas) — ridge along X at z = d/2 ───────────────────────
+    // ── Gable — ridge along X at z = d/2 ─────────────────────────────────────
 
     private static void BuildGable(SurfaceTool top, SurfaceTool bot, SurfaceTool sides,
         float w, float d, float p, Transform3D tf)
@@ -214,7 +214,7 @@ public static class RoofMeshBuilder
             new Vector2(0, 0), new Vector2(d, 0), new Vector2(halfD, p));
     }
 
-    // ── Hip (a cuatro aguas) — ridge along longer axis ───────────────────────
+    // ── Hip — ridge along longer axis ────────────────────────────────────────
 
     private static void BuildHip(SurfaceTool top, SurfaceTool bot, SurfaceTool sides,
         float w, float d, float p, Transform3D tf)
