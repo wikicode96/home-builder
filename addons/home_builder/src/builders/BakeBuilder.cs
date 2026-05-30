@@ -756,11 +756,15 @@ public partial class BakeBuilder
         // Direction from floor-level centroid to top-level centroid
         var rampDir = (topCentroid - botCentroid).Normalized();
 
+        // Width axis: perpendicular to rampDir and world-Up, gives consistent
+        // left-right ordering for any staircase orientation (not just north-facing).
+        var widthDir = rampDir.Cross(Vector3.Up).Normalized();
+
         // "Front" edge = points most advanced along rampDir from their group centroid
         var topNear = topPts.OrderByDescending(p => (p - topCentroid).Dot(rampDir))
-                            .Take(2).OrderBy(p => p.X).ToArray();
+                            .Take(2).OrderBy(p => (p - topCentroid).Dot(widthDir)).ToArray();
         var botNear = botPts.OrderByDescending(p => (p - botCentroid).Dot(rampDir))
-                            .Take(2).OrderBy(p => p.X).ToArray();
+                            .Take(2).OrderBy(p => (p - botCentroid).Dot(widthDir)).ToArray();
 
         if (topNear.Length < 2 || botNear.Length < 2) return null;
 
