@@ -128,7 +128,8 @@ public class StairsBuilder
 
         var dirXZ     = new Vector3(dir.X, 0f, dir.Z).Normalized();
         var stepBasis = new Basis(Vector3.Up.Cross(dirXZ).Normalized(), Vector3.Up, dirXZ);
-        var origin    = new Vector3(start.X, floorBaseY, start.Z);
+        const float zFighting = 0.001f;
+        var origin    = new Vector3(start.X, floorBaseY + zFighting, start.Z);
 
         if (!_ghostIsStaircase)
         {
@@ -185,8 +186,11 @@ public class StairsBuilder
         var basisY = Vector3.Up;
         var stepBasis = new Basis(basisX, basisY, basisZ);
 
-        // Use floorBaseY directly so step bottoms sit flush with the floor.
-        var origin = new Vector3(start.X, floorBaseY, start.Z);
+        // Offset by the same zFighting margin used in FloorBuilder so step
+        // bottoms sit flush with the top surface of the floor slab (not the
+        // raw floor plane), avoiding Z-fighting with the wall below.
+        const float zFighting = 0.001f;
+        var origin = new Vector3(start.X, floorBaseY + zFighting, start.Z);
 
         // Build the shared mesh once — all steps share the same mesh
         var stepMesh = StairsMeshBuilder.Build(StairWidth, StairRise, StairRun);

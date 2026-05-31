@@ -873,6 +873,20 @@ popup/item_2/text = "Dependencias"
 popup/item_2/id = 2
 popup/item_2/disabled = true
 
+[node name="ChecksRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/BakeSection" unique_id=3000000018]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="NavMeshCheck" type="CheckBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/BakeSection/ChecksRow" unique_id=3000000019]
+layout_mode = 2
+button_pressed = true
+text = "Malla de navegación"
+
+[node name="OcclusionCheck" type="CheckBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/BakeSection/ChecksRow" unique_id=3000000020]
+layout_mode = 2
+button_pressed = true
+text = "Occlusion Culling"
+
 [node name="BakeActionButton" type="Button" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/BakeSection" unique_id=3000000017]
 layout_mode = 2
 text = "Bakear"

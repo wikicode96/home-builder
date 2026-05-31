@@ -112,6 +112,8 @@ public partial class HomeBuilderDock : Control
     private SpinBox          _bakeLod0EndSpin;
     private SpinBox          _bakeLod1BeginSpin;
     private OptionButton     _bakeFadeOption;
+    private CheckBox         _bakeNavMeshCheck;
+    private CheckBox         _bakeOcclusionCheck;
     private Button           _bakeActionButton;
     private EditorFileDialog _bakeFolderDialog;
 
@@ -168,9 +170,11 @@ public partial class HomeBuilderDock : Control
     public PackedScene FenceAssetScene => _fenceAssetPicker?.EditedResource as PackedScene;
 
     // ── Bake parameters ───────────────────────────────────────────────────────
-    public string BakeOutputPath => _bakePathEdit?.Text ?? "";
-    public float  BakeLod0End    => (float)(_bakeLod0EndSpin?.Value   ?? 60.0);
-    public float  BakeLod1Begin  => (float)(_bakeLod1BeginSpin?.Value ?? 50.0);
+    public string BakeOutputPath    => _bakePathEdit?.Text ?? "";
+    public float  BakeLod0End      => (float)(_bakeLod0EndSpin?.Value   ?? 60.0);
+    public float  BakeLod1Begin    => (float)(_bakeLod1BeginSpin?.Value ?? 50.0);
+    public bool   BakeBuildNavMesh  => _bakeNavMeshCheck?.ButtonPressed  ?? true;
+    public bool   BakeBuildOcclusion => _bakeOcclusionCheck?.ButtonPressed ?? true;
     public GeometryInstance3D.VisibilityRangeFadeModeEnum BakeFadeMode =>
         (GeometryInstance3D.VisibilityRangeFadeModeEnum)(_bakeFadeOption?.Selected ?? 1);
 
@@ -298,12 +302,14 @@ public partial class HomeBuilderDock : Control
         _fenceLengthSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
 
         // Bake section
-        _bakePathEdit      = GetNode<LineEdit>($"{Stack}/BakeSection/OutputRow/OutputPathEdit");
-        _bakeBrowseButton  = GetNode<Button>($"{Stack}/BakeSection/OutputRow/BrowseButton");
-        _bakeLod0EndSpin   = GetNode<SpinBox>($"{Stack}/BakeSection/ParamsRow/Lod0EndVBox/Lod0EndSpin");
-        _bakeLod1BeginSpin = GetNode<SpinBox>($"{Stack}/BakeSection/ParamsRow/Lod1BeginVBox/Lod1BeginSpin");
-        _bakeFadeOption    = GetNode<OptionButton>($"{Stack}/BakeSection/ParamsRow/FadeVBox/FadeOption");
-        _bakeActionButton  = GetNode<Button>($"{Stack}/BakeSection/BakeActionButton");
+        _bakePathEdit       = GetNode<LineEdit>($"{Stack}/BakeSection/OutputRow/OutputPathEdit");
+        _bakeBrowseButton   = GetNode<Button>($"{Stack}/BakeSection/OutputRow/BrowseButton");
+        _bakeLod0EndSpin    = GetNode<SpinBox>($"{Stack}/BakeSection/ParamsRow/Lod0EndVBox/Lod0EndSpin");
+        _bakeLod1BeginSpin  = GetNode<SpinBox>($"{Stack}/BakeSection/ParamsRow/Lod1BeginVBox/Lod1BeginSpin");
+        _bakeFadeOption     = GetNode<OptionButton>($"{Stack}/BakeSection/ParamsRow/FadeVBox/FadeOption");
+        _bakeNavMeshCheck   = GetNode<CheckBox>($"{Stack}/BakeSection/ChecksRow/NavMeshCheck");
+        _bakeOcclusionCheck = GetNode<CheckBox>($"{Stack}/BakeSection/ChecksRow/OcclusionCheck");
+        _bakeActionButton   = GetNode<Button>($"{Stack}/BakeSection/BakeActionButton");
 
         _bakeFolderDialog = new EditorFileDialog
         {

@@ -260,7 +260,9 @@ public partial class HomeBuilderPlugin : EditorPlugin
             dock.BakeOutputPath,
             dock.BakeLod0End,
             dock.BakeLod1Begin,
-            dock.BakeFadeMode
+            dock.BakeFadeMode,
+            dock.BakeBuildNavMesh,
+            dock.BakeBuildOcclusion
         );
 
         CallDeferred(MethodName.CreateActivePreviews);

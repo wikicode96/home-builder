@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using System.Linq;
 
 [Tool]
 public partial class BakeBuilder
@@ -16,7 +17,9 @@ public partial class BakeBuilder
         string outputFolder,
         float lod0End,
         float lod1Begin,
-        GeometryInstance3D.VisibilityRangeFadeModeEnum fadeMode)
+        GeometryInstance3D.VisibilityRangeFadeModeEnum fadeMode,
+        bool buildNavMesh   = true,
+        bool buildOcclusion = true)
     {
         if (sceneRoot == null)
         {
@@ -89,7 +92,8 @@ public partial class BakeBuilder
         };
         bakedRoot.AddChild(lod1Inst);
 
-        bakedRoot.AddChild(BuildOccluder(lod1Mesh));
+        if (buildOcclusion)
+            bakedRoot.AddChild(BuildOccluder(lod1Mesh));
 
         // Main collision: visual mesh without stair steps.
         var colInstances = meshInstances.FindAll(mi => !IsStairsMesh(mi));
@@ -120,6 +124,9 @@ public partial class BakeBuilder
                 Shape = new ConvexPolygonShape3D { Points = transformed },
             });
         }
+
+        if (buildNavMesh)
+            bakedRoot.AddChild(BuildNavRegion(colMesh, convexShapes, rootInverse));
 
         SetOwnerRecursive(bakedRoot, bakedRoot);
 
@@ -674,5 +681,102 @@ public partial class BakeBuilder
         occluder.SetArrays(allVerts.ToArray(), allIndices.ToArray());
 
         return new OccluderInstance3D { Name = "Occluder", Occluder = occluder };
+    }
+
+    // -------------------------------------------------------------------------
+    // Navigation mesh — baked at export time so the .tscn carries a ready-to-use
+    // navmesh. Parameters match what was validated interactively:
+    //   agent_radius 0.3  → door opening 1.0m − 2×0.3 = 0.4m free (passes)
+    //   agent_max_slope 50 → stair ramps at 45° pass the walkability check
+    // The source geometry is:
+    //   • colMesh  — floors + walls with door holes (no stair steps)
+    //   • ramp triangles — extracted from each staircase ConvexPolygonShape3D
+    // Both are already in root-local space, so the .tscn is position-independent.
+    // -------------------------------------------------------------------------
+
+    private static NavigationRegion3D BuildNavRegion(
+        ArrayMesh colMesh,
+        List<CollisionShape3D> convexShapes,
+        Transform3D rootInverse)
+    {
+        var navMesh = new NavigationMesh
+        {
+            AgentRadius   = 0.3f,
+            AgentHeight   = 1.8f,
+            AgentMaxClimb = 0.25f,
+            AgentMaxSlope = 50.0f,
+            CellSize      = 0.10f,
+            CellHeight    = 0.10f,
+            RegionMinSize = 0.0f,
+        };
+
+        var sourceGeom = new NavigationMeshSourceGeometryData3D();
+
+        // Floors + walls with door holes (no stair steps)
+        sourceGeom.AddMesh(colMesh, Transform3D.Identity);
+
+        // One ramp quad per staircase
+        foreach (var cs in convexShapes)
+        {
+            if (cs.Shape is not ConvexPolygonShape3D convex) continue;
+
+            var localToRoot = rootInverse * cs.GlobalTransform;
+            var transformed = new Vector3[convex.Points.Length];
+            for (int p = 0; p < transformed.Length; p++)
+                transformed[p] = localToRoot * convex.Points[p];
+
+            var ramp = ExtractRampFace(transformed);
+            if (ramp != null)
+                sourceGeom.AddFaces(ramp, Transform3D.Identity);
+        }
+
+        NavigationMeshGenerator.BakeFromSourceGeometryData(navMesh, sourceGeom);
+
+        GD.Print("[BakeBuilder] NavigationMesh horneado.");
+        return new NavigationRegion3D { Name = "Navigation", NavigationMesh = navMesh };
+    }
+
+    // Extracts the two triangles that form the walkable inclined face of the
+    // staircase ConvexPolygonShape3D (an 8-point wedge). Works for any rotation:
+    // splits points into top/bottom halves by Y, then selects the two "front"
+    // points from each half by projecting onto the ramp direction vector.
+    private static Vector3[] ExtractRampFace(Vector3[] pts)
+    {
+        if (pts.Length < 4) return null;
+
+        var byY    = pts.OrderBy(p => p.Y).ToArray();
+        int half   = byY.Length / 2;
+        var botPts = byY.Take(half).ToArray();
+        var topPts = byY.Skip(byY.Length - half).ToArray();
+
+        var botCentroid = Vector3.Zero;
+        foreach (var p in botPts) botCentroid += p;
+        botCentroid /= botPts.Length;
+
+        var topCentroid = Vector3.Zero;
+        foreach (var p in topPts) topCentroid += p;
+        topCentroid /= topPts.Length;
+
+        // Direction from floor-level centroid to top-level centroid
+        var rampDir = (topCentroid - botCentroid).Normalized();
+
+        // Width axis: perpendicular to rampDir and world-Up, gives consistent
+        // left-right ordering for any staircase orientation (not just north-facing).
+        var widthDir = rampDir.Cross(Vector3.Up).Normalized();
+
+        // "Front" edge = points most advanced along rampDir from their group centroid
+        var topNear = topPts.OrderByDescending(p => (p - topCentroid).Dot(rampDir))
+                            .Take(2).OrderBy(p => (p - topCentroid).Dot(widthDir)).ToArray();
+        var botNear = botPts.OrderByDescending(p => (p - botCentroid).Dot(rampDir))
+                            .Take(2).OrderBy(p => (p - botCentroid).Dot(widthDir)).ToArray();
+
+        if (topNear.Length < 2 || botNear.Length < 2) return null;
+
+        // Quad as two CCW triangles (normal faces upward)
+        return new[]
+        {
+            topNear[0], topNear[1], botNear[1],
+            topNear[0], botNear[1], botNear[0],
+        };
     }
 }
