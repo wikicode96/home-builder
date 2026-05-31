@@ -17,7 +17,9 @@ public partial class BakeBuilder
         string outputFolder,
         float lod0End,
         float lod1Begin,
-        GeometryInstance3D.VisibilityRangeFadeModeEnum fadeMode)
+        GeometryInstance3D.VisibilityRangeFadeModeEnum fadeMode,
+        bool buildNavMesh   = true,
+        bool buildOcclusion = true)
     {
         if (sceneRoot == null)
         {
@@ -90,7 +92,8 @@ public partial class BakeBuilder
         };
         bakedRoot.AddChild(lod1Inst);
 
-        bakedRoot.AddChild(BuildOccluder(lod1Mesh));
+        if (buildOcclusion)
+            bakedRoot.AddChild(BuildOccluder(lod1Mesh));
 
         // Main collision: visual mesh without stair steps.
         var colInstances = meshInstances.FindAll(mi => !IsStairsMesh(mi));
@@ -122,7 +125,8 @@ public partial class BakeBuilder
             });
         }
 
-        bakedRoot.AddChild(BuildNavRegion(colMesh, convexShapes, rootInverse));
+        if (buildNavMesh)
+            bakedRoot.AddChild(BuildNavRegion(colMesh, convexShapes, rootInverse));
 
         SetOwnerRecursive(bakedRoot, bakedRoot);
 
