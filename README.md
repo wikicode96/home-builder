@@ -6,7 +6,7 @@ A Godot 4 plugin (C#) for building structures directly in the scene editor by cl
 
 Requires Godot 4.x with .NET (Mono) support. To install the plugin, copy the `addons` folder from this repository into your project's `addons` folder. Then enable it under **Project → Project Settings → Plugins**.
 
-![house](./addons/home_builder/imgs/house1.png)
+![house](./imgs/house1.png)
 
 ---
 
@@ -123,16 +123,16 @@ Each mode exposes material selectors in the panel. Materials are assigned before
 ## Sample Images
 
 ### Interiors
-![Interiors](./addons/home_builder/imgs/inside.png)
+![Interiors](./imgs/inside.png)
 
 ---
 
 ### LOD0 and LOD1
-![LOD0](./addons/home_builder/imgs/lod0.png)
-![LOD1](./addons/home_builder/imgs/lod1.png)
+![LOD0](./imgs/lod0.png)
+![LOD1](./imgs/lod1.png)
 
 ---
 
 ### Occlusion Culling
-![Occlusion Culling 1](./addons/home_builder/imgs/oc1.png)
-![Occlusion Culling 2](./addons/home_builder/imgs/oc2.png)
+![Occlusion Culling 1](./imgs/oc1.png)
+![Occlusion Culling 2](./imgs/oc2.png)
