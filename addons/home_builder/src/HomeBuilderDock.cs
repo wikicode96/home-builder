@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 [Tool]
@@ -421,3 +422,4 @@ public partial class HomeBuilderDock : Control
 
     private void UpdateFloorLabel() => _floorLabel.Text = $"P {_currentFloor}";
 }
+#endif

@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public class FloorBuilder
@@ -160,3 +161,4 @@ public class FloorBuilder
     }
 
 }
+#endif

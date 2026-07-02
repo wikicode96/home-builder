@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 // Generates an ArrayMesh for a floor slab of arbitrary size (cols x rows tiles
@@ -124,3 +125,4 @@ public static class FloorMeshBuilder
         return st;
     }
 }
+#endif

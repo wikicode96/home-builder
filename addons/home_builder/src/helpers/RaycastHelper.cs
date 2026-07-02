@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public static class RaycastHelper
@@ -138,3 +139,4 @@ public static class RaycastHelper
 
     private static float GetWallHalfLength(StaticBody3D body) => WallHelper.GetWallHalfLength(body);
 }
+#endif

@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public static class WallHelper
@@ -45,3 +46,4 @@ public static class WallHelper
         return WallBuilder.Height;
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public enum BuildMode
@@ -303,3 +304,4 @@ public partial class HomeBuilderPlugin : EditorPlugin
         return parent;
     }
 }
+#endif

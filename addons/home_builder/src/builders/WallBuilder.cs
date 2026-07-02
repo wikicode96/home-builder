@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 using System.Collections.Generic;
 
@@ -273,3 +274,4 @@ public class WallBuilder
             dock?.WallEdgesMaterial ?? MaterialHelper.MakeDefaultMaterial(new Color(0.7f, 0.7f, 0.65f)));
     }
 }
+#endif

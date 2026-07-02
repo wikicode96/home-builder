@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 using System.Collections.Generic;
 
@@ -16,3 +17,4 @@ public static class MaterialHelper
         return mat;
     }
 }
+#endif

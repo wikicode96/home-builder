@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public static class PreviewHelper
@@ -37,3 +38,4 @@ public static class PreviewHelper
         CullMode     = BaseMaterial3D.CullModeEnum.Disabled,
     };
 }
+#endif
