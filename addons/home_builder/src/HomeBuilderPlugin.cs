@@ -24,6 +24,14 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private FenceBuilder   _fenceBuilder;
     private BakeBuilder    _bakeBuilder;
 
+    // Stored so _ExitTree can disconnect the exact same Callable instances
+    // that were connected in _EnterTree (required for the IsConnected check).
+    private Callable _onModeChanged;
+    private Callable _onFloorChanged;
+    private Callable _onBakeRequested;
+    private Callable _onOpeningConfigChanged;
+    private Callable _onBuildingConfigChanged;
+
     public override void _EnterTree()
     {
         _floorBuilder   = new FloorBuilder(this);
@@ -38,60 +46,50 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _dock = dockScene.Instantiate<Control>();
         AddControlToBottomPanel(_dock, "Home Builder");
 
-        _dock.Connect(
-            HomeBuilderDock.SignalName.ModeChanged,
-            Callable.From((string mode) =>
+        _onModeChanged = Callable.From((string mode) =>
+        {
+            ClearAllPreviews();
+            _activeMode = mode switch
+            {
+                "floor"   => BuildMode.Floor,
+                "walls"   => BuildMode.Walls,
+                "roof"    => BuildMode.Roof,
+                "doors"   => BuildMode.Doors,
+                "windows" => BuildMode.Windows,
+                "stairs"  => BuildMode.Stairs,
+                "fences"  => BuildMode.Fences,
+                "none"    => BuildMode.None,
+                "bake"    => BuildMode.None,
+                _         => BuildMode.None
+            };
+            CallDeferred(MethodName.CreateActivePreviews);
+        });
+        _dock.Connect(HomeBuilderDock.SignalName.ModeChanged, _onModeChanged);
+
+        _onFloorChanged = Callable.From((int floor) =>
+        {
+            _activeFloor = floor;
+            UpdateNodeVisibility();
+            ClearAllPreviews();
+            CallDeferred(MethodName.CreateActivePreviews);
+        });
+        _dock.Connect(HomeBuilderDock.SignalName.FloorChanged, _onFloorChanged);
+
+        _onBakeRequested = Callable.From(OnBakeRequested);
+        _dock.Connect(HomeBuilderDock.SignalName.BakeRequested, _onBakeRequested);
+
+        _onOpeningConfigChanged = Callable.From(() =>
+        {
+            if (_activeMode is BuildMode.Doors or BuildMode.Windows)
             {
                 ClearAllPreviews();
-                _activeMode = mode switch
-                {
-                    "floor"   => BuildMode.Floor,
-                    "walls"   => BuildMode.Walls,
-                    "roof"    => BuildMode.Roof,
-                    "doors"   => BuildMode.Doors,
-                    "windows" => BuildMode.Windows,
-                    "stairs"  => BuildMode.Stairs,
-                    "fences"  => BuildMode.Fences,
-                    "none"    => BuildMode.None,
-                    "bake"    => BuildMode.None,
-                    _         => BuildMode.None
-                };
                 CallDeferred(MethodName.CreateActivePreviews);
-            })
-        );
+            }
+        });
+        _dock.Connect(HomeBuilderDock.SignalName.OpeningConfigChanged, _onOpeningConfigChanged);
 
-        _dock.Connect(
-            HomeBuilderDock.SignalName.FloorChanged,
-            Callable.From((int floor) =>
-            {
-                _activeFloor = floor;
-                UpdateNodeVisibility();
-                ClearAllPreviews();
-                CallDeferred(MethodName.CreateActivePreviews);
-            })
-        );
-
-        _dock.Connect(
-            HomeBuilderDock.SignalName.BakeRequested,
-            Callable.From(OnBakeRequested)
-        );
-
-        _dock.Connect(
-            HomeBuilderDock.SignalName.OpeningConfigChanged,
-            Callable.From(() =>
-            {
-                if (_activeMode is BuildMode.Doors or BuildMode.Windows)
-                {
-                    ClearAllPreviews();
-                    CallDeferred(MethodName.CreateActivePreviews);
-                }
-            })
-        );
-
-        _dock.Connect(
-            HomeBuilderDock.SignalName.BuildingConfigChanged,
-            Callable.From(OnBuildingConfigChanged)
-        );
+        _onBuildingConfigChanged = Callable.From(OnBuildingConfigChanged);
+        _dock.Connect(HomeBuilderDock.SignalName.BuildingConfigChanged, _onBuildingConfigChanged);
 
         SceneChanged += OnSceneChanged;
 
@@ -103,10 +101,28 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     public override void _ExitTree()
     {
-        SceneChanged -= OnSceneChanged;
+        // Godot may have already torn down these connections internally by
+        // the time _ExitTree runs (e.g. when the whole editor is closing).
+        // Disconnecting blindly logs "nonexistent connection" errors, so
+        // check IsConnected first.
+        var sceneChangedCallable = Callable.From<Node>(OnSceneChanged);
+        if (IsConnected(SignalName.SceneChanged, sceneChangedCallable))
+            SceneChanged -= OnSceneChanged;
+
         ClearAllPreviews();
         if (_dock != null)
         {
+            if (_dock.IsConnected(HomeBuilderDock.SignalName.ModeChanged, _onModeChanged))
+                _dock.Disconnect(HomeBuilderDock.SignalName.ModeChanged, _onModeChanged);
+            if (_dock.IsConnected(HomeBuilderDock.SignalName.FloorChanged, _onFloorChanged))
+                _dock.Disconnect(HomeBuilderDock.SignalName.FloorChanged, _onFloorChanged);
+            if (_dock.IsConnected(HomeBuilderDock.SignalName.BakeRequested, _onBakeRequested))
+                _dock.Disconnect(HomeBuilderDock.SignalName.BakeRequested, _onBakeRequested);
+            if (_dock.IsConnected(HomeBuilderDock.SignalName.OpeningConfigChanged, _onOpeningConfigChanged))
+                _dock.Disconnect(HomeBuilderDock.SignalName.OpeningConfigChanged, _onOpeningConfigChanged);
+            if (_dock.IsConnected(HomeBuilderDock.SignalName.BuildingConfigChanged, _onBuildingConfigChanged))
+                _dock.Disconnect(HomeBuilderDock.SignalName.BuildingConfigChanged, _onBuildingConfigChanged);
+
             RemoveControlFromBottomPanel(_dock);
             _dock.QueueFree();
             _dock = null;
