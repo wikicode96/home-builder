@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public static class SnapHelper
@@ -58,3 +59,4 @@ public static class SnapHelper
 
     private static float GetWallLength(StaticBody3D wallBody) => WallHelper.GetWallLength(wallBody);
 }
+#endif

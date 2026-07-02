@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public static class MeshHelper
@@ -42,3 +43,4 @@ public static class MeshHelper
         st.SetNormal(normal); st.SetUV(uv1); st.AddVertex(v1);
     }
 }
+#endif

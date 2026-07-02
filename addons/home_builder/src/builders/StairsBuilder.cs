@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public class StairsBuilder
@@ -264,3 +265,4 @@ public class StairsBuilder
         undo.CommitAction(false);
     }
 }
+#endif

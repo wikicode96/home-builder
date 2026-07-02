@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 // Generates an ArrayMesh for a single stair step with three surfaces:
@@ -128,3 +129,4 @@ public static class StairsMeshBuilder
         return st;
     }
 }
+#endif

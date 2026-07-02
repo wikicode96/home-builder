@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 using System.Collections.Generic;
 
@@ -265,3 +266,4 @@ public class OpeningBuilder
         collisionShape.Shape = concaveShape;
     }
 }
+#endif

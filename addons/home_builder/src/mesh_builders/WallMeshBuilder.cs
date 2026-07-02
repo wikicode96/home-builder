@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
@@ -426,3 +427,4 @@ public static class WallMeshBuilder
         );
     }
 }
+#endif

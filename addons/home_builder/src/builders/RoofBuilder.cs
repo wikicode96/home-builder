@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public class RoofBuilder
@@ -146,3 +147,4 @@ public class RoofBuilder
         undo.CommitAction(false);
     }
 }
+#endif

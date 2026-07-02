@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 
 public enum RoofType { Flat, Shed, Gable, Hip }
@@ -316,3 +317,4 @@ public static class RoofMeshBuilder
             new Vector2(w, 0), new Vector2(0, 0));
     }
 }
+#endif

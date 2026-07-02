@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 using System.Collections.Generic;
 
@@ -63,3 +64,4 @@ public static class JunctionFillMeshBuilder
         st.SetNormal(normal); st.SetUV(new Vector2(1f,   0f));   st.AddVertex(v2);
     }
 }
+#endif

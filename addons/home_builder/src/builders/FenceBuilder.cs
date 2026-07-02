@@ -1,3 +1,4 @@
+#if TOOLS
 using Godot;
 using System.Collections.Generic;
 
@@ -191,3 +192,4 @@ public class FenceBuilder
             SetOwnerRecursive(child, owner);
     }
 }
+#endif
