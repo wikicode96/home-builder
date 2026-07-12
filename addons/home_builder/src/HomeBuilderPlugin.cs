@@ -47,46 +47,19 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _dock = dockScene.Instantiate<Control>();
         AddControlToBottomPanel(_dock, "Home Builder");
 
-        _onModeChanged = Callable.From((string mode) =>
-        {
-            ClearAllPreviews();
-            _activeMode = mode switch
-            {
-                "floor"   => BuildMode.Floor,
-                "walls"   => BuildMode.Walls,
-                "roof"    => BuildMode.Roof,
-                "doors"   => BuildMode.Doors,
-                "windows" => BuildMode.Windows,
-                "stairs"  => BuildMode.Stairs,
-                "fences"  => BuildMode.Fences,
-                "none"    => BuildMode.None,
-                "bake"    => BuildMode.None,
-                _         => BuildMode.None
-            };
-            CallDeferred(MethodName.CreateActivePreviews);
-        });
+        // Métodos con nombre, nunca lambdas: las closures conectadas a señales
+        // en el editor no se pueden serializar durante la recarga del assembly
+        // .NET y bloquean su descarga (godotengine/godot#78513).
+        _onModeChanged = Callable.From<string>(OnModeChanged);
         _dock.Connect(HomeBuilderDock.SignalName.ModeChanged, _onModeChanged);
 
-        _onFloorChanged = Callable.From((int floor) =>
-        {
-            _activeFloor = floor;
-            UpdateNodeVisibility();
-            ClearAllPreviews();
-            CallDeferred(MethodName.CreateActivePreviews);
-        });
+        _onFloorChanged = Callable.From<int>(OnFloorChanged);
         _dock.Connect(HomeBuilderDock.SignalName.FloorChanged, _onFloorChanged);
 
         _onBakeRequested = Callable.From(OnBakeRequested);
         _dock.Connect(HomeBuilderDock.SignalName.BakeRequested, _onBakeRequested);
 
-        _onOpeningConfigChanged = Callable.From(() =>
-        {
-            if (_activeMode is BuildMode.Doors or BuildMode.Windows)
-            {
-                ClearAllPreviews();
-                CallDeferred(MethodName.CreateActivePreviews);
-            }
-        });
+        _onOpeningConfigChanged = Callable.From(OnOpeningConfigChanged);
         _dock.Connect(HomeBuilderDock.SignalName.OpeningConfigChanged, _onOpeningConfigChanged);
 
         _onBuildingConfigChanged = Callable.From(OnBuildingConfigChanged);
@@ -130,6 +103,42 @@ public partial class HomeBuilderPlugin : EditorPlugin
         }
         _activeMode  = BuildMode.None;
         _activeFloor = 0;
+    }
+
+    private void OnModeChanged(string mode)
+    {
+        ClearAllPreviews();
+        _activeMode = mode switch
+        {
+            "floor"   => BuildMode.Floor,
+            "walls"   => BuildMode.Walls,
+            "roof"    => BuildMode.Roof,
+            "doors"   => BuildMode.Doors,
+            "windows" => BuildMode.Windows,
+            "stairs"  => BuildMode.Stairs,
+            "fences"  => BuildMode.Fences,
+            "none"    => BuildMode.None,
+            "bake"    => BuildMode.None,
+            _         => BuildMode.None
+        };
+        CallDeferred(MethodName.CreateActivePreviews);
+    }
+
+    private void OnFloorChanged(int floor)
+    {
+        _activeFloor = floor;
+        UpdateNodeVisibility();
+        ClearAllPreviews();
+        CallDeferred(MethodName.CreateActivePreviews);
+    }
+
+    private void OnOpeningConfigChanged()
+    {
+        if (_activeMode is BuildMode.Doors or BuildMode.Windows)
+        {
+            ClearAllPreviews();
+            CallDeferred(MethodName.CreateActivePreviews);
+        }
     }
 
     private void OnSceneChanged(Node sceneRoot)

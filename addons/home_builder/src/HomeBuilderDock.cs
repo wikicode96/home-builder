@@ -217,7 +217,7 @@ public partial class HomeBuilderDock : Control
 
         PopulateRoofTypeOptions();
         PopulateRoofDirectionOptions();
-        _roofTypeOption.ItemSelected += _ => UpdateRoofShapeControls();
+        _roofTypeOption.ItemSelected += OnRoofTypeSelected;
         UpdateRoofShapeControls();
 
         // Button group (only one mode active at a time)
@@ -232,36 +232,36 @@ public partial class HomeBuilderDock : Control
         _noneButton.ButtonGroup     = group;
         _bakeModeButton.ButtonGroup = group;
 
-        _floorButton.Pressed    += () => OnModeSelected("floor");
-        _wallButton.Pressed     += () => OnModeSelected("walls");
-        _ceilingButton.Pressed  += () => OnModeSelected("roof");
-        _doorButton.Pressed     += () => OnModeSelected("doors");
-        _windowButton.Pressed   += () => OnModeSelected("windows");
-        _stairsButton.Pressed   += () => OnModeSelected("stairs");
-        _fenceButton.Pressed    += () => OnModeSelected("fences");
-        _noneButton.Pressed     += () => OnModeSelected("none");
-        _bakeModeButton.Pressed += () => OnModeSelected("bake");
+        _floorButton.Pressed    += OnFloorModePressed;
+        _wallButton.Pressed     += OnWallModePressed;
+        _ceilingButton.Pressed  += OnRoofModePressed;
+        _doorButton.Pressed     += OnDoorModePressed;
+        _windowButton.Pressed   += OnWindowModePressed;
+        _stairsButton.Pressed   += OnStairsModePressed;
+        _fenceButton.Pressed    += OnFenceModePressed;
+        _noneButton.Pressed     += OnNoneModePressed;
+        _bakeModeButton.Pressed += OnBakeModePressed;
 
         _floorUpButton.Pressed   += OnFloorUp;
         _floorDownButton.Pressed += OnFloorDown;
 
         // Floor config spin
         _floorThicknessSpin = GetNode<SpinBox>($"{Stack}/TileMaterials/ConfigRow/ThicknessVBox/ThicknessSpin");
-        _floorThicknessSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        _floorThicknessSpin.ValueChanged += OnBuildingConfigValueChanged;
 
         // Wall config spins
         _wallHeightSpin    = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/HeightVBox/HeightSpin");
         _wallThicknessSpin = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/ThicknessVBox/ThicknessSpin");
-        _wallHeightSpin.ValueChanged    += _ => EmitSignal(SignalName.BuildingConfigChanged);
-        _wallThicknessSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        _wallHeightSpin.ValueChanged    += OnBuildingConfigValueChanged;
+        _wallThicknessSpin.ValueChanged += OnBuildingConfigValueChanged;
 
         // Stair config spins
         _stairCountSpin = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/CountVBox/CountSpin");
         _stairWidthSpin = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/WidthVBox/WidthSpin");
         _stairRunSpin   = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/RunVBox/RunSpin");
-        _stairCountSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
-        _stairWidthSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
-        _stairRunSpin.ValueChanged   += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        _stairCountSpin.ValueChanged += OnBuildingConfigValueChanged;
+        _stairWidthSpin.ValueChanged += OnBuildingConfigValueChanged;
+        _stairRunSpin.ValueChanged   += OnBuildingConfigValueChanged;
 
         // Material pickers — tile
         _tileTopPicker    = CreatePicker($"{Stack}/TileMaterials/MaterialsRow/TopRow/TopPicker");
@@ -286,21 +286,21 @@ public partial class HomeBuilderDock : Control
         // Door config spins
         _doorWidthSpin  = GetNode<SpinBox>($"{Stack}/DoorConfig/ConfigRow/WidthVBox/WidthSpin");
         _doorHeightSpin = GetNode<SpinBox>($"{Stack}/DoorConfig/ConfigRow/HeightVBox/HeightSpin");
-        _doorWidthSpin.ValueChanged  += _ => EmitSignal(SignalName.OpeningConfigChanged);
-        _doorHeightSpin.ValueChanged += _ => EmitSignal(SignalName.OpeningConfigChanged);
+        _doorWidthSpin.ValueChanged  += OnOpeningConfigValueChanged;
+        _doorHeightSpin.ValueChanged += OnOpeningConfigValueChanged;
 
         // Window config spins
         _winWidthSpin  = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/WidthVBox/WidthSpin");
         _winHeightSpin = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/HeightVBox/HeightSpin");
         _winSillSpin   = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/SillVBox/SillSpin");
-        _winWidthSpin.ValueChanged  += _ => EmitSignal(SignalName.OpeningConfigChanged);
-        _winHeightSpin.ValueChanged += _ => EmitSignal(SignalName.OpeningConfigChanged);
-        _winSillSpin.ValueChanged   += _ => EmitSignal(SignalName.OpeningConfigChanged);
+        _winWidthSpin.ValueChanged  += OnOpeningConfigValueChanged;
+        _winHeightSpin.ValueChanged += OnOpeningConfigValueChanged;
+        _winSillSpin.ValueChanged   += OnOpeningConfigValueChanged;
 
         // Fence asset picker (PackedScene) and module length spin
         _fenceAssetPicker = CreatePicker($"{Stack}/FenceAssets/AssetRow/AssetPicker", "PackedScene");
         _fenceLengthSpin  = GetNode<SpinBox>($"{Stack}/FenceAssets/LengthRow/LengthSpin");
-        _fenceLengthSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        _fenceLengthSpin.ValueChanged += OnBuildingConfigValueChanged;
 
         // Bake section
         _bakePathEdit       = GetNode<LineEdit>($"{Stack}/BakeSection/OutputRow/OutputPathEdit");
@@ -319,10 +319,10 @@ public partial class HomeBuilderDock : Control
             Title    = "Seleccionar carpeta de salida",
         };
         AddChild(_bakeFolderDialog);
-        _bakeFolderDialog.DirSelected += dir => _bakePathEdit.Text = dir;
+        _bakeFolderDialog.DirSelected += OnBakeDirSelected;
 
-        _bakeBrowseButton.Pressed += () => _bakeFolderDialog.PopupCentered(new Vector2I(800, 600));
-        _bakeActionButton.Pressed += () => EmitSignal(SignalName.BakeRequested);
+        _bakeBrowseButton.Pressed += OnBakeBrowsePressed;
+        _bakeActionButton.Pressed += OnBakeActionPressed;
 
         UpdateFloorLabel();
         UpdateSectionsVisibility("none");
@@ -371,6 +371,29 @@ public partial class HomeBuilderDock : Control
         container.AddChild(picker);
         return picker;
     }
+
+    // Los manejadores de señal deben ser métodos con nombre, nunca lambdas:
+    // las closures conectadas a señales en el editor no se pueden serializar
+    // durante la recarga del assembly .NET y bloquean su descarga
+    // (godotengine/godot#78513).
+    private void OnFloorModePressed()  => OnModeSelected("floor");
+    private void OnWallModePressed()   => OnModeSelected("walls");
+    private void OnRoofModePressed()   => OnModeSelected("roof");
+    private void OnDoorModePressed()   => OnModeSelected("doors");
+    private void OnWindowModePressed() => OnModeSelected("windows");
+    private void OnStairsModePressed() => OnModeSelected("stairs");
+    private void OnFenceModePressed()  => OnModeSelected("fences");
+    private void OnNoneModePressed()   => OnModeSelected("none");
+    private void OnBakeModePressed()   => OnModeSelected("bake");
+
+    private void OnRoofTypeSelected(long index) => UpdateRoofShapeControls();
+
+    private void OnBuildingConfigValueChanged(double value) => EmitSignal(SignalName.BuildingConfigChanged);
+    private void OnOpeningConfigValueChanged(double value)  => EmitSignal(SignalName.OpeningConfigChanged);
+
+    private void OnBakeDirSelected(string dir) => _bakePathEdit.Text = dir;
+    private void OnBakeBrowsePressed() => _bakeFolderDialog.PopupCentered(new Vector2I(800, 600));
+    private void OnBakeActionPressed() => EmitSignal(SignalName.BakeRequested);
 
     private void OnModeSelected(string mode)
     {
