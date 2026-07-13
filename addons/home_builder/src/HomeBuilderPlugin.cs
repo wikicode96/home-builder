@@ -25,14 +25,6 @@ public partial class HomeBuilderPlugin : EditorPlugin
     private FenceBuilder   _fenceBuilder;
     private BakeBuilder    _bakeBuilder;
 
-    // Stored so _ExitTree can disconnect the exact same Callable instances
-    // that were connected in _EnterTree (required for the IsConnected check).
-    private Callable _onModeChanged;
-    private Callable _onFloorChanged;
-    private Callable _onBakeRequested;
-    private Callable _onOpeningConfigChanged;
-    private Callable _onBuildingConfigChanged;
-
     public override void _EnterTree()
     {
         _floorBuilder   = new FloorBuilder(this);
@@ -47,25 +39,18 @@ public partial class HomeBuilderPlugin : EditorPlugin
         _dock = dockScene.Instantiate<Control>();
         AddControlToBottomPanel(_dock, "Home Builder");
 
-        // Métodos con nombre, nunca lambdas: las closures conectadas a señales
-        // en el editor no se pueden serializar durante la recarga del assembly
-        // .NET y bloquean su descarga (godotengine/godot#78513).
-        _onModeChanged = Callable.From<string>(OnModeChanged);
-        _dock.Connect(HomeBuilderDock.SignalName.ModeChanged, _onModeChanged);
+        // Callables nativos (objeto + nombre de método), nunca delegados C#
+        // (`+=` o Callable.From): cada delegado conectado a una señal crea un
+        // ManagedCallable cuyo GCHandle fuerte bloquea la descarga del assembly
+        // .NET durante la recarga (godotengine/godot#78513). El callable nativo
+        // se resuelve por nombre en el motor y no toca el GC.
+        _dock.Connect(HomeBuilderDock.SignalName.ModeChanged, new Callable(this, MethodName.OnModeChanged));
+        _dock.Connect(HomeBuilderDock.SignalName.FloorChanged, new Callable(this, MethodName.OnFloorChanged));
+        _dock.Connect(HomeBuilderDock.SignalName.BakeRequested, new Callable(this, MethodName.OnBakeRequested));
+        _dock.Connect(HomeBuilderDock.SignalName.OpeningConfigChanged, new Callable(this, MethodName.OnOpeningConfigChanged));
+        _dock.Connect(HomeBuilderDock.SignalName.BuildingConfigChanged, new Callable(this, MethodName.OnBuildingConfigChanged));
 
-        _onFloorChanged = Callable.From<int>(OnFloorChanged);
-        _dock.Connect(HomeBuilderDock.SignalName.FloorChanged, _onFloorChanged);
-
-        _onBakeRequested = Callable.From(OnBakeRequested);
-        _dock.Connect(HomeBuilderDock.SignalName.BakeRequested, _onBakeRequested);
-
-        _onOpeningConfigChanged = Callable.From(OnOpeningConfigChanged);
-        _dock.Connect(HomeBuilderDock.SignalName.OpeningConfigChanged, _onOpeningConfigChanged);
-
-        _onBuildingConfigChanged = Callable.From(OnBuildingConfigChanged);
-        _dock.Connect(HomeBuilderDock.SignalName.BuildingConfigChanged, _onBuildingConfigChanged);
-
-        SceneChanged += OnSceneChanged;
+        Connect(SignalName.SceneChanged, new Callable(this, MethodName.OnSceneChanged));
 
         // If a scene is already open when the plugin activates, SceneChanged
         // will NOT fire. We must manually select the scene root so that Godot
@@ -75,27 +60,16 @@ public partial class HomeBuilderPlugin : EditorPlugin
 
     public override void _ExitTree()
     {
-        // Godot may have already torn down these connections internally by
-        // the time _ExitTree runs (e.g. when the whole editor is closing).
-        // Disconnecting blindly logs "nonexistent connection" errors, so
-        // check IsConnected first.
-        var sceneChangedCallable = Callable.From<Node>(OnSceneChanged);
-        if (IsConnected(SignalName.SceneChanged, sceneChangedCallable))
-            SceneChanged -= OnSceneChanged;
+        DisconnectIfConnected(this, SignalName.SceneChanged, MethodName.OnSceneChanged);
 
         ClearAllPreviews();
         if (_dock != null)
         {
-            if (_dock.IsConnected(HomeBuilderDock.SignalName.ModeChanged, _onModeChanged))
-                _dock.Disconnect(HomeBuilderDock.SignalName.ModeChanged, _onModeChanged);
-            if (_dock.IsConnected(HomeBuilderDock.SignalName.FloorChanged, _onFloorChanged))
-                _dock.Disconnect(HomeBuilderDock.SignalName.FloorChanged, _onFloorChanged);
-            if (_dock.IsConnected(HomeBuilderDock.SignalName.BakeRequested, _onBakeRequested))
-                _dock.Disconnect(HomeBuilderDock.SignalName.BakeRequested, _onBakeRequested);
-            if (_dock.IsConnected(HomeBuilderDock.SignalName.OpeningConfigChanged, _onOpeningConfigChanged))
-                _dock.Disconnect(HomeBuilderDock.SignalName.OpeningConfigChanged, _onOpeningConfigChanged);
-            if (_dock.IsConnected(HomeBuilderDock.SignalName.BuildingConfigChanged, _onBuildingConfigChanged))
-                _dock.Disconnect(HomeBuilderDock.SignalName.BuildingConfigChanged, _onBuildingConfigChanged);
+            DisconnectIfConnected(_dock, HomeBuilderDock.SignalName.ModeChanged, MethodName.OnModeChanged);
+            DisconnectIfConnected(_dock, HomeBuilderDock.SignalName.FloorChanged, MethodName.OnFloorChanged);
+            DisconnectIfConnected(_dock, HomeBuilderDock.SignalName.BakeRequested, MethodName.OnBakeRequested);
+            DisconnectIfConnected(_dock, HomeBuilderDock.SignalName.OpeningConfigChanged, MethodName.OnOpeningConfigChanged);
+            DisconnectIfConnected(_dock, HomeBuilderDock.SignalName.BuildingConfigChanged, MethodName.OnBuildingConfigChanged);
 
             RemoveControlFromBottomPanel(_dock);
             _dock.QueueFree();
@@ -103,6 +77,15 @@ public partial class HomeBuilderPlugin : EditorPlugin
         }
         _activeMode  = BuildMode.None;
         _activeFloor = 0;
+    }
+
+    // Godot puede haber destruido ya la conexión cuando corre _ExitTree (p. ej.
+    // al cerrar el editor); desconectar a ciegas loguea "nonexistent connection".
+    private void DisconnectIfConnected(GodotObject source, StringName signal, StringName method)
+    {
+        var callable = new Callable(this, method);
+        if (source.IsConnected(signal, callable))
+            source.Disconnect(signal, callable);
     }
 
     private void OnModeChanged(string mode)
