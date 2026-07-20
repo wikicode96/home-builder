@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bsh1q0iona6a5"]
 
-[ext_resource type="Script" path="res://addons/home_builder/src/HomeBuilderDock.cs" id="1"]
+[ext_resource type="Script" path="res://addons/home_builder/src/home_builder_dock.gd" id="1"]
 [ext_resource type="Texture2D" path="res://addons/home_builder/icons/suelos.svg" id="2"]
 [ext_resource type="Texture2D" path="res://addons/home_builder/icons/paredes.svg" id="3"]
 [ext_resource type="Texture2D" path="res://addons/home_builder/icons/techos.svg" id="4"]
