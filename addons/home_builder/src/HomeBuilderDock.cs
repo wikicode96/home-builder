@@ -217,7 +217,7 @@ public partial class HomeBuilderDock : Control
 
         PopulateRoofTypeOptions();
         PopulateRoofDirectionOptions();
-        _roofTypeOption.ItemSelected += _ => UpdateRoofShapeControls();
+        ConnectNative(_roofTypeOption, OptionButton.SignalName.ItemSelected, MethodName.OnRoofTypeSelected);
         UpdateRoofShapeControls();
 
         // Button group (only one mode active at a time)
@@ -232,36 +232,36 @@ public partial class HomeBuilderDock : Control
         _noneButton.ButtonGroup     = group;
         _bakeModeButton.ButtonGroup = group;
 
-        _floorButton.Pressed    += () => OnModeSelected("floor");
-        _wallButton.Pressed     += () => OnModeSelected("walls");
-        _ceilingButton.Pressed  += () => OnModeSelected("roof");
-        _doorButton.Pressed     += () => OnModeSelected("doors");
-        _windowButton.Pressed   += () => OnModeSelected("windows");
-        _stairsButton.Pressed   += () => OnModeSelected("stairs");
-        _fenceButton.Pressed    += () => OnModeSelected("fences");
-        _noneButton.Pressed     += () => OnModeSelected("none");
-        _bakeModeButton.Pressed += () => OnModeSelected("bake");
+        ConnectNative(_floorButton,    BaseButton.SignalName.Pressed, MethodName.OnFloorModePressed);
+        ConnectNative(_wallButton,     BaseButton.SignalName.Pressed, MethodName.OnWallModePressed);
+        ConnectNative(_ceilingButton,  BaseButton.SignalName.Pressed, MethodName.OnRoofModePressed);
+        ConnectNative(_doorButton,     BaseButton.SignalName.Pressed, MethodName.OnDoorModePressed);
+        ConnectNative(_windowButton,   BaseButton.SignalName.Pressed, MethodName.OnWindowModePressed);
+        ConnectNative(_stairsButton,   BaseButton.SignalName.Pressed, MethodName.OnStairsModePressed);
+        ConnectNative(_fenceButton,    BaseButton.SignalName.Pressed, MethodName.OnFenceModePressed);
+        ConnectNative(_noneButton,     BaseButton.SignalName.Pressed, MethodName.OnNoneModePressed);
+        ConnectNative(_bakeModeButton, BaseButton.SignalName.Pressed, MethodName.OnBakeModePressed);
 
-        _floorUpButton.Pressed   += OnFloorUp;
-        _floorDownButton.Pressed += OnFloorDown;
+        ConnectNative(_floorUpButton,   BaseButton.SignalName.Pressed, MethodName.OnFloorUp);
+        ConnectNative(_floorDownButton, BaseButton.SignalName.Pressed, MethodName.OnFloorDown);
 
         // Floor config spin
         _floorThicknessSpin = GetNode<SpinBox>($"{Stack}/TileMaterials/ConfigRow/ThicknessVBox/ThicknessSpin");
-        _floorThicknessSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        ConnectNative(_floorThicknessSpin, Range.SignalName.ValueChanged, MethodName.OnBuildingConfigValueChanged);
 
         // Wall config spins
         _wallHeightSpin    = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/HeightVBox/HeightSpin");
         _wallThicknessSpin = GetNode<SpinBox>($"{Stack}/WallMaterials/ConfigRow/ThicknessVBox/ThicknessSpin");
-        _wallHeightSpin.ValueChanged    += _ => EmitSignal(SignalName.BuildingConfigChanged);
-        _wallThicknessSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        ConnectNative(_wallHeightSpin,    Range.SignalName.ValueChanged, MethodName.OnBuildingConfigValueChanged);
+        ConnectNative(_wallThicknessSpin, Range.SignalName.ValueChanged, MethodName.OnBuildingConfigValueChanged);
 
         // Stair config spins
         _stairCountSpin = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/CountVBox/CountSpin");
         _stairWidthSpin = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/WidthVBox/WidthSpin");
         _stairRunSpin   = GetNode<SpinBox>($"{Stack}/StairMaterials/ConfigRow/RunVBox/RunSpin");
-        _stairCountSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
-        _stairWidthSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
-        _stairRunSpin.ValueChanged   += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        ConnectNative(_stairCountSpin, Range.SignalName.ValueChanged, MethodName.OnBuildingConfigValueChanged);
+        ConnectNative(_stairWidthSpin, Range.SignalName.ValueChanged, MethodName.OnBuildingConfigValueChanged);
+        ConnectNative(_stairRunSpin,   Range.SignalName.ValueChanged, MethodName.OnBuildingConfigValueChanged);
 
         // Material pickers — tile
         _tileTopPicker    = CreatePicker($"{Stack}/TileMaterials/MaterialsRow/TopRow/TopPicker");
@@ -286,21 +286,21 @@ public partial class HomeBuilderDock : Control
         // Door config spins
         _doorWidthSpin  = GetNode<SpinBox>($"{Stack}/DoorConfig/ConfigRow/WidthVBox/WidthSpin");
         _doorHeightSpin = GetNode<SpinBox>($"{Stack}/DoorConfig/ConfigRow/HeightVBox/HeightSpin");
-        _doorWidthSpin.ValueChanged  += _ => EmitSignal(SignalName.OpeningConfigChanged);
-        _doorHeightSpin.ValueChanged += _ => EmitSignal(SignalName.OpeningConfigChanged);
+        ConnectNative(_doorWidthSpin,  Range.SignalName.ValueChanged, MethodName.OnOpeningConfigValueChanged);
+        ConnectNative(_doorHeightSpin, Range.SignalName.ValueChanged, MethodName.OnOpeningConfigValueChanged);
 
         // Window config spins
         _winWidthSpin  = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/WidthVBox/WidthSpin");
         _winHeightSpin = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/HeightVBox/HeightSpin");
         _winSillSpin   = GetNode<SpinBox>($"{Stack}/WindowConfig/ConfigRow/SillVBox/SillSpin");
-        _winWidthSpin.ValueChanged  += _ => EmitSignal(SignalName.OpeningConfigChanged);
-        _winHeightSpin.ValueChanged += _ => EmitSignal(SignalName.OpeningConfigChanged);
-        _winSillSpin.ValueChanged   += _ => EmitSignal(SignalName.OpeningConfigChanged);
+        ConnectNative(_winWidthSpin,  Range.SignalName.ValueChanged, MethodName.OnOpeningConfigValueChanged);
+        ConnectNative(_winHeightSpin, Range.SignalName.ValueChanged, MethodName.OnOpeningConfigValueChanged);
+        ConnectNative(_winSillSpin,   Range.SignalName.ValueChanged, MethodName.OnOpeningConfigValueChanged);
 
         // Fence asset picker (PackedScene) and module length spin
         _fenceAssetPicker = CreatePicker($"{Stack}/FenceAssets/AssetRow/AssetPicker", "PackedScene");
         _fenceLengthSpin  = GetNode<SpinBox>($"{Stack}/FenceAssets/LengthRow/LengthSpin");
-        _fenceLengthSpin.ValueChanged += _ => EmitSignal(SignalName.BuildingConfigChanged);
+        ConnectNative(_fenceLengthSpin, Range.SignalName.ValueChanged, MethodName.OnBuildingConfigValueChanged);
 
         // Bake section
         _bakePathEdit       = GetNode<LineEdit>($"{Stack}/BakeSection/OutputRow/OutputPathEdit");
@@ -319,10 +319,10 @@ public partial class HomeBuilderDock : Control
             Title    = "Seleccionar carpeta de salida",
         };
         AddChild(_bakeFolderDialog);
-        _bakeFolderDialog.DirSelected += dir => _bakePathEdit.Text = dir;
+        ConnectNative(_bakeFolderDialog, EditorFileDialog.SignalName.DirSelected, MethodName.OnBakeDirSelected);
 
-        _bakeBrowseButton.Pressed += () => _bakeFolderDialog.PopupCentered(new Vector2I(800, 600));
-        _bakeActionButton.Pressed += () => EmitSignal(SignalName.BakeRequested);
+        ConnectNative(_bakeBrowseButton, BaseButton.SignalName.Pressed, MethodName.OnBakeBrowsePressed);
+        ConnectNative(_bakeActionButton, BaseButton.SignalName.Pressed, MethodName.OnBakeActionPressed);
 
         UpdateFloorLabel();
         UpdateSectionsVisibility("none");
@@ -371,6 +371,33 @@ public partial class HomeBuilderDock : Control
         container.AddChild(picker);
         return picker;
     }
+
+    // Conecta con un callable nativo (objeto + nombre de método) en vez de un
+    // delegado C# (`+=` o Callable.From): cada delegado conectado a una señal
+    // crea un ManagedCallable cuyo GCHandle fuerte bloquea la descarga del
+    // assembly .NET durante la recarga (godotengine/godot#78513). El callable
+    // nativo se resuelve por nombre en el motor y no toca el GC.
+    private void ConnectNative(GodotObject source, StringName signal, StringName method)
+        => source.Connect(signal, new Callable(this, method));
+
+    private void OnFloorModePressed()  => OnModeSelected("floor");
+    private void OnWallModePressed()   => OnModeSelected("walls");
+    private void OnRoofModePressed()   => OnModeSelected("roof");
+    private void OnDoorModePressed()   => OnModeSelected("doors");
+    private void OnWindowModePressed() => OnModeSelected("windows");
+    private void OnStairsModePressed() => OnModeSelected("stairs");
+    private void OnFenceModePressed()  => OnModeSelected("fences");
+    private void OnNoneModePressed()   => OnModeSelected("none");
+    private void OnBakeModePressed()   => OnModeSelected("bake");
+
+    private void OnRoofTypeSelected(long index) => UpdateRoofShapeControls();
+
+    private void OnBuildingConfigValueChanged(double value) => EmitSignal(SignalName.BuildingConfigChanged);
+    private void OnOpeningConfigValueChanged(double value)  => EmitSignal(SignalName.OpeningConfigChanged);
+
+    private void OnBakeDirSelected(string dir) => _bakePathEdit.Text = dir;
+    private void OnBakeBrowsePressed() => _bakeFolderDialog.PopupCentered(new Vector2I(800, 600));
+    private void OnBakeActionPressed() => EmitSignal(SignalName.BakeRequested);
 
     private void OnModeSelected(string mode)
     {
