@@ -62,6 +62,12 @@ var _shape: CollisionShape3D
 
 
 func _ready() -> void:
+	# "_edit_group_" is the same metadata the Scene dock's Group toggle sets.
+	# It makes the 3D viewport escalate a click anywhere on our internal
+	# Mesh/Collision children up to this node, so the wall — not its hidden
+	# internals — ends up selected (and shown in the Inspector).
+	if Engine.is_editor_hint():
+		set_meta("_edit_group_", true)
 	_rebuild()
 
 
@@ -139,6 +145,16 @@ func _ensure_children() -> void:
 		_shape = CollisionShape3D.new()
 		_shape.name = "Collision"
 		add_child(_shape, false, Node.INTERNAL_MODE_BACK)
+
+	# Internal children default to owner = null, which stops the editor's 3D
+	# viewport click-picking from bubbling up to this node (it only walks the
+	# parent chain for owned nodes) — clicking the wall's mesh would then do
+	# nothing, even though selecting HBWall_001 from the Scene dock works fine.
+	if Engine.is_editor_hint() and is_inside_tree():
+		var root := get_tree().edited_scene_root
+		if root:
+			_mesh.owner = root
+			_shape.owner = root
 
 
 func _apply_materials() -> void:

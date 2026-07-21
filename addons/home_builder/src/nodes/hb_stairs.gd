@@ -46,6 +46,12 @@ var _shape: CollisionShape3D
 
 
 func _ready() -> void:
+	# "_edit_group_" is the same metadata the Scene dock's Group toggle sets.
+	# It makes the 3D viewport escalate a click anywhere on our internal step
+	# meshes/collision up to this node, so the staircase — not one of its
+	# hidden steps — ends up selected (and shown in the Inspector).
+	if Engine.is_editor_hint():
+		set_meta("_edit_group_", true)
 	_rebuild()
 
 
@@ -74,6 +80,7 @@ func _rebuild_steps() -> void:
 		step.position = Vector3(0.0, (i + 0.5) * rise, i * run + run * 0.5 - 0.5)
 		_apply_step_materials(step)
 		add_child(step, false, Node.INTERNAL_MODE_BACK)
+		_own(step)
 
 
 func _existing_steps() -> Array:
@@ -114,6 +121,17 @@ func _ensure_collision() -> void:
 	_shape = CollisionShape3D.new()
 	_shape.name = "Collision"
 	add_child(_shape, false, Node.INTERNAL_MODE_BACK)
+	_own(_shape)
+
+
+# Owner is required for an internal child to register a gizmo at all (unowned
+# nodes are invisible to the viewport's click-picking); "_edit_group_" on this
+# node (see _ready) then escalates the resulting click up to us.
+func _own(node: Node) -> void:
+	if Engine.is_editor_hint() and is_inside_tree():
+		var root := get_tree().edited_scene_root
+		if root:
+			node.owner = root
 
 
 # ── Materials ────────────────────────────────────────────────────────────────

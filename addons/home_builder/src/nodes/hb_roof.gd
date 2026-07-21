@@ -46,6 +46,12 @@ var _shape: CollisionShape3D
 
 
 func _ready() -> void:
+	# "_edit_group_" is the same metadata the Scene dock's Group toggle sets.
+	# It makes the 3D viewport escalate a click anywhere on our internal
+	# Mesh/Collision children up to this node, so the roof — not its hidden
+	# internals — ends up selected (and shown in the Inspector).
+	if Engine.is_editor_hint():
+		set_meta("_edit_group_", true)
 	_rebuild()
 
 
@@ -76,6 +82,15 @@ func _ensure_children() -> void:
 		_shape = CollisionShape3D.new()
 		_shape.name = "Collision"
 		add_child(_shape, false, Node.INTERNAL_MODE_BACK)
+
+	# Owner is required for the internal children to register a gizmo at all
+	# (unowned nodes are invisible to the viewport's click-picking); "_edit_group_"
+	# on this node (see _ready) then escalates the resulting click up to us.
+	if Engine.is_editor_hint() and is_inside_tree():
+		var root := get_tree().edited_scene_root
+		if root:
+			_mesh.owner = root
+			_shape.owner = root
 
 
 func _apply_materials() -> void:

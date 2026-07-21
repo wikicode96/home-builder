@@ -26,6 +26,12 @@ extends Node3D
 
 
 func _ready() -> void:
+	# "_edit_group_" is the same metadata the Scene dock's Group toggle sets.
+	# It makes the 3D viewport escalate a click anywhere on our internal
+	# module instances up to this node, so the fence segment — not one of its
+	# hidden modules — ends up selected (and shown in the Inspector).
+	if Engine.is_editor_hint():
+		set_meta("_edit_group_", true)
 	_rebuild()
 
 
@@ -51,3 +57,12 @@ func _rebuild() -> void:
 			continue
 		module.position = Vector3((i + 0.5) * module_length, 0.0, 0.0)
 		add_child(module, false, Node.INTERNAL_MODE_BACK)
+
+		# Owner is required for the module root to register a gizmo at all
+		# (unowned nodes are invisible to the viewport's click-picking);
+		# "_edit_group_" on this node (see _ready) then escalates the
+		# resulting click up to us.
+		if Engine.is_editor_hint() and is_inside_tree():
+			var root := get_tree().edited_scene_root
+			if root:
+				module.owner = root
