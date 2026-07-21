@@ -144,7 +144,10 @@ static func _collect_geometry(node: Node,
 	# staircase ramp. Box/ConcavePolygon shapes are replaced by the visual mesh.
 	if node is CollisionShape3D and node.shape is ConvexPolygonShape3D:
 		convex_shapes.append(node)
-	for child in node.get_children():
+	# include_internal = true: HBWall (and the other typed nodes) keep their
+	# mesh and collision as internal children, which get_children() hides by
+	# default. Without this the bake would collect no wall geometry.
+	for child in node.get_children(true):
 		_collect_geometry(child, meshes, convex_shapes)
 
 
@@ -539,6 +542,10 @@ static func _is_lod1_excluded(node: Node) -> bool:
 ## so LOD1 walls are clean flat faces. Returns null for non-wall meshes.
 static func _get_simplified_wall_mesh(mi: MeshInstance3D) -> ArrayMesh:
 	var parent := mi.get_parent()
+	if parent is HBWall:
+		var wall: HBWall = parent
+		return WallMeshBuilder.build(wall.length, wall.height, wall.thickness)
+	# Legacy walls stored their dimensions as metadata on a plain StaticBody3D.
 	if parent is StaticBody3D and parent.has_meta(WallHelper.META_WALL_LENGTH):
 		var body: StaticBody3D = parent
 		var length := float(body.get_meta(WallHelper.META_WALL_LENGTH))

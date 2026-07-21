@@ -25,10 +25,6 @@ static func _stair_rise() -> float:
 	return WallBuilder.height / stair_count
 
 
-static func _stair_total_run() -> float:
-	return stair_count * stair_run
-
-
 # ── Preview ──────────────────────────────────────────────────────────────────
 
 ## floor_base_y is unused at creation: the ghost is moved into place on the
@@ -179,65 +175,33 @@ func _place_stairs(start: Vector3, dir_hint: Vector3, floor_base_y: float) -> vo
 	var z_fighting := 0.001
 	var origin := Vector3(start.x, floor_base_y + z_fighting, start.z)
 
-	# Build the shared mesh once — all steps share the same mesh
-	var step_mesh := StairsMeshBuilder.build(stair_width, _stair_rise(), stair_run)
-
-	# Single StaticBody3D for the whole staircase
-	var body := StaticBody3D.new()
-	body.name = "Staircase"
+	# HBStairs is self-contained: it owns every step mesh and the ramp
+	# collision as internal children. The designer only ever sees a single
+	# "HBStairs_001" node.
+	var body := HBStairs.new()
+	body.name = "HBStairs_001"
 	body.position = origin
 	body.basis = step_basis
+	body.count = stair_count
+	body.width = stair_width
+	body.run = stair_run
+	body.height = WallBuilder.height
 
-	var half_width := stair_width * 0.5
-	var h := WallBuilder.height
-	var tr := _stair_total_run()
-	var collision_poly := CollisionShape3D.new()
-	var convex := ConvexPolygonShape3D.new()
-	convex.points = PackedVector3Array([
-		Vector3(-half_width, h, tr - 0.75),
-		Vector3(half_width, h, tr - 0.75),
-		Vector3(-half_width, h, tr - 0.5),
-		Vector3(half_width, h, tr - 0.5),
-		Vector3(-half_width, 0.0, -0.5),
-		Vector3(half_width, 0.0, -0.5),
-		Vector3(-half_width, 0.0, -0.75),
-		Vector3(half_width, 0.0, -0.75),
-	])
-	collision_poly.shape = convex
+	var dock = _plugin.dock
+	body.top_material = MaterialHelper.or_default(
+		dock.stair_top_material if dock != null else null, Color(0.8, 0.7, 0.5))
+	body.bottom_material = MaterialHelper.or_default(
+		dock.stair_bottom_material if dock != null else null, Color(0.6, 0.6, 0.6))
+	body.sides_material = MaterialHelper.or_default(
+		dock.stair_sides_material if dock != null else null, Color(0.5, 0.5, 0.5))
 
 	var undo: EditorUndoRedoManager = _plugin.get_undo_redo()
 	undo.create_action("Place Stairs")
 
-	stairs_parent.add_child(body)
+	# force_readable_name = true so name collisions increment the trailing
+	# number (HBStairs_002, …) instead of "@StaticBody3D@NN".
+	stairs_parent.add_child(body, true)
 	body.owner = scene
-
-	body.add_child(collision_poly)
-	collision_poly.owner = scene
-
-	# One MeshInstance3D per step as child of the single body, positioned in local space
-	var dock = _plugin.dock
-	for i in stair_count:
-		# run_offset: step center along local Z. The -0.5 aligns the back edge with the tile edge.
-		var run_offset := i * stair_run + stair_run * 0.5 - 0.5
-		var rise_offset := (i + 0.5) * _stair_rise()
-
-		var step := MeshInstance3D.new()
-		step.name = "Step_%d" % (i + 1)
-		step.mesh = step_mesh
-		step.position = Vector3(0.0, rise_offset, run_offset)
-
-		step.set_surface_override_material(StairsMeshBuilder.SURFACE_TOP,
-			MaterialHelper.or_default(
-				dock.stair_top_material if dock != null else null, Color(0.8, 0.7, 0.5)))
-		step.set_surface_override_material(StairsMeshBuilder.SURFACE_BOTTOM,
-			MaterialHelper.or_default(
-				dock.stair_bottom_material if dock != null else null, Color(0.6, 0.6, 0.6)))
-		step.set_surface_override_material(StairsMeshBuilder.SURFACE_SIDES,
-			MaterialHelper.or_default(
-				dock.stair_sides_material if dock != null else null, Color(0.5, 0.5, 0.5)))
-
-		body.add_child(step)
-		step.owner = scene
 
 	undo.add_do_method(stairs_parent, &"add_child", body)
 	undo.add_undo_method(stairs_parent, &"remove_child", body)

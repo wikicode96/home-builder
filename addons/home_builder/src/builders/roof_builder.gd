@@ -112,8 +112,6 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 	)
 	var pitch: float = dock.roof_pitch if dock != null else 1.5
 
-	var mesh := RoofMeshBuilder.build(type, w, d, pitch, dir)
-
 	var roof_parent: Node3D = _plugin.get_or_create_parent_node("Roof_%d" % active_floor)
 	if roof_parent == null:
 		return
@@ -121,35 +119,32 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 	var undo: EditorUndoRedoManager = _plugin.get_undo_redo()
 	undo.create_action("Place Roof")
 
-	var body := StaticBody3D.new()
-	body.name = "Roof"
+	# HBRoof is self-contained: it owns its mesh and collision as internal
+	# children. The designer only ever sees a single "HBRoof_001" node.
+	var body := HBRoof.new()
+	body.name = "HBRoof_001"
 	body.position = Vector3(
 		bounds.position.x * 0.5 - half_t,
 		base_y,
 		bounds.position.y * 0.5 - half_t
 	)
+	body.roof_type = type
+	body.direction = dir
+	body.width = w
+	body.depth = d
+	body.pitch = pitch
 
-	var inst := MeshInstance3D.new()
-	inst.mesh = mesh
-	inst.set_surface_override_material(RoofMeshBuilder.SURFACE_TOP,
-		MaterialHelper.or_default(
-			dock.roof_top_material if dock != null else null, Color(0.65, 0.25, 0.2)))
-	inst.set_surface_override_material(RoofMeshBuilder.SURFACE_BOTTOM,
-		MaterialHelper.or_default(
-			dock.roof_bottom_material if dock != null else null, Color(0.5, 0.5, 0.5)))
-	inst.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
-		MaterialHelper.or_default(
-			dock.roof_sides_material if dock != null else null, Color(0.85, 0.82, 0.75)))
+	body.top_material = MaterialHelper.or_default(
+		dock.roof_top_material if dock != null else null, Color(0.65, 0.25, 0.2))
+	body.bottom_material = MaterialHelper.or_default(
+		dock.roof_bottom_material if dock != null else null, Color(0.5, 0.5, 0.5))
+	body.sides_material = MaterialHelper.or_default(
+		dock.roof_sides_material if dock != null else null, Color(0.85, 0.82, 0.75))
 
-	var shape := CollisionShape3D.new()
-	shape.shape = mesh.create_trimesh_shape()
-
-	roof_parent.add_child(body)
+	# force_readable_name = true so name collisions increment the trailing
+	# number (HBRoof_002, …) instead of "@StaticBody3D@NN".
+	roof_parent.add_child(body, true)
 	body.owner = roof_parent.owner
-	body.add_child(inst)
-	inst.owner = roof_parent.owner
-	body.add_child(shape)
-	shape.owner = roof_parent.owner
 
 	undo.add_do_method(roof_parent, &"add_child", body)
 	undo.add_undo_method(roof_parent, &"remove_child", body)
