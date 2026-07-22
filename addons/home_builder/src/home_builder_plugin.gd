@@ -22,6 +22,9 @@ var _stairs_builder: StairsBuilder
 var _roof_builder: RoofBuilder
 var _fence_builder: FenceBuilder
 var _bake_builder: BakeBuilder
+var _wall_gizmo_plugin: HBWallGizmoPlugin
+var _floor_slab_gizmo_plugin: HBFloorSlabGizmoPlugin
+var _roof_gizmo_plugin: HBRoofGizmoPlugin
 
 
 func _enter_tree() -> void:
@@ -32,6 +35,13 @@ func _enter_tree() -> void:
 	_roof_builder = RoofBuilder.new(self)
 	_fence_builder = FenceBuilder.new(self)
 	_bake_builder = BakeBuilder.new(self)
+
+	_wall_gizmo_plugin = HBWallGizmoPlugin.new(get_undo_redo())
+	add_node_3d_gizmo_plugin(_wall_gizmo_plugin)
+	_floor_slab_gizmo_plugin = HBFloorSlabGizmoPlugin.new(get_undo_redo())
+	add_node_3d_gizmo_plugin(_floor_slab_gizmo_plugin)
+	_roof_gizmo_plugin = HBRoofGizmoPlugin.new(get_undo_redo())
+	add_node_3d_gizmo_plugin(_roof_gizmo_plugin)
 
 	var dock_scene: PackedScene = load("res://addons/home_builder/src/HomeBuilderDock.tscn")
 	_dock = dock_scene.instantiate()
@@ -64,6 +74,15 @@ func _exit_tree() -> void:
 		remove_control_from_bottom_panel(_dock)
 		_dock.queue_free()
 		_dock = null
+	if _wall_gizmo_plugin != null:
+		remove_node_3d_gizmo_plugin(_wall_gizmo_plugin)
+		_wall_gizmo_plugin = null
+	if _floor_slab_gizmo_plugin != null:
+		remove_node_3d_gizmo_plugin(_floor_slab_gizmo_plugin)
+		_floor_slab_gizmo_plugin = null
+	if _roof_gizmo_plugin != null:
+		remove_node_3d_gizmo_plugin(_roof_gizmo_plugin)
+		_roof_gizmo_plugin = null
 	_active_mode = BuildMode.NONE
 	_active_floor = 0
 
