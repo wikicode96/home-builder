@@ -93,12 +93,16 @@ func _ensure_children() -> void:
 			_shape.owner = root
 
 
+const _DEFAULT_FACE_TEXTURE := "res://addons/home_builder/textures/white.png"
+const _DEFAULT_EDGE_TEXTURE := "res://addons/home_builder/textures/red.png"
+
+
 func _apply_materials() -> void:
 	if _mesh == null or not is_instance_valid(_mesh):
 		return
 	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_TOP,
-		MaterialHelper.or_default(top_material, Color(0.65, 0.25, 0.2)))
+		MaterialHelper.or_default_textured(top_material, _DEFAULT_FACE_TEXTURE))
 	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_BOTTOM,
-		MaterialHelper.or_default(bottom_material, Color(0.5, 0.5, 0.5)))
+		MaterialHelper.or_default_textured(bottom_material, _DEFAULT_FACE_TEXTURE))
 	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
-		MaterialHelper.or_default(sides_material, Color(0.85, 0.82, 0.75)))
+		MaterialHelper.or_default_textured(sides_material, _DEFAULT_EDGE_TEXTURE))

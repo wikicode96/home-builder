@@ -198,9 +198,6 @@ static func _find_wall_edge_material(wall_parent: Node3D) -> Material:
 ## the Inspector.
 func apply_materials(wall: HBWall) -> void:
 	var dock = _plugin.dock
-	wall.face_a_material = MaterialHelper.or_default(
-		dock.wall_face_a_material if dock != null else null, Color(0.9, 0.9, 0.85))
-	wall.face_b_material = MaterialHelper.or_default(
-		dock.wall_face_b_material if dock != null else null, Color(0.85, 0.85, 0.8))
-	wall.edges_material = MaterialHelper.or_default(
-		dock.wall_edges_material if dock != null else null, Color(0.7, 0.7, 0.65))
+	wall.face_a_material = dock.wall_face_a_material if dock != null else null
+	wall.face_b_material = dock.wall_face_b_material if dock != null else null
+	wall.edges_material = dock.wall_edges_material if dock != null else null

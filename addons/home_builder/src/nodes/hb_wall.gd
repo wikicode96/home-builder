@@ -157,15 +157,19 @@ func _ensure_children() -> void:
 			_shape.owner = root
 
 
+const _DEFAULT_FACE_TEXTURE := "res://addons/home_builder/textures/white.png"
+const _DEFAULT_EDGE_TEXTURE := "res://addons/home_builder/textures/red.png"
+
+
 func _apply_materials() -> void:
 	if _mesh == null or not is_instance_valid(_mesh):
 		return
 	_mesh.set_surface_override_material(WallMeshBuilder.SURFACE_FACE_A,
-		MaterialHelper.or_default(face_a_material, Color(0.9, 0.9, 0.85)))
+		MaterialHelper.or_default_textured(face_a_material, _DEFAULT_FACE_TEXTURE))
 	_mesh.set_surface_override_material(WallMeshBuilder.SURFACE_FACE_B,
-		MaterialHelper.or_default(face_b_material, Color(0.85, 0.85, 0.8)))
+		MaterialHelper.or_default_textured(face_b_material, _DEFAULT_FACE_TEXTURE))
 	_mesh.set_surface_override_material(WallMeshBuilder.SURFACE_EDGES,
-		MaterialHelper.or_default(edges_material, Color(0.7, 0.7, 0.65)))
+		MaterialHelper.or_default_textured(edges_material, _DEFAULT_EDGE_TEXTURE))
 
 
 ## No openings → an exact BoxShape3D (cheap). With openings → a

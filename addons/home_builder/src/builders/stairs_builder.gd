@@ -188,12 +188,9 @@ func _place_stairs(start: Vector3, dir_hint: Vector3, floor_base_y: float) -> vo
 	body.height = WallBuilder.height
 
 	var dock = _plugin.dock
-	body.top_material = MaterialHelper.or_default(
-		dock.stair_top_material if dock != null else null, Color(0.8, 0.7, 0.5))
-	body.bottom_material = MaterialHelper.or_default(
-		dock.stair_bottom_material if dock != null else null, Color(0.6, 0.6, 0.6))
-	body.sides_material = MaterialHelper.or_default(
-		dock.stair_sides_material if dock != null else null, Color(0.5, 0.5, 0.5))
+	body.top_material = dock.stair_top_material if dock != null else null
+	body.bottom_material = dock.stair_bottom_material if dock != null else null
+	body.sides_material = dock.stair_sides_material if dock != null else null
 
 	var undo: EditorUndoRedoManager = _plugin.get_undo_redo()
 	undo.create_action("Place Stairs")

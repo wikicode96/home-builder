@@ -141,10 +141,14 @@ func _apply_materials() -> void:
 		_apply_step_materials(step)
 
 
+const _DEFAULT_FACE_TEXTURE := "res://addons/home_builder/textures/white.png"
+const _DEFAULT_EDGE_TEXTURE := "res://addons/home_builder/textures/red.png"
+
+
 func _apply_step_materials(step: MeshInstance3D) -> void:
 	step.set_surface_override_material(StairsMeshBuilder.SURFACE_TOP,
-		MaterialHelper.or_default(top_material, Color(0.8, 0.7, 0.5)))
+		MaterialHelper.or_default_textured(top_material, _DEFAULT_FACE_TEXTURE))
 	step.set_surface_override_material(StairsMeshBuilder.SURFACE_BOTTOM,
-		MaterialHelper.or_default(bottom_material, Color(0.6, 0.6, 0.6)))
+		MaterialHelper.or_default_textured(bottom_material, _DEFAULT_FACE_TEXTURE))
 	step.set_surface_override_material(StairsMeshBuilder.SURFACE_SIDES,
-		MaterialHelper.or_default(sides_material, Color(0.5, 0.5, 0.5)))
+		MaterialHelper.or_default_textured(sides_material, _DEFAULT_EDGE_TEXTURE))

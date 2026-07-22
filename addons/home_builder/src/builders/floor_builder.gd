@@ -123,12 +123,9 @@ func _fill_floor_rect(a: Vector3, b: Vector3, floor_base_y: float, active_floor:
 	body.thickness = ht
 
 	var dock = _plugin.dock
-	body.top_material = MaterialHelper.or_default(
-		dock.tile_top_material if dock != null else null, Color(0.8, 0.7, 0.5))
-	body.bottom_material = MaterialHelper.or_default(
-		dock.tile_bottom_material if dock != null else null, Color(0.6, 0.6, 0.6))
-	body.sides_material = MaterialHelper.or_default(
-		dock.tile_sides_material if dock != null else null, Color(0.5, 0.5, 0.5))
+	body.top_material = dock.tile_top_material if dock != null else null
+	body.bottom_material = dock.tile_bottom_material if dock != null else null
+	body.sides_material = dock.tile_sides_material if dock != null else null
 
 	# force_readable_name = true so name collisions increment the trailing
 	# number (HBFloorSlab_002, …) instead of "@StaticBody3D@NN".
