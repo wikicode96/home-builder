@@ -44,7 +44,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 		if pos == null:
 			return EditorPlugin.AFTER_GUI_INPUT_PASS
 
-		var cell := SnapHelper.to_half_tile_center(pos, base_y)
+		var cell := SnapHelper.to_tile_center(pos, base_y)
 		cell.y = base_y + 0.05
 
 		if _drag_start != null:
@@ -60,11 +60,11 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 			return EditorPlugin.AFTER_GUI_INPUT_PASS
 
 		if event.pressed:
-			_drag_start = SnapHelper.to_half_tile_center(pos, base_y)
+			_drag_start = SnapHelper.to_tile_center(pos, base_y)
 			return EditorPlugin.AFTER_GUI_INPUT_STOP
 
 		if _drag_start != null:
-			var end_cell := SnapHelper.to_half_tile_center(pos, base_y)
+			var end_cell := SnapHelper.to_tile_center(pos, base_y)
 			_place_roof(_drag_start, end_cell, base_y, _plugin.active_floor)
 			_drag_start = null
 
@@ -79,7 +79,7 @@ func _update_ghost_rect(a: Vector3, b: Vector3, base_y: float) -> void:
 	if _ghost == null or not is_instance_valid(_ghost):
 		return
 
-	var bounds := SnapHelper.half_grid_bounds(a, b)
+	var bounds := SnapHelper.grid_bounds(a, b)
 	var half_t := WallBuilder.thickness * 0.5
 	var w := bounds.size.x * 0.5 + WallBuilder.thickness
 	var d := bounds.size.y * 0.5 + WallBuilder.thickness
@@ -93,7 +93,7 @@ func _update_ghost_rect(a: Vector3, b: Vector3, base_y: float) -> void:
 
 
 func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> void:
-	var bounds := SnapHelper.half_grid_bounds(a, b)
+	var bounds := SnapHelper.grid_bounds(a, b)
 
 	# Extend the roof footprint by half the wall thickness on every side so
 	# that the roof covers the outer face of facade walls, not just their

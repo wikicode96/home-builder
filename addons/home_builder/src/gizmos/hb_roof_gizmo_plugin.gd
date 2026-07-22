@@ -21,8 +21,10 @@ extends EditorNode3DGizmoPlugin
 ## thickness regardless of pitch, so a handle for it there would move with no
 ## visible feedback.
 ##
-## Snaps to the grid step below by default (mirrors HBFloorSlabGizmoPlugin);
-## hold Ctrl while dragging to size it continuously instead.
+## Snaps to the 0.5m world grid by default — matching RoofBuilder's own
+## placement grid (SnapHelper.to_tile_center/grid_bounds), so a roof you just
+## placed and one you're nudging with the gizmo agree on which sizes are
+## reachable; hold Ctrl while dragging to size it continuously instead.
 
 const _AXES := [Vector3.RIGHT, Vector3.RIGHT, Vector3.BACK, Vector3.BACK, Vector3.UP]
 const _SIGNS := [1.0, -1.0, 1.0, -1.0, 1.0]
@@ -30,7 +32,7 @@ const _ANCHOR_FRACS := [0.0, 1.0, 0.0, 1.0, 0.0]
 const _PROPS := ["width", "width", "depth", "depth", "pitch"]
 const _NAMES := ["Ancho", "Ancho", "Fondo", "Fondo", "Inclinación"]
 const _MIN_SIZE := [0.1, 0.1, 0.1, 0.1, 0.05]
-const _SNAP_STEPS := [1.0, 1.0, 1.0, 1.0, 0.1]
+const _GRID_STEP := 0.5
 
 var _undo_redo: EditorUndoRedoManager
 
@@ -115,11 +117,14 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 
 	var ray_from := camera.project_ray_origin(screen_pos)
 	var ray_dir := camera.project_ray_normal(screen_pos)
-	var new_size := HBGizmoResizeMath.drag_size(
-		_drag_anchor_global, _drag_dir_global, ray_from, ray_dir, _MIN_SIZE[handle_id])
-	if not Input.is_key_pressed(KEY_CTRL):
-		new_size = maxf(
-			HBGizmoResizeMath.snap(new_size, _SNAP_STEPS[handle_id]), _MIN_SIZE[handle_id])
+	var new_size: float
+	if Input.is_key_pressed(KEY_CTRL):
+		new_size = HBGizmoResizeMath.drag_size(
+			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir, _MIN_SIZE[handle_id])
+	else:
+		new_size = HBGizmoResizeMath.drag_size_snapped(
+			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir,
+			_GRID_STEP, _MIN_SIZE[handle_id])
 
 	roof.global_position = HBGizmoResizeMath.node_position(
 		_drag_anchor_global, _drag_dir_global,

@@ -23,7 +23,7 @@ func create_ghost(scene: Node3D, floor_base_y: float) -> void:
 	_ghost = PreviewHelper.create_marker(
 		scene,
 		"__HB_GhostFloor__",
-		Vector3(1.0, ht, 1.0),
+		Vector3(0.5, ht, 0.5),
 		Color(0.2, 0.9, 0.3, 0.4),
 		Vector3(0.0, floor_base_y - ht * 0.5, 0.0)
 	)
@@ -48,7 +48,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 		if _drag_start != null:
 			_update_ghost_rect(_drag_start, cell, floor_base_y)
 		elif _ghost != null and is_instance_valid(_ghost):
-			_ghost.size = Vector3(1.0, slab_thickness, 1.0)
+			_ghost.size = Vector3(0.5, slab_thickness, 0.5)
 			_ghost.position = cell
 
 		return EditorPlugin.AFTER_GUI_INPUT_PASS
@@ -68,7 +68,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 				_drag_start = null
 
 				if _ghost != null and is_instance_valid(_ghost):
-					_ghost.size = Vector3(1.0, slab_thickness, 1.0)
+					_ghost.size = Vector3(0.5, slab_thickness, 0.5)
 			return EditorPlugin.AFTER_GUI_INPUT_STOP
 
 	return EditorPlugin.AFTER_GUI_INPUT_PASS
@@ -81,15 +81,15 @@ func _update_ghost_rect(a: Vector3, b: Vector3, floor_base_y: float) -> void:
 		return
 
 	var bounds := SnapHelper.grid_bounds(a, b)
-	var cols := bounds.size.x
-	var rows := bounds.size.y
+	var cols := bounds.size.x * 0.5
+	var rows := bounds.size.y * 0.5
 
 	var ht := slab_thickness
 	_ghost.size = Vector3(cols, ht, rows)
 	_ghost.position = Vector3(
-		bounds.position.x + cols * 0.5,
+		bounds.position.x * 0.5 + cols * 0.5,
 		floor_base_y - ht * 0.5,
-		bounds.position.y + rows * 0.5
+		bounds.position.y * 0.5 + rows * 0.5
 	)
 
 
@@ -97,10 +97,10 @@ func _update_ghost_rect(a: Vector3, b: Vector3, floor_base_y: float) -> void:
 
 func _fill_floor_rect(a: Vector3, b: Vector3, floor_base_y: float, active_floor: int) -> void:
 	var bounds := SnapHelper.grid_bounds(a, b)
-	var min_x := bounds.position.x
-	var min_z := bounds.position.y
-	var cols := bounds.size.x
-	var rows := bounds.size.y
+	var min_x := bounds.position.x * 0.5
+	var min_z := bounds.position.y * 0.5
+	var cols := bounds.size.x * 0.5
+	var rows := bounds.size.y * 0.5
 
 	var floor_parent: Node3D = _plugin.get_or_create_parent_node("Floor_%d" % active_floor)
 	if floor_parent == null:

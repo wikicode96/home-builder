@@ -13,16 +13,20 @@ extends EditorNode3DGizmoPlugin
 ## WallMeshBuilder), so the one-sidedness is achieved purely by moving the
 ## node — the mesh/collision rebuild doesn't need to know about it.
 ##
-## Snaps to the grid step below by default (mirrors HBFloorSlabGizmoPlugin);
-## hold Ctrl while dragging to size it continuously instead.
+## Snaps to the 0.5m world grid by default (see HBGizmoResizeMath — a wall
+## placed diagonally, e.g. between two grid corners per WallBuilder, still
+## lands its dragged end on an actual grid intersection, not just a rounded
+## distance along the diagonal); hold Ctrl while dragging to size it
+## continuously instead.
 
 # Handle ids 0..5, two per axis (one on each side).
 const _AXES := [Vector3.RIGHT, Vector3.RIGHT, Vector3.UP, Vector3.UP, Vector3.BACK, Vector3.BACK]
 const _SIGNS := [1.0, -1.0, 1.0, -1.0, 1.0, -1.0]
+const _ANCHOR_FRACS := [-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]
 const _PROPS := ["length", "length", "height", "height", "thickness", "thickness"]
 const _NAMES := ["Longitud", "Longitud", "Altura", "Altura", "Grosor", "Grosor"]
 const _MIN_LENGTH := [0.05, 0.05, 0.05, 0.05, 0.02, 0.02]
-const _SNAP_STEPS := [1.0, 1.0, 1.0, 1.0, 0.05, 0.05]
+const _GRID_STEP := 0.5
 
 var _undo_redo: EditorUndoRedoManager
 
@@ -111,18 +115,18 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	var ray_from := camera.project_ray_origin(screen_pos)
 	var ray_dir := camera.project_ray_normal(screen_pos)
 
-	# Closest point between the fixed anchor->direction ray and the mouse ray;
-	# clamped to the anchor side of the segment so the wall can't invert.
-	var closest := Geometry3D.get_closest_points_between_segments(
-		_drag_anchor_global, _drag_anchor_global + _drag_dir_global * 4096.0,
-		ray_from, ray_from + ray_dir * 4096.0
-	)
-	var new_length: float = (closest[0] - _drag_anchor_global).dot(_drag_dir_global)
-	if not Input.is_key_pressed(KEY_CTRL):
-		new_length = HBGizmoResizeMath.snap(new_length, _SNAP_STEPS[handle_id])
-	new_length = maxf(new_length, _MIN_LENGTH[handle_id])
+	var new_length: float
+	if Input.is_key_pressed(KEY_CTRL):
+		new_length = HBGizmoResizeMath.drag_size(
+			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir, _MIN_LENGTH[handle_id])
+	else:
+		new_length = HBGizmoResizeMath.drag_size_snapped(
+			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir,
+			_GRID_STEP, _MIN_LENGTH[handle_id])
 
-	wall.global_position = _drag_anchor_global + _drag_dir_global * (new_length * 0.5)
+	wall.global_position = HBGizmoResizeMath.node_position(
+		_drag_anchor_global, _drag_dir_global,
+		_SIGNS[handle_id], _ANCHOR_FRACS[handle_id], new_length)
 	wall.set(_PROPS[handle_id], new_length)
 
 
@@ -136,11 +140,12 @@ func _begin_drag(wall: HBWall, handle_id: int) -> void:
 
 	var axis: Vector3 = _AXES[handle_id]
 	var sign: float = _SIGNS[handle_id]
-	var start_half: float = wall.get(_PROPS[handle_id]) * 0.5
+	var current_size: float = wall.get(_PROPS[handle_id])
 	var start_transform := wall.global_transform
 
-	_drag_anchor_global = start_transform * (axis * -sign * start_half)
-	_drag_dir_global = (start_transform.basis * (axis * sign)).normalized()
+	_drag_anchor_global = HBGizmoResizeMath.anchor_global(
+		start_transform, axis, _ANCHOR_FRACS[handle_id], current_size)
+	_drag_dir_global = HBGizmoResizeMath.dir_global(start_transform.basis, axis, sign)
 
 
 func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
