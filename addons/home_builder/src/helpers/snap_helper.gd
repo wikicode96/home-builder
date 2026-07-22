@@ -2,6 +2,12 @@
 class_name SnapHelper
 extends RefCounted
 
+## Single source of truth for the world grid's cell size. Anything that needs
+## to know "how big is a grid tile" (builders, ghost previews) should read
+## this instead of hardcoding 0.5 — that drift is exactly what caused stale
+## grid constants in HBStairs and the floor ghost preview before.
+const GRID_STEP := 0.5
+
 
 ## Centre of the 0.5m grid cell hit lands in.
 static func to_tile_center(hit: Vector3, floor_base_y: float) -> Vector3:

@@ -72,12 +72,14 @@ func _rebuild_steps() -> void:
 	var rise := height / count
 	var step_mesh := StairsMeshBuilder.build(width, rise, run)
 	for i in count:
-		# run_offset: step centre along local Z; the -0.5 aligns the back edge
-		# with the tile edge. rise_offset centres each step vertically.
+		# Local Z=0 is the back edge of the first step — the staircase's own
+		# geometric start, with no grid-alignment offset baked in. Snapping
+		# the placement point to a tile edge is StairsBuilder's job, not
+		# this node's (see its _place_stairs/_update_ghost).
 		var step := MeshInstance3D.new()
 		step.name = "Step_%d" % (i + 1)
 		step.mesh = step_mesh
-		step.position = Vector3(0.0, (i + 0.5) * rise, i * run + run * 0.5 - 0.5)
+		step.position = Vector3(0.0, (i + 0.5) * rise, i * run + run * 0.5)
 		_apply_step_materials(step)
 		add_child(step, false, Node.INTERNAL_MODE_BACK)
 		_own(step)
@@ -99,14 +101,14 @@ func _rebuild_collision() -> void:
 	var tr := count * run
 	var convex := ConvexPolygonShape3D.new()
 	convex.points = PackedVector3Array([
-		Vector3(-half_w, height, tr - 0.75),
-		Vector3(half_w, height, tr - 0.75),
-		Vector3(-half_w, height, tr - 0.5),
-		Vector3(half_w, height, tr - 0.5),
-		Vector3(-half_w, 0.0, -0.5),
-		Vector3(half_w, 0.0, -0.5),
-		Vector3(-half_w, 0.0, -0.75),
-		Vector3(half_w, 0.0, -0.75),
+		Vector3(-half_w, height, tr - 0.25),
+		Vector3(half_w, height, tr - 0.25),
+		Vector3(-half_w, height, tr),
+		Vector3(half_w, height, tr),
+		Vector3(-half_w, 0.0, 0.0),
+		Vector3(half_w, 0.0, 0.0),
+		Vector3(-half_w, 0.0, -0.25),
+		Vector3(half_w, 0.0, -0.25),
 	])
 	_shape.shape = convex
 

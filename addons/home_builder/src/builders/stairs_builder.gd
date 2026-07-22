@@ -25,6 +25,22 @@ static func _stair_rise() -> float:
 	return WallBuilder.height / stair_count
 
 
+## start is the CENTRE of the 1x1 landing tile the first click marks (see
+## _add_tile_child). The staircase itself should begin at whichever corner
+## of that tile sits behind the direction of travel — e.g. dragging into the
+## +X/+Z quadrant starts the stairs at the tile's -X/-Z corner and runs
+## through the tile and beyond — not at the tile's centre. A drag that's
+## purely along one axis (dir.x or dir.z exactly 0) keeps that axis centred,
+## since signf(0.0) is 0.0.
+static func _start_corner(start: Vector3, dir: Vector3) -> Vector3:
+	var half := stair_width * 0.5
+	return Vector3(
+		start.x - signf(dir.x) * half,
+		start.y,
+		start.z - signf(dir.z) * half
+	)
+
+
 # ── Preview ──────────────────────────────────────────────────────────────────
 
 ## floor_base_y is unused at creation: the ghost is moved into place on the
@@ -54,7 +70,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 		if pos == null:
 			return EditorPlugin.AFTER_GUI_INPUT_PASS
 
-		var snapped_pos := SnapHelper.to_tile_center(pos, floor_base_y)
+		var snapped_pos := SnapHelper.to_grid_corner(pos, floor_base_y)
 
 		if _start != null:
 			_update_ghost(_start, snapped_pos, floor_base_y)
@@ -70,7 +86,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 		if pos == null:
 			return EditorPlugin.AFTER_GUI_INPUT_PASS
 
-		var corner := SnapHelper.to_tile_center(pos, floor_base_y)
+		var corner := SnapHelper.to_grid_corner(pos, floor_base_y)
 
 		if _start == null:
 			_start = corner
@@ -89,7 +105,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 
 func _add_tile_child() -> void:
 	var tile := CSGBox3D.new()
-	tile.size = Vector3(1.0, WallBuilder.height, 1.0)
+	tile.size = Vector3(stair_width, WallBuilder.height, stair_width)
 	tile.position = Vector3(0.0, WallBuilder.height * 0.5, 0.0)
 	tile.material_override = PreviewHelper.make_material(_GHOST_COLOR)
 	tile.use_collision = false
@@ -115,10 +131,14 @@ func _update_ghost(start: Vector3, cursor: Vector3, floor_base_y: float) -> void
 	if dir.length_squared() < 0.001:
 		return
 
-	var dir_xz := Vector3(dir.x, 0.0, dir.z).normalized()
+	var corner := _start_corner(start, dir)
+	var dir_xz := Vector3(cursor.x - corner.x, 0.0, cursor.z - corner.z).normalized()
 	var step_basis := Basis(Vector3.UP.cross(dir_xz).normalized(), Vector3.UP, dir_xz)
 	var z_fighting := 0.001
-	var origin := Vector3(start.x, floor_base_y + z_fighting, start.z)
+	# corner is the landing tile's back corner (see _start_corner), and local
+	# Z=0 in HBStairs is the staircase's own start edge — so it lands right
+	# here with no extra offset needed.
+	var origin := Vector3(corner.x, floor_base_y + z_fighting, corner.z)
 
 	if not _ghost_is_staircase:
 		# Switch from single tile to full staircase preview
@@ -142,7 +162,7 @@ func _update_ghost(start: Vector3, cursor: Vector3, floor_base_y: float) -> void
 	# Update each step position/orientation (world space, container is at zero)
 	var children := _ghost.get_children()
 	for i in stair_count:
-		var run_offset := i * stair_run + stair_run * 0.5 - 0.5
+		var run_offset := i * stair_run + stair_run * 0.5
 		var rise_offset := (i + 0.5) * _stair_rise()
 
 		if children[i] is MeshInstance3D:
@@ -163,7 +183,8 @@ func _place_stairs(start: Vector3, dir_hint: Vector3, floor_base_y: float) -> vo
 		return
 
 	var diff := dir_hint - start
-	var dir_xz := Vector3(diff.x, 0.0, diff.z).normalized()
+	var corner := _start_corner(start, diff)
+	var dir_xz := Vector3(dir_hint.x - corner.x, 0.0, dir_hint.z - corner.z).normalized()
 	var basis_z := dir_xz
 	var basis_x := Vector3.UP.cross(basis_z).normalized()
 	var basis_y := Vector3.UP
@@ -173,7 +194,10 @@ func _place_stairs(start: Vector3, dir_hint: Vector3, floor_base_y: float) -> vo
 	# bottoms sit flush with the top surface of the floor slab (not the
 	# raw floor plane), avoiding Z-fighting with the wall below.
 	var z_fighting := 0.001
-	var origin := Vector3(start.x, floor_base_y + z_fighting, start.z)
+	# corner is the landing tile's back corner (see _start_corner), and local
+	# Z=0 in HBStairs is the staircase's own start edge — so it lands right
+	# here with no extra offset needed, matching _update_ghost above.
+	var origin := Vector3(corner.x, floor_base_y + z_fighting, corner.z)
 
 	# HBStairs is self-contained: it owns every step mesh and the ramp
 	# collision as internal children. The designer only ever sees a single
