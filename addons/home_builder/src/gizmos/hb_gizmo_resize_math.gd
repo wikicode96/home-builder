@@ -46,3 +46,12 @@ static func drag_size(anchor: Vector3, dir: Vector3,
 static func node_position(anchor: Vector3, dir: Vector3,
 		sign: float, anchor_frac: float, new_size: float) -> Vector3:
 	return anchor - dir * (sign * anchor_frac * new_size)
+
+
+## Rounds a value to the nearest multiple of step. step <= 0 disables
+## snapping (returns value unchanged). Used to implement the Ctrl-held
+## grid-snap toggle each gizmo plugin offers on top of its default behaviour.
+static func snap(value: float, step: float) -> float:
+	if step <= 0.0:
+		return value
+	return roundf(value / step) * step

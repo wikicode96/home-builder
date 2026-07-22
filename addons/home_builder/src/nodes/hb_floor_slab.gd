@@ -6,11 +6,14 @@ extends StaticBody3D
 ## as INTERNAL children and regenerates them from the exported parameters, so
 ## the designer only ever sees a single "HBFloorSlab_001" node.
 
-@export var cols: int = 1:
+## Footprint size in metres. Normally kept to whole numbers by the gizmo
+## (FloorMeshBuilder tiles the top/bottom UVs per metre), but stored as float
+## so the gizmo's free-drag mode (hold Ctrl) can size it continuously too.
+@export var cols: float = 1.0:
 	set(value):
 		cols = value
 		_rebuild()
-@export var rows: int = 1:
+@export var rows: float = 1.0:
 	set(value):
 		rows = value
 		_rebuild()

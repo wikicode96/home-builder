@@ -118,8 +118,8 @@ func _fill_floor_rect(a: Vector3, b: Vector3, floor_base_y: float, active_floor:
 		floor_base_y - ht * 0.5 + z_fighting,
 		min_z + rows * 0.5
 	)
-	body.cols = int(cols)
-	body.rows = int(rows)
+	body.cols = cols
+	body.rows = rows
 	body.thickness = ht
 
 	var dock = _plugin.dock

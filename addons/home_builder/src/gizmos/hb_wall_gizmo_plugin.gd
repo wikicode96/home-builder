@@ -12,6 +12,9 @@ extends EditorNode3DGizmoPlugin
 ## The wall mesh itself always stays centred on the node's local origin (see
 ## WallMeshBuilder), so the one-sidedness is achieved purely by moving the
 ## node — the mesh/collision rebuild doesn't need to know about it.
+##
+## Snaps to the grid step below by default (mirrors HBFloorSlabGizmoPlugin);
+## hold Ctrl while dragging to size it continuously instead.
 
 # Handle ids 0..5, two per axis (one on each side).
 const _AXES := [Vector3.RIGHT, Vector3.RIGHT, Vector3.UP, Vector3.UP, Vector3.BACK, Vector3.BACK]
@@ -19,6 +22,7 @@ const _SIGNS := [1.0, -1.0, 1.0, -1.0, 1.0, -1.0]
 const _PROPS := ["length", "length", "height", "height", "thickness", "thickness"]
 const _NAMES := ["Longitud", "Longitud", "Altura", "Altura", "Grosor", "Grosor"]
 const _MIN_LENGTH := [0.05, 0.05, 0.05, 0.05, 0.02, 0.02]
+const _SNAP_STEPS := [1.0, 1.0, 1.0, 1.0, 0.05, 0.05]
 
 var _undo_redo: EditorUndoRedoManager
 
@@ -114,6 +118,8 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 		ray_from, ray_from + ray_dir * 4096.0
 	)
 	var new_length: float = (closest[0] - _drag_anchor_global).dot(_drag_dir_global)
+	if not Input.is_key_pressed(KEY_CTRL):
+		new_length = HBGizmoResizeMath.snap(new_length, _SNAP_STEPS[handle_id])
 	new_length = maxf(new_length, _MIN_LENGTH[handle_id])
 
 	wall.global_position = _drag_anchor_global + _drag_dir_global * (new_length * 0.5)

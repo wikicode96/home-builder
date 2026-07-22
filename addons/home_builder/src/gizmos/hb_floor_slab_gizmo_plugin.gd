@@ -4,8 +4,9 @@ extends EditorNode3DGizmoPlugin
 
 ## Drag handles for HBFloorSlab's footprint (cols/rows), one-sided like
 ## HBWall's: dragging a side keeps the opposite edge fixed in world space.
-## cols/rows are whole 1m tiles (FloorMeshBuilder), so drags snap to whole
-## metres.
+## Snaps to whole-metre tiles by default (matching FloorMeshBuilder's 1m UV
+## tiling); hold Ctrl while dragging to size it continuously instead, same
+## as HBWall/HBRoof already do by default.
 ##
 ## No handle for thickness: FloorMeshBuilder always draws the visual slab at
 ## a fixed 0.1m regardless of that property (it only sizes the physics box),
@@ -17,7 +18,8 @@ const _SIGNS := [1.0, -1.0, 1.0, -1.0]
 const _ANCHOR_FRACS := [-0.5, 0.5, -0.5, 0.5]
 const _PROPS := ["cols", "cols", "rows", "rows"]
 const _NAMES := ["Columnas", "Columnas", "Filas", "Filas"]
-const _MIN_CELLS := 1
+const _GRID_STEP := 1.0
+const _MIN_SIZE := 0.1
 const _VISUAL_HALF_Y := 0.05  # FloorMeshBuilder's fixed visual half-height
 
 var _undo_redo: EditorUndoRedoManager
@@ -105,13 +107,16 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	var ray_from := camera.project_ray_origin(screen_pos)
 	var ray_dir := camera.project_ray_normal(screen_pos)
 	var raw := HBGizmoResizeMath.drag_size(
-		_drag_anchor_global, _drag_dir_global, ray_from, ray_dir, float(_MIN_CELLS))
-	var new_cells := maxi(int(round(raw)), _MIN_CELLS)
+		_drag_anchor_global, _drag_dir_global, ray_from, ray_dir, _MIN_SIZE)
+
+	var new_size := raw
+	if not Input.is_key_pressed(KEY_CTRL):
+		new_size = maxf(HBGizmoResizeMath.snap(raw, _GRID_STEP), _GRID_STEP)
 
 	slab.global_position = HBGizmoResizeMath.node_position(
 		_drag_anchor_global, _drag_dir_global,
-		_SIGNS[handle_id], _ANCHOR_FRACS[handle_id], float(new_cells))
-	slab.set(_PROPS[handle_id], new_cells)
+		_SIGNS[handle_id], _ANCHOR_FRACS[handle_id], new_size)
+	slab.set(_PROPS[handle_id], new_size)
 
 
 func _begin_drag(slab: HBFloorSlab, handle_id: int) -> void:
@@ -144,7 +149,7 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 
 	var new_value = slab.get(prop)
 	var new_position := slab.position
-	if new_value == restore and new_position.is_equal_approx(_drag_start_position):
+	if is_equal_approx(new_value, restore) and new_position.is_equal_approx(_drag_start_position):
 		_drag_handle_id = -1
 		return
 

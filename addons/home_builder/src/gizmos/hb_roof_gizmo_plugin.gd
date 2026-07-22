@@ -20,6 +20,9 @@ extends EditorNode3DGizmoPlugin
 ## It's only shown for non-flat roofs — FlatRoof always renders at a fixed
 ## thickness regardless of pitch, so a handle for it there would move with no
 ## visible feedback.
+##
+## Snaps to the grid step below by default (mirrors HBFloorSlabGizmoPlugin);
+## hold Ctrl while dragging to size it continuously instead.
 
 const _AXES := [Vector3.RIGHT, Vector3.RIGHT, Vector3.BACK, Vector3.BACK, Vector3.UP]
 const _SIGNS := [1.0, -1.0, 1.0, -1.0, 1.0]
@@ -27,6 +30,7 @@ const _ANCHOR_FRACS := [0.0, 1.0, 0.0, 1.0, 0.0]
 const _PROPS := ["width", "width", "depth", "depth", "pitch"]
 const _NAMES := ["Ancho", "Ancho", "Fondo", "Fondo", "Inclinación"]
 const _MIN_SIZE := [0.1, 0.1, 0.1, 0.1, 0.05]
+const _SNAP_STEPS := [1.0, 1.0, 1.0, 1.0, 0.1]
 
 var _undo_redo: EditorUndoRedoManager
 
@@ -113,6 +117,9 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	var ray_dir := camera.project_ray_normal(screen_pos)
 	var new_size := HBGizmoResizeMath.drag_size(
 		_drag_anchor_global, _drag_dir_global, ray_from, ray_dir, _MIN_SIZE[handle_id])
+	if not Input.is_key_pressed(KEY_CTRL):
+		new_size = maxf(
+			HBGizmoResizeMath.snap(new_size, _SNAP_STEPS[handle_id]), _MIN_SIZE[handle_id])
 
 	roof.global_position = HBGizmoResizeMath.node_position(
 		_drag_anchor_global, _drag_dir_global,
