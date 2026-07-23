@@ -23,10 +23,17 @@ static func to_grid_corner(hit: Vector3, floor_base_y: float) -> Vector3:
 	return Vector3(round(hit.x * 2.0) * 0.5, floor_base_y, round(hit.z * 2.0) * 0.5)
 
 
-## Snaps a world-space hit on a wall to a half-metre step along the wall's
-## local X axis, clamped so an opening of [param opening_width] stays inside
-## the wall. Returns the snapped local X coordinate.
-static func to_wall(wall_body: StaticBody3D, world_hit: Vector3, opening_width: float) -> float:
+## Snaps a world-space hit on a wall to a [param step]-metre grid along the
+## wall's local X axis, clamped so an opening of [param opening_width] stays
+## inside the wall. Pass [param step] <= 0.0 to skip snapping entirely and
+## follow the raw cursor position (used while Ctrl is held). Returns the
+## snapped local X coordinate.
+static func to_wall(
+	wall_body: StaticBody3D,
+	world_hit: Vector3,
+	opening_width: float,
+	step: float = GRID_STEP
+) -> float:
 	var local_hit := wall_body.global_transform.affine_inverse() * world_hit
 
 	# Read wall length — prefer stored metadata so this keeps working after
@@ -37,7 +44,7 @@ static func to_wall(wall_body: StaticBody3D, world_hit: Vector3, opening_width: 
 		return local_hit.x
 
 	var half_len := wall_len * 0.5
-	var snapped_x := floorf(local_hit.x) + 0.5
+	var snapped_x: float = local_hit.x if step <= 0.0 else round(local_hit.x / step) * step
 	return clampf(snapped_x, -half_len + opening_width * 0.5, half_len - opening_width * 0.5)
 
 

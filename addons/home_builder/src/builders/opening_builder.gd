@@ -66,7 +66,8 @@ func handle_input(camera: Camera3D, event: InputEvent, is_door: bool, wall_paren
 		if hit != null:
 			var wall_body := hit.collider
 			var opening_width := _door_width() if is_door else _win_width()
-			var snapped_x := SnapHelper.to_wall(wall_body, hit.position, opening_width)
+			var step := 0.0 if Input.is_key_pressed(KEY_CTRL) else SnapHelper.GRID_STEP
+			var snapped_x := SnapHelper.to_wall(wall_body, hit.position, opening_width, step)
 
 			if _marker != null and is_instance_valid(_marker):
 				var wall_h := WallHelper.get_wall_height(wall_body)
@@ -94,7 +95,8 @@ func handle_input(camera: Camera3D, event: InputEvent, is_door: bool, wall_paren
 		if hit != null:
 			var wall_body := hit.collider
 			var opening_width := _door_width() if is_door else _win_width()
-			var snapped_x := SnapHelper.to_wall(wall_body, hit.position, opening_width)
+			var step := 0.0 if Input.is_key_pressed(KEY_CTRL) else SnapHelper.GRID_STEP
+			var snapped_x := SnapHelper.to_wall(wall_body, hit.position, opening_width, step)
 
 			_cut_opening(wall_body, snapped_x, is_door)
 			return EditorPlugin.AFTER_GUI_INPUT_STOP
