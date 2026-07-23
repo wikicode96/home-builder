@@ -66,6 +66,24 @@ static func drag_size_snapped(anchor: Vector3, dir: Vector3,
 	return maxf((snapped_point - anchor).dot(dir), min_size)
 
 
+## Same as drag_size, but snaps the resulting SIZE itself to the nearest
+## multiple of step — unlike drag_size_snapped, which snaps the endpoint's
+## absolute world position first.
+##
+## Use this for vertical (Y-axis) handles: none of this addon's nodes rotate
+## around X/Z, so a vertical direction is never diagonal and there's no
+## world-grid-intersection concern to justify point-snapping. Point-snapping
+## also silently assumes the anchor itself sits exactly on the world grid —
+## true for length/width/depth anchors, but not for HBStairs' base, which
+## carries a small deliberate z-fighting offset (see StairsBuilder). Snapping
+## the absolute Y there would turn a clean 4m height into 3.999m; snapping
+## the height value itself keeps it exactly 4.0.
+static func drag_size_snapped_relative(anchor: Vector3, dir: Vector3,
+		ray_from: Vector3, ray_dir: Vector3, step: float, min_size: float) -> float:
+	var raw := drag_size(anchor, dir, ray_from, ray_dir, min_size)
+	return maxf(snap(raw, step), min_size)
+
+
 ## New node position that keeps the anchor fixed in world space once the
 ## axis's size becomes new_size.
 static func node_position(anchor: Vector3, dir: Vector3,

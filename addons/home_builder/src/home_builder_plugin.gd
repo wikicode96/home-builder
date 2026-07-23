@@ -25,6 +25,7 @@ var _bake_builder: BakeBuilder
 var _wall_gizmo_plugin: HBWallGizmoPlugin
 var _floor_slab_gizmo_plugin: HBFloorSlabGizmoPlugin
 var _roof_gizmo_plugin: HBRoofGizmoPlugin
+var _stairs_gizmo_plugin: HBStairsGizmoPlugin
 
 
 func _enter_tree() -> void:
@@ -42,6 +43,8 @@ func _enter_tree() -> void:
 	add_node_3d_gizmo_plugin(_floor_slab_gizmo_plugin)
 	_roof_gizmo_plugin = HBRoofGizmoPlugin.new(get_undo_redo())
 	add_node_3d_gizmo_plugin(_roof_gizmo_plugin)
+	_stairs_gizmo_plugin = HBStairsGizmoPlugin.new(get_undo_redo())
+	add_node_3d_gizmo_plugin(_stairs_gizmo_plugin)
 
 	var dock_scene: PackedScene = load("res://addons/home_builder/src/HomeBuilderDock.tscn")
 	_dock = dock_scene.instantiate()
@@ -83,6 +86,9 @@ func _exit_tree() -> void:
 	if _roof_gizmo_plugin != null:
 		remove_node_3d_gizmo_plugin(_roof_gizmo_plugin)
 		_roof_gizmo_plugin = null
+	if _stairs_gizmo_plugin != null:
+		remove_node_3d_gizmo_plugin(_stairs_gizmo_plugin)
+		_stairs_gizmo_plugin = null
 	_active_mode = BuildMode.NONE
 	_active_floor = 0
 

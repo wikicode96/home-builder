@@ -121,6 +121,12 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	if Input.is_key_pressed(KEY_CTRL):
 		new_size = HBGizmoResizeMath.drag_size(
 			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir, _MIN_SIZE[handle_id])
+	elif _AXES[handle_id] == Vector3.UP:
+		# Vertical handle (pitch): snap the height itself, not the absolute
+		# world Y (see HBGizmoResizeMath.drag_size_snapped_relative).
+		new_size = HBGizmoResizeMath.drag_size_snapped_relative(
+			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir,
+			_GRID_STEP, _MIN_SIZE[handle_id])
 	else:
 		new_size = HBGizmoResizeMath.drag_size_snapped(
 			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir,
