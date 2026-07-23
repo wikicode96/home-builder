@@ -18,6 +18,15 @@ extends EditorNode3DGizmoPlugin
 ## lands its dragged end on an actual grid intersection, not just a rounded
 ## distance along the diagonal); hold Ctrl while dragging to size it
 ## continuously instead.
+##
+## Holding Shift while dragging one of the two length handles switches that
+## handle from "stretch along the wall's current axis" to "move this
+## endpoint freely in the floor plane" — the opposite end stays put, but the
+## dragged end (and therefore the wall's angle) can land anywhere on the
+## floor plane, not just further out along the original direction. This is
+## what lets an axis-aligned wall be turned diagonal after the fact instead
+## of having to delete and replace it. Ctrl still toggles snapped/free
+## within that mode.
 
 # Handle ids 0..5, two per axis (one on each side).
 const _AXES := [Vector3.RIGHT, Vector3.RIGHT, Vector3.UP, Vector3.UP, Vector3.BACK, Vector3.BACK]
@@ -37,6 +46,7 @@ var _drag_handle_id := -1
 var _drag_anchor_global := Vector3.ZERO
 var _drag_dir_global := Vector3.ZERO
 var _drag_start_position := Vector3.ZERO
+var _drag_start_basis := Basis.IDENTITY
 
 
 func _init(undo_redo: EditorUndoRedoManager) -> void:
@@ -112,6 +122,10 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	if handle_id != _drag_handle_id:
 		_begin_drag(wall, handle_id)
 
+	if _AXES[handle_id] == Vector3.RIGHT and Input.is_key_pressed(KEY_SHIFT):
+		_set_handle_endpoint(wall, handle_id, camera, screen_pos)
+		return
+
 	var ray_from := camera.project_ray_origin(screen_pos)
 	var ray_dir := camera.project_ray_normal(screen_pos)
 
@@ -136,6 +150,43 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	wall.set(_PROPS[handle_id], new_length)
 
 
+## Moves a length handle's endpoint freely across the floor plane instead of
+## along the wall's existing axis: the opposite end (_drag_anchor_global,
+## captured in _begin_drag before the basis changes) stays fixed, the
+## dragged end goes wherever the mouse ray crosses the plane at the wall's
+## own height, and the basis is rebuilt each frame from anchor→point — the
+## same convention WallBuilder.place_wall uses at initial placement, so a
+## wall can be re-angled after the fact exactly as if it had been placed
+## diagonally to begin with.
+func _set_handle_endpoint(wall: HBWall, handle_id: int, camera: Camera3D, screen_pos: Vector2) -> void:
+	var plane_y := _drag_anchor_global.y
+	var point = RaycastHelper.to_floor_plane(camera, screen_pos, plane_y)
+	if point == null:
+		return
+	if not Input.is_key_pressed(KEY_CTRL):
+		point = SnapHelper.to_grid_corner(point, plane_y)
+
+	var delta: Vector3 = point - _drag_anchor_global
+	var horiz := Vector3(delta.x, 0.0, delta.z)
+	var dist := horiz.length()
+
+	var new_dir: Vector3
+	if dist < 0.0001:
+		new_dir = _drag_dir_global
+	else:
+		new_dir = horiz.normalized()
+	dist = maxf(dist, _MIN_LENGTH[handle_id])
+
+	var basis_x := new_dir
+	var basis_y := Vector3.UP
+	var basis_z := basis_y.cross(basis_x).normalized()
+
+	wall.basis = Basis(basis_x, basis_y, basis_z)
+	wall.global_position = HBGizmoResizeMath.node_position(
+		_drag_anchor_global, new_dir, _SIGNS[handle_id], _ANCHOR_FRACS[handle_id], dist)
+	wall.length = dist
+
+
 ## Captures the opposite face's world position (the anchor) and the drag
 ## axis's world direction, both from the wall's state right before the drag
 ## touches it — these stay constant for the whole drag even as the node's
@@ -143,6 +194,7 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 func _begin_drag(wall: HBWall, handle_id: int) -> void:
 	_drag_handle_id = handle_id
 	_drag_start_position = wall.position
+	_drag_start_basis = wall.basis
 
 	var axis: Vector3 = _AXES[handle_id]
 	var sign: float = _SIGNS[handle_id]
@@ -165,18 +217,23 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	if cancel:
 		wall.set(prop, restore)
 		wall.position = _drag_start_position
+		wall.basis = _drag_start_basis
 		_drag_handle_id = -1
 		return
 
 	var new_value = wall.get(prop)
 	var new_position := wall.position
-	if is_equal_approx(new_value, restore) and new_position.is_equal_approx(_drag_start_position):
+	var new_basis := wall.basis
+	if is_equal_approx(new_value, restore) and new_position.is_equal_approx(_drag_start_position) \
+			and new_basis.is_equal_approx(_drag_start_basis):
 		_drag_handle_id = -1
 		return
 
 	_undo_redo.create_action("Cambiar %s de %s" % [_NAMES[handle_id], wall.name])
 	_undo_redo.add_do_property(wall, prop, new_value)
 	_undo_redo.add_do_property(wall, "position", new_position)
+	_undo_redo.add_do_property(wall, "basis", new_basis)
+	_undo_redo.add_undo_property(wall, "basis", _drag_start_basis)
 	_undo_redo.add_undo_property(wall, "position", _drag_start_position)
 	_undo_redo.add_undo_property(wall, prop, restore)
 	_undo_redo.commit_action(false)
