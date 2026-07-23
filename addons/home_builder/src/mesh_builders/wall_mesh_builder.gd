@@ -144,7 +144,14 @@ static func _sanitize_openings(openings: Array, hx: float, hy: float) -> Array:
 		if right - left < _OPENING_MARGIN:
 			continue
 
-		var local_bottom: float = clampf(op.local_bottom(hy), -hy + _OPENING_MARGIN, hy - _OPENING_MARGIN)
+		# Floor-reaching openings (doors) must stay pinned to exactly -hy —
+		# nudging them up by the margin turns _build_edges' floor-quad split
+		# into a "window" case and adds a spurious sill strip above the floor.
+		var raw_bottom: float = op.local_bottom(hy)
+		var local_bottom: float = (
+			-hy if raw_bottom <= -hy
+			else clampf(raw_bottom, -hy + _OPENING_MARGIN, hy - _OPENING_MARGIN)
+		)
 		var local_top: float = clampf(op.local_top(hy), -hy + _OPENING_MARGIN, hy - _OPENING_MARGIN)
 		if local_top - local_bottom < _OPENING_MARGIN:
 			continue

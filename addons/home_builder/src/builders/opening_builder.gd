@@ -142,3 +142,41 @@ func _cut_opening(wall_body: StaticBody3D, local_center: float, is_door: bool) -
 	# ── 5. Hand the opening to the node, which rebuilds mesh and collision
 	#       while keeping its current junction miter offsets. ─────────────────
 	wall.add_opening(new_opening)
+
+	# ── 6. Instantiate the designer's asset scene, if one is assigned ────────
+	_place_asset(wall_body, new_opening, is_door)
+
+
+# ── Asset instancing ─────────────────────────────────────────────────────────
+
+## If the dock has a door/window scene assigned, instantiate it at the
+## opening's position with the wall's own basis (local +X = wall's +X, i.e.
+## the opening's width axis; local +Z = wall's +Z, its thickness axis). What
+## the scene actually contains (mesh, collision, scripts, pivot) is entirely
+## the game developer's responsibility — we just place it.
+func _place_asset(wall_body: StaticBody3D, opening: WallMeshBuilder.Opening, is_door: bool) -> void:
+	var dock = _plugin.dock
+	var asset_scene: PackedScene = (
+		(dock.door_asset_scene if is_door else dock.window_asset_scene) if dock != null else null
+	)
+	if asset_scene == null:
+		return
+
+	var instance := asset_scene.instantiate() as Node3D
+	if instance == null:
+		push_warning("[HomeBuilder] Asset scene root is not a Node3D — skipped.")
+		return
+
+	var wall_h := WallHelper.get_wall_height(wall_body)
+	var base_local_y := opening.bottom_y - wall_h * 0.5
+
+	instance.name = "Door_001" if is_door else "Window_001"
+
+	# Parented directly under the wall, so an identity local basis already
+	# means "same orientation as the wall" — its local +X lines up with the
+	# wall's +X (the opening's width axis) for free, no manual rotation math.
+	var scene_root := EditorInterface.get_edited_scene_root()
+	wall_body.add_child(instance, true)
+	instance.owner = scene_root
+	instance.position = Vector3(opening.center_x, base_local_y, 0.0)
+	instance.basis = Basis.IDENTITY

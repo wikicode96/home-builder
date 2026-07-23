@@ -715,6 +715,21 @@ step = 0.1
 value = 2.0
 suffix = "m"
 
+[node name="AssetRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig" unique_id=4000000020]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="AssetLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/AssetRow" unique_id=4000000021]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Escena de puerta (opcional, +X ancho)"
+
+[node name="AssetPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/DoorConfig/AssetRow" unique_id=4000000022]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="WindowConfig" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=4000000009]
 visible = false
 layout_mode = 0
@@ -787,6 +802,21 @@ max_value = 3.0
 step = 0.1
 value = 0.9
 suffix = "m"
+
+[node name="AssetRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig" unique_id=4000000023]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="AssetLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/AssetRow" unique_id=4000000024]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Escena de ventana (opcional, +X ancho)"
+
+[node name="AssetPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/WindowConfig/AssetRow" unique_id=4000000025]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="BakeSection" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack" unique_id=3000000001]
 visible = false

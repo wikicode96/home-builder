@@ -93,6 +93,10 @@ var _win_sill_spin: SpinBox
 var _door_section: Container
 var _window_section: Container
 
+# Door / Window asset pickers
+var _door_asset_picker: EditorResourcePicker
+var _window_asset_picker: EditorResourcePicker
+
 # Fence asset picker
 var _fence_asset_picker: EditorResourcePicker
 
@@ -182,6 +186,12 @@ var win_height: float:
 	get: return _win_height_spin.value if _win_height_spin != null else 1.0
 var win_sill: float:
 	get: return _win_sill_spin.value if _win_sill_spin != null else 0.9
+
+# ── Door / Window assets ─────────────────────────────────────────────────────
+var door_asset_scene: PackedScene:
+	get: return (_door_asset_picker.edited_resource as PackedScene) if _door_asset_picker != null else null
+var window_asset_scene: PackedScene:
+	get: return (_window_asset_picker.edited_resource as PackedScene) if _window_asset_picker != null else null
 
 # ── Fence asset ──────────────────────────────────────────────────────────────
 var fence_asset_scene: PackedScene:
@@ -318,6 +328,10 @@ func _ready() -> void:
 	_win_width_spin.value_changed.connect(_on_opening_config_value_changed)
 	_win_height_spin.value_changed.connect(_on_opening_config_value_changed)
 	_win_sill_spin.value_changed.connect(_on_opening_config_value_changed)
+
+	# Door / Window asset pickers (PackedScene)
+	_door_asset_picker = _create_picker(_STACK + "/DoorConfig/AssetRow/AssetPicker", "PackedScene")
+	_window_asset_picker = _create_picker(_STACK + "/WindowConfig/AssetRow/AssetPicker", "PackedScene")
 
 	# Fence asset picker (PackedScene) and module length spin
 	_fence_asset_picker = _create_picker(_STACK + "/FenceAssets/AssetRow/AssetPicker", "PackedScene")
