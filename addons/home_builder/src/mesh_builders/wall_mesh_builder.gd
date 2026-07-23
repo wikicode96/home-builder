@@ -100,7 +100,17 @@ static func build_with_openings_and_joins(length: float, height: float, thicknes
 
 	var clamped := _clamp_joins(joins if joins != null else JoinOffsets.new(), length)
 
-	var ops: Array = openings.duplicate() if openings != null else []
+	# Openings are only validated against the wall's size at the moment
+	# they're cut (see OpeningBuilder._cut_opening) — nothing re-validates
+	# them if the wall is shrunk afterwards (gizmo length drag, endpoint
+	# drag, or a manual Inspector edit). Without clamping here, a door/
+	# window whose stored footprint no longer fits can block a face's
+	# entire width or height, leaving that surface with zero geometry —
+	# generate_tangents() then fails ("UVs are required to generate
+	# tangents") and the surface never commits, shifting every later
+	# surface index down and breaking the fixed SURFACE_FACE_A/B/EDGES
+	# indices HBWall relies on for materials.
+	var ops: Array = _sanitize_openings(openings if openings != null else [], hx, hy)
 	ops.sort_custom(func(a, b): return a.center_x < b.center_x)
 
 	# Per-face left/right X extents derived from the joins.
@@ -116,6 +126,33 @@ static func build_with_openings_and_joins(length: float, height: float, thicknes
 	MeshHelper.add_surface(mesh, _build_face(hx, hy, ops, x_start_pz, x_end_pz, hz, 1.0))
 	MeshHelper.add_surface(mesh, _build_edges(hx, hy, hz, ops, x_start_mz, x_start_pz, x_end_mz, x_end_pz))
 	return mesh
+
+
+## Clamps every opening's footprint to fit inside the current [-hx, hx] ×
+## [-hy, hy] face bounds, keeping at least _OPENING_MARGIN of solid face on
+## every side so a face quad always has area. Openings that no longer fit
+## at all (clamped span below the minimum) are dropped from the mesh for
+## this rebuild — they reappear once the wall grows back to fit them again,
+## since the stored Opening data on the HBWall node itself is untouched.
+const _OPENING_MARGIN := 0.01
+
+static func _sanitize_openings(openings: Array, hx: float, hy: float) -> Array:
+	var result: Array = []
+	for op in openings:
+		var left: float = clampf(op.left(), -hx + _OPENING_MARGIN, hx - _OPENING_MARGIN)
+		var right: float = clampf(op.right(), -hx + _OPENING_MARGIN, hx - _OPENING_MARGIN)
+		if right - left < _OPENING_MARGIN:
+			continue
+
+		var local_bottom: float = clampf(op.local_bottom(hy), -hy + _OPENING_MARGIN, hy - _OPENING_MARGIN)
+		var local_top: float = clampf(op.local_top(hy), -hy + _OPENING_MARGIN, hy - _OPENING_MARGIN)
+		if local_top - local_bottom < _OPENING_MARGIN:
+			continue
+
+		result.append(Opening.new(
+			(left + right) * 0.5, right - left,
+			local_bottom + hy, local_top - local_bottom))
+	return result
 
 
 ## Prevents runaway or inverted geometry for very short walls / extreme

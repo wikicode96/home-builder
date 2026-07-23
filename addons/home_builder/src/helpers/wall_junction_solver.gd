@@ -91,6 +91,9 @@ class _HalfEdge:
 
 ## Solves all junctions under [param wall_parent]. Returns per-wall cap
 ## offsets and a list of fill polygons (one per junction gap needing cover).
+## [param wall_parent] may also contain non-wall siblings (floor slabs,
+## roof, stairs, fences all live under the same per-floor node) — only
+## HBWall children take part in the solve.
 static func solve(wall_parent: Node3D) -> SolveResult:
 	var result := SolveResult.new()
 	if wall_parent == null:
@@ -105,7 +108,7 @@ static func solve(wall_parent: Node3D) -> SolveResult:
 	var wall_thk := {}   # StaticBody3D -> float
 
 	for child in wall_parent.get_children():
-		if not (child is StaticBody3D):
+		if not (child is HBWall):
 			continue
 		var b: StaticBody3D = child
 		var body_len := WallHelper.get_wall_length(b)

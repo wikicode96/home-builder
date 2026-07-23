@@ -70,7 +70,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 # ── Placement ────────────────────────────────────────────────────────────────
 
 func place_wall(start: Vector3, end: Vector3, floor_base_y: float) -> void:
-	var wall_parent: Node3D = _plugin.get_or_create_parent_node("Walls_%d" % _plugin.active_floor)
+	var wall_parent: Node3D = _plugin.get_or_create_floor_node(_plugin.active_floor)
 	if wall_parent == null:
 		return
 
@@ -166,7 +166,7 @@ static func _rebuild_junction_fills(wall_parent: Node3D, fills: Array) -> void:
 	# local Y = ±height/2 aligns with the wall top and bottom in world.
 	var wall_centre_y := height * 0.5
 	for child in wall_parent.get_children():
-		if child is StaticBody3D:
+		if child is HBWall:
 			wall_centre_y = child.position.y
 			break
 	fill_node.position = Vector3(0.0, wall_centre_y, 0.0)

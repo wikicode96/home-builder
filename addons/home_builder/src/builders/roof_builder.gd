@@ -112,7 +112,7 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 	)
 	var pitch: float = dock.roof_pitch if dock != null else 1.5
 
-	var roof_parent: Node3D = _plugin.get_or_create_parent_node("Roof_%d" % active_floor)
+	var roof_parent: Node3D = _plugin.get_or_create_floor_node(active_floor)
 	if roof_parent == null:
 		return
 

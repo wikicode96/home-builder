@@ -174,7 +174,7 @@ func _update_ghost(start: Vector3, cursor: Vector3, floor_base_y: float) -> void
 # ── Placement ────────────────────────────────────────────────────────────────
 
 func _place_stairs(start: Vector3, dir_hint: Vector3, floor_base_y: float) -> void:
-	var stairs_parent: Node3D = _plugin.get_or_create_parent_node("Stairs_%d" % _plugin.active_floor)
+	var stairs_parent: Node3D = _plugin.get_or_create_floor_node(_plugin.active_floor)
 	if stairs_parent == null:
 		return
 

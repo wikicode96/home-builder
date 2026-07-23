@@ -121,7 +121,7 @@ func _place_fence(start: Vector3, end: Vector3, axis: Axis, floor_base_y: float)
 	if n_modules <= 0:
 		return
 
-	var fence_parent: Node3D = _plugin.get_or_create_parent_node("Fences_%d" % _plugin.active_floor)
+	var fence_parent: Node3D = _plugin.get_or_create_floor_node(_plugin.active_floor)
 	if fence_parent == null:
 		return
 

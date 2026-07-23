@@ -104,5 +104,9 @@ func _apply_materials() -> void:
 		MaterialHelper.or_default_textured(top_material, _DEFAULT_FACE_TEXTURE))
 	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_BOTTOM,
 		MaterialHelper.or_default_textured(bottom_material, _DEFAULT_FACE_TEXTURE))
-	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
-		MaterialHelper.or_default_textured(sides_material, _DEFAULT_EDGE_TEXTURE))
+	# HIP roofs have no "sides" surface — see RoofMeshBuilder.build — so the
+	# mesh only has 2 surfaces for that type; setting index 2 would error.
+	var mesh := _mesh.mesh
+	if mesh != null and mesh.get_surface_count() > RoofMeshBuilder.SURFACE_SIDES:
+		_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
+			MaterialHelper.or_default_textured(sides_material, _DEFAULT_EDGE_TEXTURE))

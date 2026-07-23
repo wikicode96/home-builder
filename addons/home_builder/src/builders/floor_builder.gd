@@ -102,7 +102,7 @@ func _fill_floor_rect(a: Vector3, b: Vector3, floor_base_y: float, active_floor:
 	var cols := bounds.size.x * 0.5
 	var rows := bounds.size.y * 0.5
 
-	var floor_parent: Node3D = _plugin.get_or_create_parent_node("Floor_%d" % active_floor)
+	var floor_parent: Node3D = _plugin.get_or_create_floor_node(active_floor)
 	if floor_parent == null:
 		return
 

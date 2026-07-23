@@ -523,15 +523,16 @@ static func _set_owner_recursive(node: Node, owner: Node) -> void:
 		_set_owner_recursive(child, owner)
 
 
-## Returns true when the node is inside a Stairs_*, Fences_*, or Floor_*
-## subtree, so it gets skipped in LOD1 to reduce polygon count at distance.
+## Returns true when the node is inside an HBStairs, HBFence, or
+## HBFloorSlab, so it gets skipped in LOD1 to reduce polygon count at
+## distance. Checked by node TYPE rather than by container name — walls,
+## floor slabs, roof, stairs and fences are all siblings under the same
+## per-floor "Floor_%d" node, so the container name alone can no longer
+## tell them apart.
 static func _is_lod1_excluded(node: Node) -> bool:
 	var current := node.get_parent()
 	while current != null and is_instance_valid(current):
-		var current_name := String(current.name)
-		if current_name.begins_with("Stairs_") \
-				or current_name.begins_with("Fences_") \
-				or current_name.begins_with("Floor_"):
+		if current is HBStairs or current is HBFence or current is HBFloorSlab:
 			return true
 		current = current.get_parent()
 	return false
@@ -554,13 +555,13 @@ static func _get_simplified_wall_mesh(mi: MeshInstance3D) -> ArrayMesh:
 	return null
 
 
-## Returns true when the node is a step mesh inside a Stairs_* subtree.
-## Used to exclude stair visuals from the collision mesh — the ramp
+## Returns true when the node is a step mesh inside an HBStairs. Used to
+## exclude stair visuals from the collision mesh — the ramp
 ## ConvexPolygonShape3D handles walkability instead.
 static func _is_stairs_mesh(node: Node) -> bool:
 	var current := node.get_parent()
 	while current != null and is_instance_valid(current):
-		if String(current.name).begins_with("Stairs_"):
+		if current is HBStairs:
 			return true
 		current = current.get_parent()
 	return false

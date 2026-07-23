@@ -49,7 +49,14 @@ static func build(type: RoofType, w: float, d: float, pitch: float, dir: RoofDir
 	var mesh := ArrayMesh.new()
 	MeshHelper.add_surface(mesh, top)
 	MeshHelper.add_surface(mesh, bot)
-	MeshHelper.add_surface(mesh, sides)
+	# HIP roofs have no vertical gable ends — every side is a sloped face
+	# that's already part of "top" — so _build_hip never writes to `sides`
+	# and committing it here would try to generate_tangents() on an empty
+	# SurfaceTool ("UVs are required to generate tangents") and silently
+	# produce no third surface, leaving SURFACE_SIDES out of bounds for
+	# HBRoof._apply_materials. Only commit it when it actually has geometry.
+	if type != RoofType.HIP:
+		MeshHelper.add_surface(mesh, sides)
 	return mesh
 
 

@@ -163,11 +163,11 @@ func _forward_3d_gui_input(viewport_camera: Camera3D, event: InputEvent) -> int:
 		BuildMode.DOORS:
 			return _opening_builder.handle_input(
 				viewport_camera, event, true,
-				get_or_create_parent_node("Walls_%d" % _active_floor))
+				get_or_create_floor_node(_active_floor))
 		BuildMode.WINDOWS:
 			return _opening_builder.handle_input(
 				viewport_camera, event, false,
-				get_or_create_parent_node("Walls_%d" % _active_floor))
+				get_or_create_floor_node(_active_floor))
 		BuildMode.STAIRS:
 			return _stairs_builder.handle_input(viewport_camera, event, floor_base_y)
 		BuildMode.FENCES:
@@ -232,14 +232,13 @@ func _update_node_visibility() -> void:
 		child.visible = node_index <= _active_floor
 
 
-## Returns the floor index encoded in a builder-created node name
-## ("Walls_1", "Floor_0", ...), or null for any other node.
+## Returns the floor index encoded in a builder-created floor node name
+## ("Floor_1", "Floor_0", ...), or null for any other node.
 static func _parse_node_index(node_name: String) -> Variant:
-	for prefix in ["Floor_", "Walls_", "Stairs_", "Roof_", "Fences_"]:
-		if node_name.begins_with(prefix):
-			var suffix := node_name.substr(prefix.length())
-			if suffix.is_valid_int():
-				return suffix.to_int()
+	if node_name.begins_with(_FLOOR_NODE_PREFIX):
+		var suffix := node_name.substr(_FLOOR_NODE_PREFIX.length())
+		if suffix.is_valid_int():
+			return suffix.to_int()
 	return null
 
 
@@ -288,15 +287,22 @@ func _on_bake_requested() -> void:
 
 # ── Helpers used by builders ─────────────────────────────────────────────────
 
-func get_or_create_parent_node(parent_name: String) -> Node3D:
+## Every builder-created element for a floor — walls, floor slab, roof,
+## stairs, fences — lives directly under a single "Floor_%d" node instead of
+## a separate per-type container, so switching floors and building the
+## scene tree don't scatter half a dozen near-empty Node3Ds per floor.
+const _FLOOR_NODE_PREFIX := "Floor_"
+
+func get_or_create_floor_node(floor_index: int) -> Node3D:
 	var scene := EditorInterface.get_edited_scene_root() as Node3D
 	if scene == null:
 		return null
 
-	var parent := scene.get_node_or_null(parent_name) as Node3D
+	var node_name := "%s%d" % [_FLOOR_NODE_PREFIX, floor_index]
+	var parent := scene.get_node_or_null(node_name) as Node3D
 	if parent == null:
 		parent = Node3D.new()
-		parent.name = parent_name
+		parent.name = node_name
 		scene.add_child(parent)
 		parent.owner = scene
 	return parent
