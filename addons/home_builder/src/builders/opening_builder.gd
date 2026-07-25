@@ -168,7 +168,8 @@ func _place_asset(wall_body: StaticBody3D, opening: WallMeshBuilder.Opening, is_
 		return
 
 	var wall_h := WallHelper.get_wall_height(wall_body)
-	var base_local_y := opening.bottom_y - wall_h * 0.5
+	var anchor_y := opening.bottom_y if is_door else (opening.bottom_y + opening.height * 0.5)
+	var local_y := anchor_y - wall_h * 0.5
 
 	instance.name = "Door_001" if is_door else "Window_001"
 
@@ -178,5 +179,5 @@ func _place_asset(wall_body: StaticBody3D, opening: WallMeshBuilder.Opening, is_
 	var scene_root := EditorInterface.get_edited_scene_root()
 	wall_body.add_child(instance, true)
 	instance.owner = scene_root
-	instance.position = Vector3(opening.center_x, base_local_y, 0.0)
+	instance.position = Vector3(opening.center_x, local_y, 0.0)
 	instance.basis = Basis.IDENTITY
