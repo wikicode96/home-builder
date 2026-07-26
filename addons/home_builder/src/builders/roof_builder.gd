@@ -143,6 +143,9 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 	body.top_material = dock.roof_top_material if dock != null else null
 	body.bottom_material = dock.roof_bottom_material if dock != null else null
 	body.sides_material = dock.roof_sides_material if dock != null else null
+	body.end_face_a_material = dock.roof_end_face_a_material if dock != null else null
+	body.end_face_b_material = dock.roof_end_face_b_material if dock != null else null
+	body.end_edges_material = dock.roof_end_edges_material if dock != null else null
 
 	# force_readable_name = true so name collisions increment the trailing
 	# number (HBRoof_002, …) instead of "@StaticBody3D@NN".

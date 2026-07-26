@@ -487,7 +487,7 @@ size_flags_horizontal = 3
 visible = false
 layout_mode = 0
 anchor_right = 1.0
-offset_bottom = 130.0
+offset_bottom = 190.0
 grow_horizontal = 2
 theme_override_constants/separation = 6
 
@@ -575,7 +575,6 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
 [node name="EaveLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/EaveRow" unique_id=5000000091]
-modulate = Color(1, 1, 1, 0.4)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
@@ -587,7 +586,6 @@ size_flags_horizontal = 3
 max_value = 3.0
 step = 0.05
 value = 0.4
-editable = false
 suffix = "m"
 
 [node name="RoofThicknessRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow" unique_id=5000000093]
@@ -596,7 +594,6 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
 [node name="RoofThicknessLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/RoofThicknessRow" unique_id=5000000094]
-modulate = Color(1, 1, 1, 0.4)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 theme_override_font_sizes/font_size = 11
@@ -609,7 +606,6 @@ min_value = 0.01
 max_value = 1.0
 step = 0.05
 value = 0.2
-editable = false
 suffix = "m"
 
 [node name="MaterialsRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials" unique_id=1818790487]
@@ -659,6 +655,57 @@ theme_override_font_sizes/font_size = 11
 text = "Material Lateral"
 
 [node name="SidesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/MaterialsRow/SidesRow" unique_id=637112245]
+layout_mode = 2
+size_flags_horizontal = 3
+
+
+[node name="EndMaterialsRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials" unique_id=5000000096]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="EndFaceARow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow" unique_id=5000000097]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="EndFaceALabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow/EndFaceARow" unique_id=5000000098]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Hastial Cara A"
+
+[node name="EndFaceAPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow/EndFaceARow" unique_id=5000000099]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EndFaceBRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow" unique_id=5000000100]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="EndFaceBLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow/EndFaceBRow" unique_id=5000000101]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Hastial Cara B"
+
+[node name="EndFaceBPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow/EndFaceBRow" unique_id=5000000102]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EndEdgesRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow" unique_id=5000000103]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="EndEdgesLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow/EndEdgesRow" unique_id=5000000104]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Hastial Canto"
+
+[node name="EndEdgesPicker" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/EndMaterialsRow/EndEdgesRow" unique_id=5000000105]
 layout_mode = 2
 size_flags_horizontal = 3
 

@@ -59,6 +59,10 @@ var _stair_sides_picker: EditorResourcePicker
 var _roof_top_picker: EditorResourcePicker
 var _roof_bottom_picker: EditorResourcePicker
 var _roof_sides_picker: EditorResourcePicker
+var _roof_end_face_a_picker: EditorResourcePicker
+var _roof_end_face_b_picker: EditorResourcePicker
+var _roof_end_edges_picker: EditorResourcePicker
+var _roof_end_materials_row: Container
 var _roof_type_option: OptionButton
 var _roof_direction_option: OptionButton
 var _roof_pitch_spin: SpinBox
@@ -66,8 +70,6 @@ var _roof_eave_spin: SpinBox
 var _roof_thickness_spin: SpinBox
 var _roof_direction_label: Label
 var _roof_pitch_label: Label
-var _roof_eave_label: Label
-var _roof_thickness_label: Label
 
 # Wall config spins
 var _wall_height_spin: SpinBox
@@ -148,6 +150,12 @@ var roof_bottom_material: Material:
 	get: return (_roof_bottom_picker.edited_resource as Material) if _roof_bottom_picker != null else null
 var roof_sides_material: Material:
 	get: return (_roof_sides_picker.edited_resource as Material) if _roof_sides_picker != null else null
+var roof_end_face_a_material: Material:
+	get: return (_roof_end_face_a_picker.edited_resource as Material) if _roof_end_face_a_picker != null else null
+var roof_end_face_b_material: Material:
+	get: return (_roof_end_face_b_picker.edited_resource as Material) if _roof_end_face_b_picker != null else null
+var roof_end_edges_material: Material:
+	get: return (_roof_end_edges_picker.edited_resource as Material) if _roof_end_edges_picker != null else null
 var selected_roof_type: int:  # RoofMeshBuilder.RoofType
 	get: return _roof_type_option.selected if _roof_type_option != null else 0
 var selected_roof_direction: int:  # RoofMeshBuilder.RoofDirection
@@ -260,14 +268,13 @@ func _ready() -> void:
 		_STACK + "/RoofMaterials/ConfigRow/RoofThicknessRow/RoofThicknessSpin")
 	_roof_direction_label = get_node(_STACK + "/RoofMaterials/ConfigRow/DirectionRow/DirectionLabel")
 	_roof_pitch_label = get_node(_STACK + "/RoofMaterials/ConfigRow/PitchRow/PitchLabel")
-	_roof_eave_label = get_node(_STACK + "/RoofMaterials/ConfigRow/EaveRow/EaveLabel")
-	_roof_thickness_label = get_node(
-		_STACK + "/RoofMaterials/ConfigRow/RoofThicknessRow/RoofThicknessLabel")
+	_roof_end_materials_row = get_node(_STACK + "/RoofMaterials/EndMaterialsRow")
 
 	_populate_roof_type_options()
 	_populate_roof_direction_options()
 	_roof_type_option.item_selected.connect(_on_roof_type_selected)
-	_update_roof_shape_controls()
+	# _update_roof_shape_controls() also gates the gable-end material picker,
+	# which _create_picker only builds further down — so it runs from there.
 
 	# Button group (only one mode active at a time)
 	var group := ButtonGroup.new()
@@ -331,6 +338,11 @@ func _ready() -> void:
 	_roof_top_picker = _create_picker(_STACK + "/RoofMaterials/MaterialsRow/TopRow/TopPicker")
 	_roof_bottom_picker = _create_picker(_STACK + "/RoofMaterials/MaterialsRow/BottomRow/BottomPicker")
 	_roof_sides_picker = _create_picker(_STACK + "/RoofMaterials/MaterialsRow/SidesRow/SidesPicker")
+	var end_row := _STACK + "/RoofMaterials/EndMaterialsRow/"
+	_roof_end_face_a_picker = _create_picker(end_row + "EndFaceARow/EndFaceAPicker")
+	_roof_end_face_b_picker = _create_picker(end_row + "EndFaceBRow/EndFaceBPicker")
+	_roof_end_edges_picker = _create_picker(end_row + "EndEdgesRow/EndEdgesPicker")
+	_update_roof_shape_controls()
 
 	# Door config spins
 	_door_width_spin = get_node(_STACK + "/DoorConfig/ConfigRow/WidthVBox/WidthSpin")
@@ -398,24 +410,23 @@ func _populate_roof_direction_options() -> void:
 func _update_roof_shape_controls() -> void:
 	var t := selected_roof_type
 	var needs_pitch := t != RoofMeshBuilder.RoofType.FLAT
+	# SHED and GABLE are the two types with an orientation, and also the two
+	# with vertical end walls. Kept as separate names because those are two
+	# different reasons that happen to coincide today.
 	var needs_direction := (
 		t == RoofMeshBuilder.RoofType.SHED or t == RoofMeshBuilder.RoofType.GABLE
 	)
-	# Only HIP prolongs its slopes into an eave and builds them as a solid so
-	# far; widen this as the other types get the same treatment.
-	var needs_eave := t == RoofMeshBuilder.RoofType.HIP
-	var needs_thickness := needs_eave
-
+	var has_ends := (
+		t == RoofMeshBuilder.RoofType.SHED or t == RoofMeshBuilder.RoofType.GABLE
+	)
 	_roof_pitch_spin.editable = needs_pitch
 	_roof_pitch_label.modulate = Color.WHITE if needs_pitch else Color(1, 1, 1, 0.4)
 	_roof_direction_option.disabled = not needs_direction
 	_roof_direction_label.modulate = Color.WHITE if needs_direction else Color(1, 1, 1, 0.4)
-	_roof_eave_spin.editable = needs_eave
-	_roof_eave_label.modulate = Color.WHITE if needs_eave else Color(1, 1, 1, 0.4)
-	_roof_thickness_spin.editable = needs_thickness
-	_roof_thickness_label.modulate = (
-		Color.WHITE if needs_thickness else Color(1, 1, 1, 0.4)
-	)
+	# Eave and thickness apply to every type. The gable-end materials only
+	# exist for SHED and GABLE, so that whole row folds away for the others
+	# rather than sitting there greyed out.
+	_roof_end_materials_row.visible = has_ends
 
 
 func _create_picker(container_path: String, base_type: String = "Material") -> EditorResourcePicker:

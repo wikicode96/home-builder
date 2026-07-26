@@ -14,9 +14,16 @@ const DEFAULT_EAVE := 0.4
 ## 0.2 gives the eave a visible fascia without looking like a slab.
 const DEFAULT_THICKNESS := 0.2
 
+## Gable ends continue the wall below them, so this defaults to the same
+## thickness WallBuilder gives a wall.
+const DEFAULT_END_THICKNESS := 0.1
+
 @export var roof_type: RoofMeshBuilder.RoofType = RoofMeshBuilder.RoofType.FLAT:
 	set(value):
 		roof_type = value
+		# Which properties are meaningful depends on the type — see
+		# _validate_property — so the Inspector has to redraw its list.
+		notify_property_list_changed()
 		_rebuild()
 @export var direction: RoofMeshBuilder.RoofDirection = RoofMeshBuilder.RoofDirection.NORTH:
 	set(value):
@@ -44,10 +51,18 @@ const DEFAULT_THICKNESS := 0.2
 		_rebuild()
 ## Roof thickness, in metres, measured perpendicular to the slope. The slope
 ## faces become the underside and a second shell is raised above them, so the
-## ridge rises by slightly more than this. Only HIP honours it for now.
+## ridge rises by slightly more than this.
 @export var thickness: float = DEFAULT_THICKNESS:
 	set(value):
 		thickness = value
+		_rebuild()
+## Thickness of the vertical end walls — SHED's back wall and side triangles,
+## GABLE's two gable ends. Ignored by FLAT and HIP, which have none. Kept out
+## of the dock because it should just match the walls below rather than be
+## tuned per roof.
+@export var end_thickness: float = DEFAULT_END_THICKNESS:
+	set(value):
+		end_thickness = value
 		_rebuild()
 
 @export_group("Materials")
@@ -63,9 +78,46 @@ const DEFAULT_THICKNESS := 0.2
 	set(value):
 		sides_material = value
 		_apply_materials()
+@export var end_face_a_material: Material:
+	set(value):
+		end_face_a_material = value
+		_apply_materials()
+@export var end_face_b_material: Material:
+	set(value):
+		end_face_b_material = value
+		_apply_materials()
+@export var end_edges_material: Material:
+	set(value):
+		end_edges_material = value
+		_apply_materials()
 
 var _mesh: MeshInstance3D
 var _shape: CollisionShape3D
+
+
+## Hides the properties a given type ignores, so the Inspector doesn't offer
+## knobs that do nothing — a gable-end material on a hip roof, a direction on
+## a shape that is rotationally symmetric, a pitch on a flat roof. Uses
+## PROPERTY_USAGE_NO_EDITOR rather than dropping the property outright, so a
+## value set for one type survives switching away and back.
+func _validate_property(property: Dictionary) -> void:
+	var has_ends := (
+		roof_type == RoofMeshBuilder.RoofType.SHED
+		or roof_type == RoofMeshBuilder.RoofType.GABLE
+	)
+	var hide := false
+	match property.name:
+		"end_thickness", "end_face_a_material", "end_face_b_material", \
+		"end_edges_material":
+			hide = not has_ends
+		"pitch":
+			hide = roof_type == RoofMeshBuilder.RoofType.FLAT
+		"direction":
+			# Only SHED and GABLE have an orientation; FLAT is symmetric and
+			# HIP orients itself along the longest side.
+			hide = not has_ends
+	if hide:
+		property.usage = PROPERTY_USAGE_NO_EDITOR
 
 
 func _ready() -> void:
@@ -83,7 +135,7 @@ func _rebuild() -> void:
 		return
 	_ensure_children()
 	var mesh := RoofMeshBuilder.build(
-		roof_type, width, depth, pitch, direction, eave, thickness)
+		roof_type, width, depth, pitch, direction, eave, thickness, end_thickness)
 	_mesh.mesh = mesh
 	_apply_materials()
 	_shape.shape = mesh.create_trimesh_shape()
@@ -124,9 +176,29 @@ const _DEFAULT_EDGE_TEXTURE := "res://addons/home_builder/textures/red.png"
 func _apply_materials() -> void:
 	if _mesh == null or not is_instance_valid(_mesh):
 		return
-	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_TOP,
-		MaterialHelper.or_default_textured(top_material, _DEFAULT_FACE_TEXTURE))
-	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_BOTTOM,
-		MaterialHelper.or_default_textured(bottom_material, _DEFAULT_FACE_TEXTURE))
-	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
-		MaterialHelper.or_default_textured(sides_material, _DEFAULT_EDGE_TEXTURE))
+	var mesh := _mesh.mesh
+	if mesh == null:
+		return
+	# Which surfaces exist depends on the roof type — FLAT and HIP have no
+	# ENDS — so walk the builder's layout instead of assuming fixed indices.
+	var layout := RoofMeshBuilder.surface_layout(roof_type)
+	for i in mini(layout.size(), mesh.get_surface_count()):
+		var material: Material
+		var fallback := _DEFAULT_FACE_TEXTURE
+		match layout[i]:
+			RoofMeshBuilder.Surface.TOP:
+				material = top_material
+			RoofMeshBuilder.Surface.BOTTOM:
+				material = bottom_material
+			RoofMeshBuilder.Surface.END_FACE_A:
+				material = end_face_a_material
+			RoofMeshBuilder.Surface.END_FACE_B:
+				material = end_face_b_material
+			RoofMeshBuilder.Surface.END_EDGES:
+				material = end_edges_material
+				fallback = _DEFAULT_EDGE_TEXTURE
+			_:
+				material = sides_material
+				fallback = _DEFAULT_EDGE_TEXTURE
+		_mesh.set_surface_override_material(i,
+			MaterialHelper.or_default_textured(material, fallback))

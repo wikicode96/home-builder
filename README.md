@@ -50,13 +50,17 @@ Hold and drag in the viewport to define the roof footprint on the active floor. 
 - **Flat**
 - **Shed** — configurable: direction and pitch
 - **Gable** — configurable: direction and pitch
-- **Hip** — configurable: pitch, eave and thickness. The ridge is automatically oriented along the longest side of the rectangle.
+- **Hip** — the ridge is automatically oriented along the longest side of the rectangle.
 
-**Eave** (hip roofs only, for now) prolongs the slope faces outward past the footprint at the same pitch, so the roof overhangs the facade instead of dying flush with it. It is independent of width/depth/pitch: resize the roof with the gizmo and the same overhang is regenerated off the new edge. `0` gives the flush roof. Default is 0.4 m.
+Every type is also configurable by **eave** and **thickness**, and none of them has a horizontal base.
 
-**Thickness** (hip roofs only, for now) turns the roof into a solid instead of a single-sided skin: the slope faces become the soffit you see from below, a second shell is raised above them, and a vertical band around the eave closes the two. It is measured perpendicular to the slope, so the ridge ends up slightly higher than the value itself. Default is 0.2 m. The three material slots map to outer skin / soffit / eave band.
+**Eave** prolongs the slope faces outward past the footprint at the same pitch, so the roof overhangs the facade instead of dying flush with it. It is independent of width/depth/pitch: resize the roof with the gizmo and the same overhang is regenerated off the new edge. `0` gives the flush roof. Default is 0.4 m. On a gable it drives both the eave proper and the rake overhang over the gable ends; on a flat roof it simply widens the slab.
 
-Hip roofs have **no horizontal base** — the slopes are all there is — so the space below is yours to fill: leave the top storey's walls bare, add a floor slab and a staircase for an attic, or drop in a ceiling.
+**Thickness** makes the roof a solid instead of a single-sided skin: the slope faces become the soffit you see from below, a second shell is raised above them, and a band around the perimeter closes the two. It is measured perpendicular to the slope, so the ridge ends up slightly higher than the value itself. Default is 0.2 m.
+
+**No horizontal base** — the slopes are all there is — so the space below is yours to fill: leave the top storey's walls bare, add a floor slab and a staircase for an attic, or drop in a ceiling.
+
+Material slots are outer skin / soffit / perimeter band. Shed and gable roofs additionally have **end walls** — the shed's back wall and side triangles, the gable's two ends — which are real solids and therefore get the same three slots a wall does: face A (outward), face B (inward) and edge. They sit at the footprint edge with the roof flying over them, so they line up with the walls below; their thickness is an inspector-only property on the node (`end_thickness`, default 0.1 m) since it should just match the walls rather than be tuned per roof. Flat and hip roofs have no end walls, so that whole row disappears from the panel and those properties are hidden in the Inspector.
 
 ### Fences / Railings
 - First click: starting corner of the segment.
