@@ -243,22 +243,26 @@ static func _emit_shed_band(st: SurfaceTool, w: float, d: float, p: float,
 
 ## Back wall and the two side triangles, at the footprint edge with the roof
 ## overhanging them — so they line up with the walls below, not with the eave.
+##
+## These three prisms meet at the two vertical edges (0,·,0) and (w,·,0), so
+## the rim quad each would draw there is skipped on both sides of every such
+## edge (see _emit_end_prism's [param skip_rim] doc).
 static func _emit_shed_ends(tools: Dictionary, w: float, d: float, p: float,
 		et: float, tf: Transform3D) -> void:
 	_emit_end_prism(tools, tf,
 		[Vector3(w, 0, 0), Vector3(0, 0, 0), Vector3(0, p, 0), Vector3(w, p, 0)],
 		[Vector2(0, 0), Vector2(w, 0), Vector2(w, p), Vector2(0, p)],
-		Vector3(0, 0, -1), et, w)
+		Vector3(0, 0, -1), et, w, [1, 3])
 
 	_emit_end_prism(tools, tf,
 		[Vector3(0, 0, 0), Vector3(0, 0, d), Vector3(0, p, 0)],
 		[Vector2(0, 0), Vector2(d, 0), Vector2(0, p)],
-		Vector3(-1, 0, 0), et, d)
+		Vector3(-1, 0, 0), et, d, [2])
 
 	_emit_end_prism(tools, tf,
 		[Vector3(w, 0, d), Vector3(w, 0, 0), Vector3(w, p, 0)],
 		[Vector2(0, 0), Vector2(d, 0), Vector2(d, p)],
-		Vector3(1, 0, 0), et, d)
+		Vector3(1, 0, 0), et, d, [1])
 
 
 # ── Gable — ridge along X at z = d/2 ─────────────────────────────────────────
@@ -553,9 +557,24 @@ static func _mirror_u(uv: Vector2, span: float) -> Vector2:
 ## [param uvs] matches it one-for-one. The outward face, the inward face and
 ## the rim go to three separate surfaces, mirroring how HBWall splits a wall
 ## into Face A, Face B and Edges, so each side can be painted on its own.
+##
+## [param skip_rim] lists edge indices (into [param poly]) whose rim quad to
+## omit. SHED's back wall and its two side triangles are three independent
+## prisms meeting at right angles at the footprint corners — without this,
+## each one's rim there is coplanar with, and entirely covered by, the
+## neighbouring prism's own face_a, exactly the way two HBWalls without a
+## WallJunctionSolver miter would overlap through their shared thickness. The
+## fix is the mirror image of a miter: instead of computing a diagonal cut,
+## just don't draw the redundant duplicate face. This leaves a sliver at the
+## very top of the corner uncovered — the neighbour's face_a only reaches the
+## ridgeline, while the skipped rim quad was flat — but it's bounded by
+## et·pitch/depth, a few millimetres for the addon's usual proportions, right
+## at the corner where the roof skin sits above it; not worth a true mitered
+## cut for that. GABLE's two ends sit at opposite corners of the building and
+## never share an edge, so they never need this.
 static func _emit_end_prism(tools: Dictionary, tf: Transform3D,
 		poly: Array, uvs: Array, normal: Vector3, et: float,
-		u_span: float) -> void:
+		u_span: float, skip_rim: Array = []) -> void:
 	var face_a: SurfaceTool = tools[Surface.END_FACE_A]
 	var face_b: SurfaceTool = tools[Surface.END_FACE_B]
 	var edges: SurfaceTool = tools[Surface.END_EDGES]
@@ -585,6 +604,8 @@ static func _emit_end_prism(tools: Dictionary, tf: Transform3D,
 	# Rim: one quad per edge of the outline. `edge × normal` points away from
 	# the outline for a CCW winding, which is the outward direction we need.
 	for i in n:
+		if skip_rim.has(i):
+			continue
 		var a: Vector3 = poly[i]
 		var b: Vector3 = poly[(i + 1) % n]
 		var edge := b - a
