@@ -62,8 +62,12 @@ var _roof_sides_picker: EditorResourcePicker
 var _roof_type_option: OptionButton
 var _roof_direction_option: OptionButton
 var _roof_pitch_spin: SpinBox
+var _roof_eave_spin: SpinBox
+var _roof_thickness_spin: SpinBox
 var _roof_direction_label: Label
 var _roof_pitch_label: Label
+var _roof_eave_label: Label
+var _roof_thickness_label: Label
 
 # Wall config spins
 var _wall_height_spin: SpinBox
@@ -150,6 +154,13 @@ var selected_roof_direction: int:  # RoofMeshBuilder.RoofDirection
 	get: return _roof_direction_option.selected if _roof_direction_option != null else 0
 var roof_pitch: float:
 	get: return _roof_pitch_spin.value if _roof_pitch_spin != null else 1.5
+var roof_eave: float:
+	get: return _roof_eave_spin.value if _roof_eave_spin != null else HBRoof.DEFAULT_EAVE
+var roof_thickness: float:
+	get: return (
+		_roof_thickness_spin.value if _roof_thickness_spin != null
+		else HBRoof.DEFAULT_THICKNESS
+	)
 
 # ── Wall config ──────────────────────────────────────────────────────────────
 var wall_height: float:
@@ -244,8 +255,14 @@ func _ready() -> void:
 	_roof_type_option = get_node(_STACK + "/RoofMaterials/ConfigRow/TypeRow/TypeOption")
 	_roof_direction_option = get_node(_STACK + "/RoofMaterials/ConfigRow/DirectionRow/DirectionOption")
 	_roof_pitch_spin = get_node(_STACK + "/RoofMaterials/ConfigRow/PitchRow/PitchSpin")
+	_roof_eave_spin = get_node(_STACK + "/RoofMaterials/ConfigRow/EaveRow/EaveSpin")
+	_roof_thickness_spin = get_node(
+		_STACK + "/RoofMaterials/ConfigRow/RoofThicknessRow/RoofThicknessSpin")
 	_roof_direction_label = get_node(_STACK + "/RoofMaterials/ConfigRow/DirectionRow/DirectionLabel")
 	_roof_pitch_label = get_node(_STACK + "/RoofMaterials/ConfigRow/PitchRow/PitchLabel")
+	_roof_eave_label = get_node(_STACK + "/RoofMaterials/ConfigRow/EaveRow/EaveLabel")
+	_roof_thickness_label = get_node(
+		_STACK + "/RoofMaterials/ConfigRow/RoofThicknessRow/RoofThicknessLabel")
 
 	_populate_roof_type_options()
 	_populate_roof_direction_options()
@@ -384,11 +401,21 @@ func _update_roof_shape_controls() -> void:
 	var needs_direction := (
 		t == RoofMeshBuilder.RoofType.SHED or t == RoofMeshBuilder.RoofType.GABLE
 	)
+	# Only HIP prolongs its slopes into an eave and builds them as a solid so
+	# far; widen this as the other types get the same treatment.
+	var needs_eave := t == RoofMeshBuilder.RoofType.HIP
+	var needs_thickness := needs_eave
 
 	_roof_pitch_spin.editable = needs_pitch
 	_roof_pitch_label.modulate = Color.WHITE if needs_pitch else Color(1, 1, 1, 0.4)
 	_roof_direction_option.disabled = not needs_direction
 	_roof_direction_label.modulate = Color.WHITE if needs_direction else Color(1, 1, 1, 0.4)
+	_roof_eave_spin.editable = needs_eave
+	_roof_eave_label.modulate = Color.WHITE if needs_eave else Color(1, 1, 1, 0.4)
+	_roof_thickness_spin.editable = needs_thickness
+	_roof_thickness_label.modulate = (
+		Color.WHITE if needs_thickness else Color(1, 1, 1, 0.4)
+	)
 
 
 func _create_picker(container_path: String, base_type: String = "Material") -> EditorResourcePicker:

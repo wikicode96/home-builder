@@ -3,14 +3,17 @@ class_name RoofMeshBuilder
 extends RefCounted
 
 ## Generates an ArrayMesh for a roof covering a footprint of (w × d).
-## Three surfaces:
-##   0 = top    (slope skin)
-##   1 = bottom (underside)
-##   2 = sides  (gable triangles + back vertical wall on shed roofs)
+## Three surfaces, always in this order:
+##   0 = top    (outward-facing slope skin)
+##   1 = bottom (underside — the flat soffit on FLAT/SHED/GABLE, the inverted
+##               slope shell on HIP)
+##   2 = sides  (gable triangles and the shed's back wall; on HIP, the
+##               vertical band around the eave that closes the two shells)
 ##
 ## Local origin sits at the minimum corner (0, 0, 0). Vertices live in
-## the box (0..w, 0..pitch, 0..d). Direction is applied as a 90° rotation
-## around +Y about the footprint center.
+## the box (0..w, 0..pitch, 0..d) — except for the eave overhang, which
+## prolongs the slope faces outside it. Direction is applied as a 90°
+## rotation around +Y about the footprint center.
 
 enum RoofType { FLAT, SHED, GABLE, HIP }
 enum RoofDirection { NORTH, SOUTH, EAST, WEST }
@@ -21,8 +24,14 @@ const SURFACE_SIDES := 2
 
 const _FLAT_THICKNESS := 0.15
 
+## Coincident inner/outer shells would leave the eave band with zero area,
+## and generate_tangents() fails on a surface with no geometry.
+const _MIN_THICKNESS := 0.01
 
-static func build(type: RoofType, w: float, d: float, pitch: float, dir: RoofDirection) -> ArrayMesh:
+
+static func build(type: RoofType, w: float, d: float, pitch: float,
+		dir: RoofDirection, eave: float = 0.0,
+		thickness: float = 0.0) -> ArrayMesh:
 	var top := SurfaceTool.new()
 	top.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var bot := SurfaceTool.new()
@@ -44,19 +53,12 @@ static func build(type: RoofType, w: float, d: float, pitch: float, dir: RoofDir
 		RoofType.GABLE:
 			_build_gable(top, bot, sides, cw, cd, pitch, tf)
 		RoofType.HIP:
-			_build_hip(top, bot, sides, cw, cd, pitch, tf)
+			_build_hip(top, bot, sides, cw, cd, pitch, eave, thickness, tf)
 
 	var mesh := ArrayMesh.new()
 	MeshHelper.add_surface(mesh, top)
 	MeshHelper.add_surface(mesh, bot)
-	# HIP roofs have no vertical gable ends — every side is a sloped face
-	# that's already part of "top" — so _build_hip never writes to `sides`
-	# and committing it here would try to generate_tangents() on an empty
-	# SurfaceTool ("UVs are required to generate tangents") and silently
-	# produce no third surface, leaving SURFACE_SIDES out of bounds for
-	# HBRoof._apply_materials. Only commit it when it actually has geometry.
-	if type != RoofType.HIP:
-		MeshHelper.add_surface(mesh, sides)
+	MeshHelper.add_surface(mesh, sides)
 	return mesh
 
 
@@ -104,6 +106,10 @@ static func _make_orient(n: int, cw: float, cd: float, w: float, d: float) -> Tr
 
 static func _v(x: float, y: float, z: float, tf: Transform3D) -> Vector3:
 	return tf * Vector3(x, y, z)
+
+
+static func _p(point: Vector3, tf: Transform3D) -> Vector3:
+	return tf * point
 
 
 static func _n(normal: Vector3, tf: Transform3D) -> Vector3:
@@ -230,94 +236,191 @@ static func _build_gable(top: SurfaceTool, bot: SurfaceTool, sides: SurfaceTool,
 
 
 # ── Hip — ridge along longer axis ────────────────────────────────────────────
+#
+# Built as a solid: an inner shell (the soffit, seen from below), an outer
+# shell raised above it, and a vertical band around the eave closing the two
+# together. The result is watertight — the ridge and the hip lines are interior
+# edges where the faces of each shell already meet, so the eave is the only
+# boundary that needs capping.
+#
+# `e` is the eave overhang. It does not resize the roof: pitch, ridge height
+# and ridge position are computed from (w, d, p) exactly as before, and the
+# slope planes are then *prolonged* `e` metres outward in plan, dropping to
+# y = -e·p/a at the eave edge. Because the ridge is inset by the same `a` on
+# both axes, the hip lines run at 45° in plan, so their prolongation passes
+# straight through the corners of the outward-expanded rectangle: the four
+# faces still meet cleanly and only the base corners move.
+#
+# `t` is the thickness measured PERPENDICULAR to the slope, but it is applied
+# as a vertical translation. That works because all four faces share the same
+# pitch (the ridge inset `a` is identical on both axes), so offsetting every
+# plane along its own normal by `t` is the same as raising the whole shell by
+# t·√(a²+p²)/a — the raised faces still meet at the same ridge and hip lines.
+# And since each face is the graph of a function of (x, z), a purely vertical
+# translation can never make the two shells intersect.
+#
+# That same √(a²+p²)/a factor converts plan distance into distance along the
+# slope, which is exactly what the V coordinate needs so a square texture
+# doesn't come out squashed downhill.
 
-static func _build_hip(top: SurfaceTool, bot: SurfaceTool, _sides: SurfaceTool,
-		w: float, d: float, p: float, tf: Transform3D) -> void:
+static func _build_hip(outer: SurfaceTool, inner: SurfaceTool, band: SurfaceTool,
+		w: float, d: float, p: float, e: float, t: float, tf: Transform3D) -> void:
+	var a := (d * 0.5) if w >= d else (w * 0.5)
+
+	# A degenerate footprint (a → 0) makes both the drop and the slope factor
+	# diverge; fall back to a horizontal overhang with plan-projected UVs.
+	var slope := 1.0
+	var drop := 0.0
+	if a > 0.001:
+		slope = sqrt(a * a + p * p) / a
+		drop = e * p / a
+
+	var rise := maxf(t, _MIN_THICKNESS) * slope
+
+	_emit_hip_shell(inner, w, d, p, e, drop, slope, 0.0, true, tf)
+	_emit_hip_shell(outer, w, d, p, e, drop, slope, rise, false, tf)
+	_emit_eave_band(band, w, d, e, drop, rise, tf)
+
+
+## One slope shell: four faces meeting at the ridge and along the hip lines,
+## its eave edge at y = y_offset - drop. With [param flip] the winding, the
+## normals and the U axis are all reversed, so the same definition serves as
+## the inverted soffit — the same trick WallMeshBuilder._build_face uses to
+## turn Face A into Face B.
+static func _emit_hip_shell(st: SurfaceTool, w: float, d: float, p: float,
+		e: float, drop: float, slope: float, y_offset: float, flip: bool,
+		tf: Transform3D) -> void:
 	var ridge_along_x := w >= d
-	var a := d * 0.5 if ridge_along_x else w * 0.5
+	var a := (d * 0.5) if ridge_along_x else (w * 0.5)
+	var ridge_y := p + y_offset
 
 	var ridge_lo: Vector3
 	var ridge_hi: Vector3
 	if ridge_along_x:
-		ridge_lo = Vector3(a, p, a)
-		ridge_hi = Vector3(w - a, p, a)
+		ridge_lo = Vector3(a, ridge_y, a)
+		ridge_hi = Vector3(w - a, ridge_y, a)
 	else:
-		ridge_lo = Vector3(a, p, a)
-		ridge_hi = Vector3(a, p, d - a)
+		ridge_lo = Vector3(a, ridge_y, a)
+		ridge_hi = Vector3(a, ridge_y, d - a)
 
-	var c00 := Vector3(0, 0, 0)
-	var c10 := Vector3(w, 0, 0)
-	var c11 := Vector3(w, 0, d)
-	var c01 := Vector3(0, 0, d)
+	var eave_y := y_offset - drop
+	var c00 := Vector3(-e, eave_y, -e)
+	var c10 := Vector3(w + e, eave_y, -e)
+	var c11 := Vector3(w + e, eave_y, d + e)
+	var c01 := Vector3(-e, eave_y, d + e)
+
+	# V is the distance from the ridge measured ALONG the slope, on all four
+	# faces alike, so tile courses line up across the hip lines. U is the plan
+	# coordinate running along the eave; it necessarily breaks at the hips — a
+	# hip roof has no seamless unwrap, and real tiles are cut there too.
+	var v_eave := (a + e) * slope
 
 	if ridge_along_x:
 		# Front trapezoid (+Z)
-		MeshHelper.add_quad(top,
-			_v(c01.x, c01.y, c01.z, tf), _v(c11.x, c11.y, c11.z, tf),
-			_v(ridge_hi.x, ridge_hi.y, ridge_hi.z, tf),
-			_v(ridge_lo.x, ridge_lo.y, ridge_lo.z, tf),
-			_n(Vector3(0, a, p).normalized(), tf),
-			Vector2(0, a), Vector2(w, a),
+		_shell_quad(st, flip, w, tf,
+			c01, c11, ridge_hi, ridge_lo,
+			Vector3(0, a, p).normalized(),
+			Vector2(-e, v_eave), Vector2(w + e, v_eave),
 			Vector2(w - a, 0), Vector2(a, 0))
 
 		# Back trapezoid (-Z)
-		MeshHelper.add_quad(top,
-			_v(c10.x, c10.y, c10.z, tf), _v(c00.x, c00.y, c00.z, tf),
-			_v(ridge_lo.x, ridge_lo.y, ridge_lo.z, tf),
-			_v(ridge_hi.x, ridge_hi.y, ridge_hi.z, tf),
-			_n(Vector3(0, a, -p).normalized(), tf),
-			Vector2(0, a), Vector2(w, a),
+		_shell_quad(st, flip, w, tf,
+			c10, c00, ridge_lo, ridge_hi,
+			Vector3(0, a, -p).normalized(),
+			Vector2(-e, v_eave), Vector2(w + e, v_eave),
 			Vector2(w - a, 0), Vector2(a, 0))
 
 		# Left triangle (-X)
-		MeshHelper.add_triangle(top,
-			_v(c00.x, c00.y, c00.z, tf), _v(c01.x, c01.y, c01.z, tf),
-			_v(ridge_lo.x, ridge_lo.y, ridge_lo.z, tf),
-			_n(Vector3(-p, a, 0).normalized(), tf),
-			Vector2(0, 0), Vector2(d, 0), Vector2(a, p))
+		_shell_triangle(st, flip, d, tf,
+			c00, c01, ridge_lo,
+			Vector3(-p, a, 0).normalized(),
+			Vector2(-e, v_eave), Vector2(d + e, v_eave), Vector2(a, 0))
 
 		# Right triangle (+X)
-		MeshHelper.add_triangle(top,
-			_v(c11.x, c11.y, c11.z, tf), _v(c10.x, c10.y, c10.z, tf),
-			_v(ridge_hi.x, ridge_hi.y, ridge_hi.z, tf),
-			_n(Vector3(p, a, 0).normalized(), tf),
-			Vector2(0, 0), Vector2(d, 0), Vector2(a, p))
+		_shell_triangle(st, flip, d, tf,
+			c11, c10, ridge_hi,
+			Vector3(p, a, 0).normalized(),
+			Vector2(-e, v_eave), Vector2(d + e, v_eave), Vector2(a, 0))
 	else:
 		# Left trapezoid (-X)
-		MeshHelper.add_quad(top,
-			_v(c00.x, c00.y, c00.z, tf), _v(c01.x, c01.y, c01.z, tf),
-			_v(ridge_hi.x, ridge_hi.y, ridge_hi.z, tf),
-			_v(ridge_lo.x, ridge_lo.y, ridge_lo.z, tf),
-			_n(Vector3(-p, a, 0).normalized(), tf),
-			Vector2(0, a), Vector2(d, a),
+		_shell_quad(st, flip, d, tf,
+			c00, c01, ridge_hi, ridge_lo,
+			Vector3(-p, a, 0).normalized(),
+			Vector2(-e, v_eave), Vector2(d + e, v_eave),
 			Vector2(d - a, 0), Vector2(a, 0))
 
 		# Right trapezoid (+X)
-		MeshHelper.add_quad(top,
-			_v(c11.x, c11.y, c11.z, tf), _v(c10.x, c10.y, c10.z, tf),
-			_v(ridge_lo.x, ridge_lo.y, ridge_lo.z, tf),
-			_v(ridge_hi.x, ridge_hi.y, ridge_hi.z, tf),
-			_n(Vector3(p, a, 0).normalized(), tf),
-			Vector2(0, a), Vector2(d, a),
+		_shell_quad(st, flip, d, tf,
+			c11, c10, ridge_lo, ridge_hi,
+			Vector3(p, a, 0).normalized(),
+			Vector2(-e, v_eave), Vector2(d + e, v_eave),
 			Vector2(d - a, 0), Vector2(a, 0))
 
 		# Front triangle (+Z)
-		MeshHelper.add_triangle(top,
-			_v(c01.x, c01.y, c01.z, tf), _v(c11.x, c11.y, c11.z, tf),
-			_v(ridge_hi.x, ridge_hi.y, ridge_hi.z, tf),
-			_n(Vector3(0, a, p).normalized(), tf),
-			Vector2(0, 0), Vector2(w, 0), Vector2(a, p))
+		_shell_triangle(st, flip, w, tf,
+			c01, c11, ridge_hi,
+			Vector3(0, a, p).normalized(),
+			Vector2(-e, v_eave), Vector2(w + e, v_eave), Vector2(a, 0))
 
 		# Back triangle (-Z)
-		MeshHelper.add_triangle(top,
-			_v(c10.x, c10.y, c10.z, tf), _v(c00.x, c00.y, c00.z, tf),
-			_v(ridge_lo.x, ridge_lo.y, ridge_lo.z, tf),
-			_n(Vector3(0, a, -p).normalized(), tf),
-			Vector2(0, 0), Vector2(w, 0), Vector2(a, p))
+		_shell_triangle(st, flip, w, tf,
+			c10, c00, ridge_lo,
+			Vector3(0, a, -p).normalized(),
+			Vector2(-e, v_eave), Vector2(w + e, v_eave), Vector2(a, 0))
 
-	# Bottom flat
-	MeshHelper.add_quad(bot,
-		_v(w, 0, d, tf), _v(0, 0, d, tf), _v(0, 0, 0, tf), _v(w, 0, 0, tf),
-		_n(Vector3.DOWN, tf),
-		Vector2(0, d), Vector2(w, d),
-		Vector2(w, 0), Vector2(0, 0))
+
+## The vertical strip around the eave that closes the two shells into a solid.
+## Corner order per face follows the same convention _build_flat uses: the two
+## bottom corners left-to-right as seen from outside.
+static func _emit_eave_band(st: SurfaceTool, w: float, d: float, e: float,
+		drop: float, rise: float, tf: Transform3D) -> void:
+	var y := -drop
+	var c00 := _p(Vector3(-e, y, -e), tf)
+	var c10 := _p(Vector3(w + e, y, -e), tf)
+	var c11 := _p(Vector3(w + e, y, d + e), tf)
+	var c01 := _p(Vector3(-e, y, d + e), tf)
+	var span_x := w + 2.0 * e
+	var span_z := d + 2.0 * e
+
+	_add_vertical_quad(st, c01, c11, rise, _n(Vector3(0, 0, 1), tf), span_x)
+	_add_vertical_quad(st, c10, c00, rise, _n(Vector3(0, 0, -1), tf), span_x)
+	_add_vertical_quad(st, c11, c10, rise, _n(Vector3(1, 0, 0), tf), span_z)
+	_add_vertical_quad(st, c00, c01, rise, _n(Vector3(-1, 0, 0), tf), span_z)
+
+
+# ── Shell face emitters ──────────────────────────────────────────────────────
+#
+# Reversing a face means three things at once: swapping v1 with v3 (which
+# flips the winding of both triangles MeshHelper.add_quad emits), negating the
+# normal, and mirroring U about `u_span` so the texture still reads the right
+# way round when seen from the other side.
+
+static func _shell_quad(st: SurfaceTool, flip: bool, u_span: float, tf: Transform3D,
+		v0: Vector3, v1: Vector3, v2: Vector3, v3: Vector3, normal: Vector3,
+		uv0: Vector2, uv1: Vector2, uv2: Vector2, uv3: Vector2) -> void:
+	if flip:
+		MeshHelper.add_quad(st,
+			_p(v0, tf), _p(v3, tf), _p(v2, tf), _p(v1, tf), _n(-normal, tf),
+			_mirror_u(uv0, u_span), _mirror_u(uv3, u_span),
+			_mirror_u(uv2, u_span), _mirror_u(uv1, u_span))
+	else:
+		MeshHelper.add_quad(st,
+			_p(v0, tf), _p(v1, tf), _p(v2, tf), _p(v3, tf), _n(normal, tf),
+			uv0, uv1, uv2, uv3)
+
+
+static func _shell_triangle(st: SurfaceTool, flip: bool, u_span: float, tf: Transform3D,
+		v0: Vector3, v1: Vector3, v2: Vector3, normal: Vector3,
+		uv0: Vector2, uv1: Vector2, uv2: Vector2) -> void:
+	if flip:
+		MeshHelper.add_triangle(st,
+			_p(v0, tf), _p(v2, tf), _p(v1, tf), _n(-normal, tf),
+			_mirror_u(uv0, u_span), _mirror_u(uv2, u_span), _mirror_u(uv1, u_span))
+	else:
+		MeshHelper.add_triangle(st,
+			_p(v0, tf), _p(v1, tf), _p(v2, tf), _n(normal, tf),
+			uv0, uv1, uv2)
+
+
+static func _mirror_u(uv: Vector2, span: float) -> Vector2:
+	return Vector2(span - uv.x, uv.y)

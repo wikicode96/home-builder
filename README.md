@@ -46,11 +46,17 @@ With Doors or Windows mode active, click on an existing wall to open a cutout. T
 - **Step height** is calculated automatically as `wall height / number of steps`, so the staircase always meets the upper floor exactly. More steps make them shorter; fewer steps make them taller.
 
 ### Roofs
-Hold and drag in the viewport to define the roof footprint on the active floor. Snapping is to half a tile (0.5 m) so the roof can align with wall outer faces, not just cell centres. The footprint is automatically extended outward by half the wall thickness on each side, so the eave covers the exterior face of perimeter walls. Available types:
+Hold and drag in the viewport to define the roof footprint on the active floor. Snapping is to half a tile (0.5 m) so the roof can align with wall outer faces, not just cell centres. The footprint is automatically extended outward by half the wall thickness on each side, so the roof reaches the exterior face of perimeter walls. Available types:
 - **Flat**
 - **Shed** — configurable: direction and pitch
 - **Gable** — configurable: direction and pitch
-- **Hip** — configurable: pitch. The ridge is automatically oriented along the longest side of the rectangle.
+- **Hip** — configurable: pitch, eave and thickness. The ridge is automatically oriented along the longest side of the rectangle.
+
+**Eave** (hip roofs only, for now) prolongs the slope faces outward past the footprint at the same pitch, so the roof overhangs the facade instead of dying flush with it. It is independent of width/depth/pitch: resize the roof with the gizmo and the same overhang is regenerated off the new edge. `0` gives the flush roof. Default is 0.4 m.
+
+**Thickness** (hip roofs only, for now) turns the roof into a solid instead of a single-sided skin: the slope faces become the soffit you see from below, a second shell is raised above them, and a vertical band around the eave closes the two. It is measured perpendicular to the slope, so the ridge ends up slightly higher than the value itself. Default is 0.2 m. The three material slots map to outer skin / soffit / eave band.
+
+Hip roofs have **no horizontal base** — the slopes are all there is — so the space below is yours to fill: leave the top storey's walls bare, add a floor slab and a staircase for an attic, or drop in a ceiling.
 
 ### Fences / Railings
 - First click: starting corner of the segment.

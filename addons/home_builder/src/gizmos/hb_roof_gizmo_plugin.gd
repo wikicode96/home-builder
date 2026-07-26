@@ -6,10 +6,13 @@ extends EditorNode3DGizmoPlugin
 ## its pitch (ridge height).
 ##
 ## Unlike HBWall/HBFloorSlab, RoofMeshBuilder anchors the mesh at the node's
-## local origin — it spans local X:[0,width], Z:[0,depth] regardless of
-## roof_type/direction (see RoofMeshBuilder's header comment: the rotation
+## local origin — its footprint spans local X:[0,width], Z:[0,depth] regardless
+## of roof_type/direction (see RoofMeshBuilder's header comment: the rotation
 ## transform it applies is center-preserving, so this stays true for every
-## type). So the "+width"/"+depth" handles never need to move the node —
+## type). The eave overhang renders outside that box, but it is not part of
+## the footprint and no handle sizes it, so the math below is unaffected: the
+## gizmo always outlines the structural footprint, and the eave follows it.
+## So the "+width"/"+depth" handles never need to move the node —
 ## only the "-width"/"-depth" handles (the near corner) do, to keep the far
 ## corner fixed while the near one grows toward the mouse. Same underlying
 ## math as HBFloorSlabGizmoPlugin (HBGizmoResizeMath), just with anchor

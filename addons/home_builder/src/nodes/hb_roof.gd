@@ -6,6 +6,14 @@ extends StaticBody3D
 ## and regenerates them from the exported parameters, so the designer only ever
 ## sees a single "HBRoof_001" node.
 
+## Typical residential eave overhang is 0.3–0.6 m; 0.4 reads well at the
+## addon's 0.5 m grid without swallowing a whole tile.
+const DEFAULT_EAVE := 0.4
+
+## Roof build-up (rafters, boarding, tiles) is roughly 0.2–0.35 m in reality.
+## 0.2 gives the eave a visible fascia without looking like a slab.
+const DEFAULT_THICKNESS := 0.2
+
 @export var roof_type: RoofMeshBuilder.RoofType = RoofMeshBuilder.RoofType.FLAT:
 	set(value):
 		roof_type = value
@@ -25,6 +33,21 @@ extends StaticBody3D
 @export var pitch: float = 1.5:
 	set(value):
 		pitch = value
+		_rebuild()
+## Eave overhang, in metres: how far the slope faces are prolonged past the
+## footprint. Independent of width/depth/pitch — resizing the roof with the
+## gizmo re-generates the same overhang off the new edge. 0 = flush with the
+## footprint (the pre-eave behaviour). Only HIP honours it for now.
+@export var eave: float = DEFAULT_EAVE:
+	set(value):
+		eave = value
+		_rebuild()
+## Roof thickness, in metres, measured perpendicular to the slope. The slope
+## faces become the underside and a second shell is raised above them, so the
+## ridge rises by slightly more than this. Only HIP honours it for now.
+@export var thickness: float = DEFAULT_THICKNESS:
+	set(value):
+		thickness = value
 		_rebuild()
 
 @export_group("Materials")
@@ -59,7 +82,8 @@ func _rebuild() -> void:
 	if not is_inside_tree():
 		return
 	_ensure_children()
-	var mesh := RoofMeshBuilder.build(roof_type, width, depth, pitch, direction)
+	var mesh := RoofMeshBuilder.build(
+		roof_type, width, depth, pitch, direction, eave, thickness)
 	_mesh.mesh = mesh
 	_apply_materials()
 	_shape.shape = mesh.create_trimesh_shape()
@@ -104,9 +128,5 @@ func _apply_materials() -> void:
 		MaterialHelper.or_default_textured(top_material, _DEFAULT_FACE_TEXTURE))
 	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_BOTTOM,
 		MaterialHelper.or_default_textured(bottom_material, _DEFAULT_FACE_TEXTURE))
-	# HIP roofs have no "sides" surface — see RoofMeshBuilder.build — so the
-	# mesh only has 2 surfaces for that type; setting index 2 would error.
-	var mesh := _mesh.mesh
-	if mesh != null and mesh.get_surface_count() > RoofMeshBuilder.SURFACE_SIDES:
-		_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
-			MaterialHelper.or_default_textured(sides_material, _DEFAULT_EDGE_TEXTURE))
+	_mesh.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
+		MaterialHelper.or_default_textured(sides_material, _DEFAULT_EDGE_TEXTURE))

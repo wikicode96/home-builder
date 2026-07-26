@@ -111,6 +111,10 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 		dock.selected_roof_direction if dock != null else RoofMeshBuilder.RoofDirection.NORTH
 	)
 	var pitch: float = dock.roof_pitch if dock != null else 1.5
+	var eave: float = dock.roof_eave if dock != null else HBRoof.DEFAULT_EAVE
+	var thickness: float = (
+		dock.roof_thickness if dock != null else HBRoof.DEFAULT_THICKNESS
+	)
 
 	var roof_parent: Node3D = _plugin.get_or_create_floor_node(active_floor)
 	if roof_parent == null:
@@ -133,6 +137,8 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 	body.width = w
 	body.depth = d
 	body.pitch = pitch
+	body.eave = eave
+	body.thickness = thickness
 
 	body.top_material = dock.roof_top_material if dock != null else null
 	body.bottom_material = dock.roof_bottom_material if dock != null else null

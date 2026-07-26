@@ -569,6 +569,49 @@ value = 1.5
 editable = false
 suffix = "m"
 
+[node name="EaveRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow" unique_id=5000000090]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="EaveLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/EaveRow" unique_id=5000000091]
+modulate = Color(1, 1, 1, 0.4)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Alero"
+
+[node name="EaveSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/EaveRow" unique_id=5000000092]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 3.0
+step = 0.05
+value = 0.4
+editable = false
+suffix = "m"
+
+[node name="RoofThicknessRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow" unique_id=5000000093]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="RoofThicknessLabel" type="Label" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/RoofThicknessRow" unique_id=5000000094]
+modulate = Color(1, 1, 1, 0.4)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 11
+text = "Grosor"
+
+[node name="RoofThicknessSpin" type="SpinBox" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow/RoofThicknessRow" unique_id=5000000095]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.01
+max_value = 1.0
+step = 0.05
+value = 0.2
+editable = false
+suffix = "m"
+
 [node name="MaterialsRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials" unique_id=1818790487]
 layout_mode = 2
 size_flags_horizontal = 3
