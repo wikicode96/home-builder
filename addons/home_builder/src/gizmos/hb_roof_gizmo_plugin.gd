@@ -24,10 +24,13 @@ extends EditorNode3DGizmoPlugin
 ## thickness regardless of pitch, so a handle for it there would move with no
 ## visible feedback.
 ##
-## Snaps to the 0.5m world grid by default — matching RoofBuilder's own
-## placement grid (SnapHelper.to_tile_center/grid_bounds), so a roof you just
-## placed and one you're nudging with the gizmo agree on which sizes are
-## reachable; hold Ctrl while dragging to size it continuously instead.
+## Snaps to the 0.5m world grid by default, OFFSET outward by half a wall
+## thickness — matching RoofBuilder's own placement footprint, not just its
+## placement grid (SnapHelper.to_tile_center/grid_bounds plus the inflation
+## _place_roof applies on top). See _footprint_offset: without that shift a
+## roof you just placed and one you nudged with the gizmo disagree about where
+## a roof edge belongs, and the dragged side ends up short against the facade.
+## Hold Ctrl while dragging to size it continuously instead.
 
 const _AXES := [Vector3.RIGHT, Vector3.RIGHT, Vector3.BACK, Vector3.BACK, Vector3.UP]
 const _SIGNS := [1.0, -1.0, 1.0, -1.0, 1.0]
@@ -131,14 +134,39 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir,
 			_GRID_STEP, _MIN_SIZE[handle_id])
 	else:
+		# Footprint edges do NOT sit on the world grid — see _footprint_offset.
 		new_size = HBGizmoResizeMath.drag_size_snapped(
 			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir,
-			_GRID_STEP, _MIN_SIZE[handle_id])
+			_GRID_STEP, _MIN_SIZE[handle_id], _footprint_offset())
 
 	roof.global_position = HBGizmoResizeMath.node_position(
 		_drag_anchor_global, _drag_dir_global,
 		_SIGNS[handle_id], _ANCHOR_FRACS[handle_id], new_size)
 	roof.set(_PROPS[handle_id], new_size)
+
+
+## How far outside the 0.5 m world grid the dragged edge belongs, as a world
+## vector.
+##
+## RoofBuilder does not lay the footprint on the grid: it inflates it by half a
+## wall thickness on every side, so the roof covers the outer FACE of the
+## facade walls instead of stopping at their centre line (walls are centred on
+## grid lines, so the exterior half of a boundary wall would otherwise stick
+## out uncovered). Every edge of a placed roof therefore sits at
+## `n × 0.5 ± half a wall`, never at a round `n × 0.5`.
+##
+## Snapping a dragged edge to the bare grid quietly undid that on whichever
+## side was dragged — the edge landed on the wall's centre line and the roof
+## came up short by half a wall against the facade below, while the three
+## untouched sides stayed correct. Multiplying by the drag direction gives the
+## shift its sign for free: the offset is always OUTWARD, which is +half on the
+## +X/+Z handles and −half on the −X/−Z ones.
+##
+## Reads WallBuilder.thickness live, the same value RoofBuilder used, so a roof
+## resized after the dock's wall thickness changed lines up with the walls that
+## exist now rather than the ones that existed at placement.
+func _footprint_offset() -> Vector3:
+	return _drag_dir_global * (WallBuilder.thickness * 0.5)
 
 
 func _begin_drag(roof: HBRoof, handle_id: int) -> void:

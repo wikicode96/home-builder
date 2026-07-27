@@ -59,10 +59,22 @@ static func drag_size(anchor: Vector3, dir: Vector3,
 ## (the two angles this addon's builders actually place diagonals at — see
 ## WallBuilder.place_wall, which allows any two grid corners) and a
 ## reasonable best effort for any other angle.
+##
+## [param lattice_offset] shifts the lattice the endpoint snaps to, per axis.
+## Not every node's edges belong on the bare world grid: a roof's footprint is
+## deliberately inflated by half a wall thickness on each side so it covers the
+## outer face of the walls below rather than stopping at their centre line, so
+## its edges live on a grid shifted outward by that half-thickness. Snapping
+## such an edge to the bare grid is what pulls it back onto the wall's centre
+## line. Defaults to zero, i.e. the plain world grid.
 static func drag_size_snapped(anchor: Vector3, dir: Vector3,
-		ray_from: Vector3, ray_dir: Vector3, step: float, min_size: float) -> float:
+		ray_from: Vector3, ray_dir: Vector3, step: float, min_size: float,
+		lattice_offset: Vector3 = Vector3.ZERO) -> float:
 	var point := closest_point_on_line(anchor, dir, ray_from, ray_dir)
-	var snapped_point := Vector3(snap(point.x, step), snap(point.y, step), snap(point.z, step))
+	var snapped_point := Vector3(
+		snap_offset(point.x, step, lattice_offset.x),
+		snap_offset(point.y, step, lattice_offset.y),
+		snap_offset(point.z, step, lattice_offset.z))
 	return maxf((snapped_point - anchor).dot(dir), min_size)
 
 
@@ -97,3 +109,10 @@ static func snap(value: float, step: float) -> float:
 	if step <= 0.0:
 		return value
 	return roundf(value / step) * step
+
+
+## Rounds a value onto the lattice of multiples of step shifted by offset.
+static func snap_offset(value: float, step: float, offset: float) -> float:
+	if step <= 0.0:
+		return value
+	return snap(value - offset, step) + offset
