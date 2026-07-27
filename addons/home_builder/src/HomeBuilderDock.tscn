@@ -585,7 +585,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 max_value = 3.0
 step = 0.05
-value = 0.4
+value = 0.0
 suffix = "m"
 
 [node name="RoofThicknessRow" type="VBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials/ConfigRow" unique_id=5000000093]
@@ -604,8 +604,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 min_value = 0.01
 max_value = 1.0
-step = 0.05
-value = 0.2
+step = 0.01
+value = 0.1
 suffix = "m"
 
 [node name="MaterialsRow" type="HBoxContainer" parent="Background/Margin/MainHBox/RightColumn/ConfigStack/RoofMaterials" unique_id=1818790487]

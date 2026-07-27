@@ -14,9 +14,32 @@ const DEFAULT_EAVE := 0.4
 ## 0.2 gives the eave a visible fascia without looking like a slab.
 const DEFAULT_THICKNESS := 0.2
 
+## FLAT is the exception on both counts, because it is not really the same
+## object: no pitch means no tiles hanging over a gutter, so an overhang reads
+## as a slab sticking out rather than as eave, and the build-up that justifies
+## 0.2 m on a pitched roof isn't there either. What a flat roof actually is is
+## the floor slab of the storey that was never built, so it starts from
+## FloorBuilder.slab_thickness and flush with the footprint.
+const FLAT_EAVE := 0.0
+const FLAT_THICKNESS := 0.1
+
+
 ## Gable ends continue the wall below them, so this defaults to the same
 ## thickness WallBuilder gives a wall.
 const DEFAULT_END_THICKNESS := 0.1
+
+
+## Starting eave/thickness for a freshly placed roof of [param type]. The dock
+## re-seeds its two spins from these every time the type dropdown changes —
+## the values that suit a hip are wrong for a flat roof and vice versa, and a
+## single pair of defaults can only ever be right for one of them.
+static func default_eave(type: RoofMeshBuilder.RoofType) -> float:
+	return FLAT_EAVE if type == RoofMeshBuilder.RoofType.FLAT else DEFAULT_EAVE
+
+
+static func default_thickness(type: RoofMeshBuilder.RoofType) -> float:
+	return FLAT_THICKNESS if type == RoofMeshBuilder.RoofType.FLAT else DEFAULT_THICKNESS
+
 
 @export var roof_type: RoofMeshBuilder.RoofType = RoofMeshBuilder.RoofType.FLAT:
 	set(value):
@@ -44,15 +67,21 @@ const DEFAULT_END_THICKNESS := 0.1
 ## Eave overhang, in metres: how far the slope faces are prolonged past the
 ## footprint. Independent of width/depth/pitch — resizing the roof with the
 ## gizmo re-generates the same overhang off the new edge. 0 = flush with the
-## footprint (the pre-eave behaviour). Only HIP honours it for now.
-@export var eave: float = DEFAULT_EAVE:
+## footprint. All four types honour it.
+##
+## Seeded with FLAT's value, not the pitched one, because `roof_type` above
+## also defaults to FLAT — a hand-placed HBRoof should come up as the same
+## roof the dock would have given you. Switching type in the Inspector does
+## NOT re-seed this; only the dock does that, on the way in.
+@export var eave: float = FLAT_EAVE:
 	set(value):
 		eave = value
 		_rebuild()
 ## Roof thickness, in metres, measured perpendicular to the slope. The slope
 ## faces become the underside and a second shell is raised above them, so the
-## ridge rises by slightly more than this.
-@export var thickness: float = DEFAULT_THICKNESS:
+## ridge rises by slightly more than this. Seeded from FLAT for the same
+## reason `eave` is.
+@export var thickness: float = FLAT_THICKNESS:
 	set(value):
 		thickness = value
 		_rebuild()

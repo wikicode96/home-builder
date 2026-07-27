@@ -163,12 +163,17 @@ var selected_roof_direction: int:  # RoofMeshBuilder.RoofDirection
 var roof_pitch: float:
 	get: return _roof_pitch_spin.value if _roof_pitch_spin != null else 1.5
 var roof_eave: float:
-	get: return _roof_eave_spin.value if _roof_eave_spin != null else HBRoof.DEFAULT_EAVE
+	get:
+		if _roof_eave_spin != null:
+			return _roof_eave_spin.value
+		var t: RoofMeshBuilder.RoofType = selected_roof_type
+		return HBRoof.default_eave(t)
 var roof_thickness: float:
-	get: return (
-		_roof_thickness_spin.value if _roof_thickness_spin != null
-		else HBRoof.DEFAULT_THICKNESS
-	)
+	get:
+		if _roof_thickness_spin != null:
+			return _roof_thickness_spin.value
+		var t: RoofMeshBuilder.RoofType = selected_roof_type
+		return HBRoof.default_thickness(t)
 
 # ── Wall config ──────────────────────────────────────────────────────────────
 var wall_height: float:
@@ -408,7 +413,7 @@ func _populate_roof_direction_options() -> void:
 
 
 func _update_roof_shape_controls() -> void:
-	var t := selected_roof_type
+	var t: RoofMeshBuilder.RoofType = selected_roof_type
 	var needs_pitch := t != RoofMeshBuilder.RoofType.FLAT
 	# SHED and GABLE are the two types with an orientation, and also the two
 	# with vertical end walls. Kept as separate names because those are two
@@ -423,10 +428,21 @@ func _update_roof_shape_controls() -> void:
 	_roof_pitch_label.modulate = Color.WHITE if needs_pitch else Color(1, 1, 1, 0.4)
 	_roof_direction_option.disabled = not needs_direction
 	_roof_direction_label.modulate = Color.WHITE if needs_direction else Color(1, 1, 1, 0.4)
-	# Eave and thickness apply to every type. The gable-end materials only
-	# exist for SHED and GABLE, so that whole row folds away for the others
-	# rather than sitting there greyed out.
+	# The gable-end materials only exist for SHED and GABLE, so that whole row
+	# folds away for the others rather than sitting there greyed out.
 	_roof_end_materials_row.visible = has_ends
+
+	# Eave and thickness apply to every type, but what a *sensible* value is
+	# doesn't survive the jump between a slab and a pitched roof — see
+	# HBRoof.default_eave. So picking a type re-seeds both spins rather than
+	# carrying the previous shape's numbers over. This deliberately discards a
+	# value the user typed by hand; it happens in front of them, in two spins
+	# they can immediately type over, which beats silently building a flat roof
+	# with a hip's 0.4 m overhang. Neither spin has a value_changed connection
+	# (they are pulled on demand by roof_eave / roof_thickness), so writing
+	# them here fires nothing.
+	_roof_eave_spin.value = HBRoof.default_eave(t)
+	_roof_thickness_spin.value = HBRoof.default_thickness(t)
 
 
 func _create_picker(container_path: String, base_type: String = "Material") -> EditorResourcePicker:

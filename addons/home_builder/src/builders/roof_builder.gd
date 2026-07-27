@@ -111,9 +111,12 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 		dock.selected_roof_direction if dock != null else RoofMeshBuilder.RoofDirection.NORTH
 	)
 	var pitch: float = dock.roof_pitch if dock != null else 1.5
-	var eave: float = dock.roof_eave if dock != null else HBRoof.DEFAULT_EAVE
+	# Without a dock the defaults have to come from the type we just resolved,
+	# not from the pitched-roof pair — otherwise a flat roof placed this way
+	# gets a hip's overhang.
+	var eave: float = dock.roof_eave if dock != null else HBRoof.default_eave(type)
 	var thickness: float = (
-		dock.roof_thickness if dock != null else HBRoof.DEFAULT_THICKNESS
+		dock.roof_thickness if dock != null else HBRoof.default_thickness(type)
 	)
 
 	var roof_parent: Node3D = _plugin.get_or_create_floor_node(active_floor)
