@@ -1,10 +1,10 @@
 # Home Builder
 
-A Godot 4 plugin (C#) for building structures directly in the scene editor by clicking in the 3D viewport.
+A Godot 4 plugin for building structures directly in the scene editor by clicking in the 3D viewport.
 
 ## Requirements & Installation
 
-Requires Godot 4.x with .NET (Mono) support. To install the plugin, copy the `addons` folder from this repository into your project's `addons` folder. Then enable it under **Project → Project Settings → Plugins**.
+Requires Godot 4.x. To install the plugin, copy the `addons` folder from this repository into your project's `addons` folder. Then enable it under **Project → Project Settings → Plugins**.
 
 ![house](./imgs/house1.png)
 
@@ -17,6 +17,19 @@ Requires Godot 4.x with .NET (Mono) support. To install the plugin, copy the `ad
 3. Build the structure floor by floor using the floor selector.
 4. Once the building is ready, use **Bake** mode to export it as an optimised scene.
 5. Instance the baked scene in your level.
+
+---
+
+## Editing with Gizmos
+
+Every placed element (walls, floor slabs, roofs, stairs) can be resized after the fact: select it and drag the handles shown in the 3D viewport, the same way Godot's own `CollisionShape3D` boxes work. Each handle keeps the opposite side fixed in place, so dragging one end only grows or shrinks that side.
+
+- Handles snap to the 0.5 m grid by default. **Hold Ctrl** while dragging to size continuously instead, ignoring the grid.
+- On a wall, **hold Shift** while dragging one of its two length handles to move that endpoint freely across the floor plane instead of stretching along the wall's existing direction — this lets you turn an axis-aligned wall diagonal after the fact instead of deleting and re-placing it.
+- Door and window openings stay put relative to whichever end of the wall you are *not* dragging — stretching a wall from one end adds or removes wall length entirely on that side, without shifting existing openings.
+- On stairs, the step-count handle always snaps to whole steps (Ctrl has no effect there, since a fractional step isn't meaningful).
+
+All gizmo edits go through the regular Godot undo/redo (Ctrl+Z / Ctrl+Y).
 
 ---
 
@@ -35,9 +48,10 @@ Hold and drag in the viewport to fill a rectangle of tiles. A single click place
 - Configurable: wall **height** and **thickness**, and materials for **face A**, **face B**, and **edges**.
 
 ### Doors & Windows
-With Doors or Windows mode active, click on an existing wall to open a cutout. The gap is carved into both the wall geometry and its collision shape.
+With Doors or Windows mode active, click on an existing wall to open a cutout. The gap is carved into both the wall geometry and its collision shape. Placement snaps to 0.5 m steps along the wall; hold **Ctrl** for free placement.
 - Doors: configurable width and height.
 - Windows: configurable width, height, and sill height.
+- Optionally assign a `PackedScene` as the door/window asset in the panel — it is then instantiated automatically at the opening's position (matching the wall's orientation) every time you place one.
 
 ### Stairs
 - First click: staircase base.
@@ -75,6 +89,8 @@ Material slots are outer skin / soffit / perimeter band. Shed and gable roofs ad
 ## Multiple Floors
 
 The floor selector (▲ / ▼ next to the floor number) controls which level new elements are placed on. When moving up a floor, lower floors are automatically hidden in the editor to keep the workspace clean.
+
+Every element of a storey — walls, floor slab, roof, stairs, fences — is placed under a single `Floor_N` node, keeping the scene tree free of near-empty per-type containers.
 
 > Floor height equals the configured wall height.
 
