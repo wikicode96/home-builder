@@ -44,7 +44,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 		if pos == null:
 			return EditorPlugin.AFTER_GUI_INPUT_PASS
 
-		var cell := SnapHelper.to_half_tile_center(pos, base_y)
+		var cell := SnapHelper.to_tile_center(pos, base_y)
 		cell.y = base_y + 0.05
 
 		if _drag_start != null:
@@ -60,11 +60,11 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 			return EditorPlugin.AFTER_GUI_INPUT_PASS
 
 		if event.pressed:
-			_drag_start = SnapHelper.to_half_tile_center(pos, base_y)
+			_drag_start = SnapHelper.to_tile_center(pos, base_y)
 			return EditorPlugin.AFTER_GUI_INPUT_STOP
 
 		if _drag_start != null:
-			var end_cell := SnapHelper.to_half_tile_center(pos, base_y)
+			var end_cell := SnapHelper.to_tile_center(pos, base_y)
 			_place_roof(_drag_start, end_cell, base_y, _plugin.active_floor)
 			_drag_start = null
 
@@ -79,7 +79,7 @@ func _update_ghost_rect(a: Vector3, b: Vector3, base_y: float) -> void:
 	if _ghost == null or not is_instance_valid(_ghost):
 		return
 
-	var bounds := SnapHelper.half_grid_bounds(a, b)
+	var bounds := SnapHelper.grid_bounds(a, b)
 	var half_t := WallBuilder.thickness * 0.5
 	var w := bounds.size.x * 0.5 + WallBuilder.thickness
 	var d := bounds.size.y * 0.5 + WallBuilder.thickness
@@ -93,7 +93,7 @@ func _update_ghost_rect(a: Vector3, b: Vector3, base_y: float) -> void:
 
 
 func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> void:
-	var bounds := SnapHelper.half_grid_bounds(a, b)
+	var bounds := SnapHelper.grid_bounds(a, b)
 
 	# Extend the roof footprint by half the wall thickness on every side so
 	# that the roof covers the outer face of facade walls, not just their
@@ -111,45 +111,49 @@ func _place_roof(a: Vector3, b: Vector3, base_y: float, active_floor: int) -> vo
 		dock.selected_roof_direction if dock != null else RoofMeshBuilder.RoofDirection.NORTH
 	)
 	var pitch: float = dock.roof_pitch if dock != null else 1.5
+	# Without a dock the defaults have to come from the type we just resolved,
+	# not from the pitched-roof pair — otherwise a flat roof placed this way
+	# gets a hip's overhang.
+	var eave: float = dock.roof_eave if dock != null else HBRoof.default_eave(type)
+	var thickness: float = (
+		dock.roof_thickness if dock != null else HBRoof.default_thickness(type)
+	)
 
-	var mesh := RoofMeshBuilder.build(type, w, d, pitch, dir)
-
-	var roof_parent: Node3D = _plugin.get_or_create_parent_node("Roof_%d" % active_floor)
+	var roof_parent: Node3D = _plugin.get_or_create_floor_node(active_floor)
 	if roof_parent == null:
 		return
 
 	var undo: EditorUndoRedoManager = _plugin.get_undo_redo()
 	undo.create_action("Place Roof")
 
-	var body := StaticBody3D.new()
-	body.name = "Roof"
+	# HBRoof is self-contained: it owns its mesh and collision as internal
+	# children. The designer only ever sees a single "HBRoof_001" node.
+	var body := HBRoof.new()
+	body.name = "HBRoof_001"
 	body.position = Vector3(
 		bounds.position.x * 0.5 - half_t,
 		base_y,
 		bounds.position.y * 0.5 - half_t
 	)
+	body.roof_type = type
+	body.direction = dir
+	body.width = w
+	body.depth = d
+	body.pitch = pitch
+	body.eave = eave
+	body.thickness = thickness
 
-	var inst := MeshInstance3D.new()
-	inst.mesh = mesh
-	inst.set_surface_override_material(RoofMeshBuilder.SURFACE_TOP,
-		MaterialHelper.or_default(
-			dock.roof_top_material if dock != null else null, Color(0.65, 0.25, 0.2)))
-	inst.set_surface_override_material(RoofMeshBuilder.SURFACE_BOTTOM,
-		MaterialHelper.or_default(
-			dock.roof_bottom_material if dock != null else null, Color(0.5, 0.5, 0.5)))
-	inst.set_surface_override_material(RoofMeshBuilder.SURFACE_SIDES,
-		MaterialHelper.or_default(
-			dock.roof_sides_material if dock != null else null, Color(0.85, 0.82, 0.75)))
+	body.top_material = dock.roof_top_material if dock != null else null
+	body.bottom_material = dock.roof_bottom_material if dock != null else null
+	body.sides_material = dock.roof_sides_material if dock != null else null
+	body.end_face_a_material = dock.roof_end_face_a_material if dock != null else null
+	body.end_face_b_material = dock.roof_end_face_b_material if dock != null else null
+	body.end_edges_material = dock.roof_end_edges_material if dock != null else null
 
-	var shape := CollisionShape3D.new()
-	shape.shape = mesh.create_trimesh_shape()
-
-	roof_parent.add_child(body)
+	# force_readable_name = true so name collisions increment the trailing
+	# number (HBRoof_002, …) instead of "@StaticBody3D@NN".
+	roof_parent.add_child(body, true)
 	body.owner = roof_parent.owner
-	body.add_child(inst)
-	inst.owner = roof_parent.owner
-	body.add_child(shape)
-	shape.owner = roof_parent.owner
 
 	undo.add_do_method(roof_parent, &"add_child", body)
 	undo.add_undo_method(roof_parent, &"remove_child", body)

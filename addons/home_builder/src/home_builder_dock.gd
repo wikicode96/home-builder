@@ -59,9 +59,15 @@ var _stair_sides_picker: EditorResourcePicker
 var _roof_top_picker: EditorResourcePicker
 var _roof_bottom_picker: EditorResourcePicker
 var _roof_sides_picker: EditorResourcePicker
+var _roof_end_face_a_picker: EditorResourcePicker
+var _roof_end_face_b_picker: EditorResourcePicker
+var _roof_end_edges_picker: EditorResourcePicker
+var _roof_end_materials_row: Container
 var _roof_type_option: OptionButton
 var _roof_direction_option: OptionButton
 var _roof_pitch_spin: SpinBox
+var _roof_eave_spin: SpinBox
+var _roof_thickness_spin: SpinBox
 var _roof_direction_label: Label
 var _roof_pitch_label: Label
 
@@ -92,6 +98,10 @@ var _win_sill_spin: SpinBox
 # Door / Window config sections
 var _door_section: Container
 var _window_section: Container
+
+# Door / Window asset pickers
+var _door_asset_picker: EditorResourcePicker
+var _window_asset_picker: EditorResourcePicker
 
 # Fence asset picker
 var _fence_asset_picker: EditorResourcePicker
@@ -140,12 +150,30 @@ var roof_bottom_material: Material:
 	get: return (_roof_bottom_picker.edited_resource as Material) if _roof_bottom_picker != null else null
 var roof_sides_material: Material:
 	get: return (_roof_sides_picker.edited_resource as Material) if _roof_sides_picker != null else null
+var roof_end_face_a_material: Material:
+	get: return (_roof_end_face_a_picker.edited_resource as Material) if _roof_end_face_a_picker != null else null
+var roof_end_face_b_material: Material:
+	get: return (_roof_end_face_b_picker.edited_resource as Material) if _roof_end_face_b_picker != null else null
+var roof_end_edges_material: Material:
+	get: return (_roof_end_edges_picker.edited_resource as Material) if _roof_end_edges_picker != null else null
 var selected_roof_type: int:  # RoofMeshBuilder.RoofType
 	get: return _roof_type_option.selected if _roof_type_option != null else 0
 var selected_roof_direction: int:  # RoofMeshBuilder.RoofDirection
 	get: return _roof_direction_option.selected if _roof_direction_option != null else 0
 var roof_pitch: float:
 	get: return _roof_pitch_spin.value if _roof_pitch_spin != null else 1.5
+var roof_eave: float:
+	get:
+		if _roof_eave_spin != null:
+			return _roof_eave_spin.value
+		var t: RoofMeshBuilder.RoofType = selected_roof_type
+		return HBRoof.default_eave(t)
+var roof_thickness: float:
+	get:
+		if _roof_thickness_spin != null:
+			return _roof_thickness_spin.value
+		var t: RoofMeshBuilder.RoofType = selected_roof_type
+		return HBRoof.default_thickness(t)
 
 # ── Wall config ──────────────────────────────────────────────────────────────
 var wall_height: float:
@@ -182,6 +210,12 @@ var win_height: float:
 	get: return _win_height_spin.value if _win_height_spin != null else 1.0
 var win_sill: float:
 	get: return _win_sill_spin.value if _win_sill_spin != null else 0.9
+
+# ── Door / Window assets ─────────────────────────────────────────────────────
+var door_asset_scene: PackedScene:
+	get: return (_door_asset_picker.edited_resource as PackedScene) if _door_asset_picker != null else null
+var window_asset_scene: PackedScene:
+	get: return (_window_asset_picker.edited_resource as PackedScene) if _window_asset_picker != null else null
 
 # ── Fence asset ──────────────────────────────────────────────────────────────
 var fence_asset_scene: PackedScene:
@@ -234,13 +268,18 @@ func _ready() -> void:
 	_roof_type_option = get_node(_STACK + "/RoofMaterials/ConfigRow/TypeRow/TypeOption")
 	_roof_direction_option = get_node(_STACK + "/RoofMaterials/ConfigRow/DirectionRow/DirectionOption")
 	_roof_pitch_spin = get_node(_STACK + "/RoofMaterials/ConfigRow/PitchRow/PitchSpin")
+	_roof_eave_spin = get_node(_STACK + "/RoofMaterials/ConfigRow/EaveRow/EaveSpin")
+	_roof_thickness_spin = get_node(
+		_STACK + "/RoofMaterials/ConfigRow/RoofThicknessRow/RoofThicknessSpin")
 	_roof_direction_label = get_node(_STACK + "/RoofMaterials/ConfigRow/DirectionRow/DirectionLabel")
 	_roof_pitch_label = get_node(_STACK + "/RoofMaterials/ConfigRow/PitchRow/PitchLabel")
+	_roof_end_materials_row = get_node(_STACK + "/RoofMaterials/EndMaterialsRow")
 
 	_populate_roof_type_options()
 	_populate_roof_direction_options()
 	_roof_type_option.item_selected.connect(_on_roof_type_selected)
-	_update_roof_shape_controls()
+	# _update_roof_shape_controls() also gates the gable-end material picker,
+	# which _create_picker only builds further down — so it runs from there.
 
 	# Button group (only one mode active at a time)
 	var group := ButtonGroup.new()
@@ -304,6 +343,11 @@ func _ready() -> void:
 	_roof_top_picker = _create_picker(_STACK + "/RoofMaterials/MaterialsRow/TopRow/TopPicker")
 	_roof_bottom_picker = _create_picker(_STACK + "/RoofMaterials/MaterialsRow/BottomRow/BottomPicker")
 	_roof_sides_picker = _create_picker(_STACK + "/RoofMaterials/MaterialsRow/SidesRow/SidesPicker")
+	var end_row := _STACK + "/RoofMaterials/EndMaterialsRow/"
+	_roof_end_face_a_picker = _create_picker(end_row + "EndFaceARow/EndFaceAPicker")
+	_roof_end_face_b_picker = _create_picker(end_row + "EndFaceBRow/EndFaceBPicker")
+	_roof_end_edges_picker = _create_picker(end_row + "EndEdgesRow/EndEdgesPicker")
+	_update_roof_shape_controls()
 
 	# Door config spins
 	_door_width_spin = get_node(_STACK + "/DoorConfig/ConfigRow/WidthVBox/WidthSpin")
@@ -318,6 +362,10 @@ func _ready() -> void:
 	_win_width_spin.value_changed.connect(_on_opening_config_value_changed)
 	_win_height_spin.value_changed.connect(_on_opening_config_value_changed)
 	_win_sill_spin.value_changed.connect(_on_opening_config_value_changed)
+
+	# Door / Window asset pickers (PackedScene)
+	_door_asset_picker = _create_picker(_STACK + "/DoorConfig/AssetRow/AssetPicker", "PackedScene")
+	_window_asset_picker = _create_picker(_STACK + "/WindowConfig/AssetRow/AssetPicker", "PackedScene")
 
 	# Fence asset picker (PackedScene) and module length spin
 	_fence_asset_picker = _create_picker(_STACK + "/FenceAssets/AssetRow/AssetPicker", "PackedScene")
@@ -365,16 +413,36 @@ func _populate_roof_direction_options() -> void:
 
 
 func _update_roof_shape_controls() -> void:
-	var t := selected_roof_type
+	var t: RoofMeshBuilder.RoofType = selected_roof_type
 	var needs_pitch := t != RoofMeshBuilder.RoofType.FLAT
+	# SHED and GABLE are the two types with an orientation, and also the two
+	# with vertical end walls. Kept as separate names because those are two
+	# different reasons that happen to coincide today.
 	var needs_direction := (
 		t == RoofMeshBuilder.RoofType.SHED or t == RoofMeshBuilder.RoofType.GABLE
 	)
-
+	var has_ends := (
+		t == RoofMeshBuilder.RoofType.SHED or t == RoofMeshBuilder.RoofType.GABLE
+	)
 	_roof_pitch_spin.editable = needs_pitch
 	_roof_pitch_label.modulate = Color.WHITE if needs_pitch else Color(1, 1, 1, 0.4)
 	_roof_direction_option.disabled = not needs_direction
 	_roof_direction_label.modulate = Color.WHITE if needs_direction else Color(1, 1, 1, 0.4)
+	# The gable-end materials only exist for SHED and GABLE, so that whole row
+	# folds away for the others rather than sitting there greyed out.
+	_roof_end_materials_row.visible = has_ends
+
+	# Eave and thickness apply to every type, but what a *sensible* value is
+	# doesn't survive the jump between a slab and a pitched roof — see
+	# HBRoof.default_eave. So picking a type re-seeds both spins rather than
+	# carrying the previous shape's numbers over. This deliberately discards a
+	# value the user typed by hand; it happens in front of them, in two spins
+	# they can immediately type over, which beats silently building a flat roof
+	# with a hip's 0.4 m overhang. Neither spin has a value_changed connection
+	# (they are pulled on demand by roof_eave / roof_thickness), so writing
+	# them here fires nothing.
+	_roof_eave_spin.value = HBRoof.default_eave(t)
+	_roof_thickness_spin.value = HBRoof.default_thickness(t)
 
 
 func _create_picker(container_path: String, base_type: String = "Material") -> EditorResourcePicker:

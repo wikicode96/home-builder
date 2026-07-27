@@ -54,19 +54,18 @@ class Offsets:
 	var end_minus_z: float    # cap offset at End   on local -Z side
 	var end_plus_z: float     # cap offset at End   on local +Z side
 
-
-## Convex polygon (world XZ) that fills the gap at a multi-wall junction.
-## Points are in CCW order matching the half-edge sort order.
-class JunctionFill:
-	var points_xz: PackedVector2Array
-
-	func _init(p_points_xz := PackedVector2Array()) -> void:
-		points_xz = p_points_xz
+	# Where a 3+-way junction gap's centroid falls in THIS wall's own local
+	# frame (x, z), one point per end — set only when that end participates
+	# in such a junction. WallMeshBuilder fans a wedge from this end's two
+	# corners to this point instead of a separate junction-fill mesh.
+	var has_start_wedge: bool = false
+	var start_wedge: Vector2 = Vector2.ZERO
+	var has_end_wedge: bool = false
+	var end_wedge: Vector2 = Vector2.ZERO
 
 
 class SolveResult:
 	var offsets: Dictionary = {}  # StaticBody3D -> Offsets
-	var fills: Array = []         # of JunctionFill
 
 
 class _HalfEdge:
@@ -89,8 +88,65 @@ class _HalfEdge:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
+## Returns every OTHER wall under [param wall_parent] that currently forms a
+## junction with one of [param wall]'s two endpoints — either by sharing
+## that exact point (L/X corner) or by [param wall]'s endpoint resting on
+## the middle of the other wall (a T, with [param wall] as the leg touching
+## the other wall's middle). Used by use-case code (e.g. the gizmo) to know,
+## BEFORE an edit starts, which neighbours need to be re-solved once
+## [param wall] no longer touches them.
+static func find_corner_partners(wall: HBWall, wall_parent: Node3D) -> Array[HBWall]:
+	var result: Array[HBWall] = []
+	if wall_parent == null or wall == null:
+		return result
+
+	var w_len := WallHelper.get_wall_length(wall)
+	if w_len <= 0.0:
+		return result
+	var w_tr := wall.global_transform
+	var w_axis := w_tr.basis.x
+	var endpoints := [
+		w_tr.origin - w_axis * (w_len * 0.5),
+		w_tr.origin + w_axis * (w_len * 0.5),
+	]
+
+	for child in wall_parent.get_children():
+		if child == wall or not (child is HBWall):
+			continue
+		var other: HBWall = child
+		var o_len := WallHelper.get_wall_length(other)
+		if o_len <= 0.0:
+			continue
+		var o_tr := other.global_transform
+		var o_axis := o_tr.basis.x
+		var o_d2 := Vector2(o_axis.x, o_axis.z)
+		if o_d2.length_squared() < 1e-8:
+			continue
+		o_d2 = o_d2.normalized()
+		var o_start := o_tr.origin - o_axis * (o_len * 0.5)
+		var o_end := o_tr.origin + o_axis * (o_len * 0.5)
+
+		for p in endpoints:
+			if _close_xz(p, o_start) or _close_xz(p, o_end):
+				result.append(other)
+				break
+			var rel := Vector2(p.x - o_start.x, p.z - o_start.z)
+			var t_along := rel.dot(o_d2)
+			var t_perp := rel.dot(Vector2(-o_d2.y, o_d2.x))
+			if absf(t_perp) <= _POS_TOLERANCE \
+					and t_along > _MIN_MID_DISTANCE and t_along < o_len - _MIN_MID_DISTANCE:
+				result.append(other)
+				break
+
+	return result
+
+
 ## Solves all junctions under [param wall_parent]. Returns per-wall cap
-## offsets and a list of fill polygons (one per junction gap needing cover).
+## offsets — including, for walls at a 3+-way junction, a wedge point each
+## affected end can fan a triangle to instead of needing a separate mesh.
+## [param wall_parent] may also contain non-wall siblings (floor slabs,
+## roof, stairs, fences all live under the same per-floor node) — only
+## HBWall children take part in the solve.
 static func solve(wall_parent: Node3D) -> SolveResult:
 	var result := SolveResult.new()
 	if wall_parent == null:
@@ -105,7 +161,7 @@ static func solve(wall_parent: Node3D) -> SolveResult:
 	var wall_thk := {}   # StaticBody3D -> float
 
 	for child in wall_parent.get_children():
-		if not (child is StaticBody3D):
+		if not (child is HBWall):
 			continue
 		var b: StaticBody3D = child
 		var body_len := WallHelper.get_wall_length(b)
@@ -231,9 +287,29 @@ static func solve(wall_parent: Node3D) -> SolveResult:
 			var p_xz := Vector2(a.node_pos.x, a.node_pos.z)
 			miter_pts.append(p_xz + n_la * (a.thickness * 0.5) + sa * a.dir)
 
-		# Three or more miter points form a gap polygon that needs filling.
+		# Three or more miter points form a gap that no single 2-wall join
+		# covers — give every real wall at this node a wedge point (this
+		# node's centroid, in that wall's own local frame) so its own mesh
+		# can fan a triangle from its two corners to the centre instead of
+		# relying on a separate junction-fill mesh.
 		if miter_pts.size() >= 3:
-			result.fills.append(JunctionFill.new(miter_pts))
+			var centroid := Vector2.ZERO
+			for pt in miter_pts:
+				centroid += pt
+			centroid /= miter_pts.size()
+
+			for he in node:
+				if he.kind == _Kind.MID_VIRTUAL:
+					continue
+				var local: Vector3 = he.wall.global_transform.affine_inverse() \
+					* Vector3(centroid.x, he.wall.global_transform.origin.y, centroid.y)
+				var off: Offsets = result.offsets[he.wall]
+				if he.kind == _Kind.START:
+					off.has_start_wedge = true
+					off.start_wedge = Vector2(local.x, local.z)
+				else:
+					off.has_end_wedge = true
+					off.end_wedge = Vector2(local.x, local.z)
 
 	return result
 
@@ -304,5 +380,9 @@ static func to_mesh_joins(o: Offsets) -> WallMeshBuilder.JoinOffsets:
 		o.start_minus_z,
 		o.start_plus_z,
 		o.end_minus_z,
-		o.end_plus_z
+		o.end_plus_z,
+		o.has_start_wedge,
+		o.start_wedge,
+		o.has_end_wedge,
+		o.end_wedge
 	)

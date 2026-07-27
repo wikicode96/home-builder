@@ -2,12 +2,15 @@
 class_name SnapHelper
 extends RefCounted
 
+## Single source of truth for the world grid's cell size. Anything that needs
+## to know "how big is a grid tile" (builders, ghost previews) should read
+## this instead of hardcoding 0.5 — that drift is exactly what caused stale
+## grid constants in HBStairs and the floor ghost preview before.
+const GRID_STEP := 0.5
 
+
+## Centre of the 0.5m grid cell hit lands in.
 static func to_tile_center(hit: Vector3, floor_base_y: float) -> Vector3:
-	return Vector3(floor(hit.x) + 0.5, floor_base_y - 0.05, floor(hit.z) + 0.5)
-
-
-static func to_half_tile_center(hit: Vector3, floor_base_y: float) -> Vector3:
 	return Vector3(
 		floor(hit.x * 2.0) * 0.5 + 0.25,
 		floor_base_y - 0.05,
@@ -15,14 +18,22 @@ static func to_half_tile_center(hit: Vector3, floor_base_y: float) -> Vector3:
 	)
 
 
+## Nearest 0.5m grid corner to hit.
 static func to_grid_corner(hit: Vector3, floor_base_y: float) -> Vector3:
-	return Vector3(round(hit.x), floor_base_y, round(hit.z))
+	return Vector3(round(hit.x * 2.0) * 0.5, floor_base_y, round(hit.z * 2.0) * 0.5)
 
 
-## Snaps a world-space hit on a wall to a half-metre step along the wall's
-## local X axis, clamped so an opening of [param opening_width] stays inside
-## the wall. Returns the snapped local X coordinate.
-static func to_wall(wall_body: StaticBody3D, world_hit: Vector3, opening_width: float) -> float:
+## Snaps a world-space hit on a wall to a [param step]-metre grid along the
+## wall's local X axis, clamped so an opening of [param opening_width] stays
+## inside the wall. Pass [param step] <= 0.0 to skip snapping entirely and
+## follow the raw cursor position (used while Ctrl is held). Returns the
+## snapped local X coordinate.
+static func to_wall(
+	wall_body: StaticBody3D,
+	world_hit: Vector3,
+	opening_width: float,
+	step: float = GRID_STEP
+) -> float:
 	var local_hit := wall_body.global_transform.affine_inverse() * world_hit
 
 	# Read wall length — prefer stored metadata so this keeps working after
@@ -33,22 +44,15 @@ static func to_wall(wall_body: StaticBody3D, world_hit: Vector3, opening_width: 
 		return local_hit.x
 
 	var half_len := wall_len * 0.5
-	var snapped_x := floorf(local_hit.x) + 0.5
+	var snapped_x: float = local_hit.x if step <= 0.0 else round(local_hit.x / step) * step
 	return clampf(snapped_x, -half_len + opening_width * 0.5, half_len - opening_width * 0.5)
 
 
-## Inclusive tile bounds of the rectangle spanned by two tile-center points.
-## position = (min_x, min_z), size = (cols, rows).
+## Inclusive bounds of the rectangle spanned by two tile-center points, in
+## HALF-METRE units (multiply position/size by 0.5 to get world metres) —
+## Rect2i can't hold the 0.5 fractions directly, so callers do that scaling
+## themselves (see RoofBuilder/FloorBuilder).
 static func grid_bounds(a: Vector3, b: Vector3) -> Rect2i:
-	var x0 := roundi(a.x - 0.5)
-	var z0 := roundi(a.z - 0.5)
-	var x1 := roundi(b.x - 0.5)
-	var z1 := roundi(b.z - 0.5)
-	return Rect2i(mini(x0, x1), mini(z0, z1), absi(x1 - x0) + 1, absi(z1 - z0) + 1)
-
-
-## Same as [method grid_bounds] but on the half-metre grid.
-static func half_grid_bounds(a: Vector3, b: Vector3) -> Rect2i:
 	var x0 := roundi(a.x * 2.0 - 0.5)
 	var z0 := roundi(a.z * 2.0 - 0.5)
 	var x1 := roundi(b.x * 2.0 - 0.5)

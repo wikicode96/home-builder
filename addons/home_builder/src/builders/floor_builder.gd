@@ -23,7 +23,7 @@ func create_ghost(scene: Node3D, floor_base_y: float) -> void:
 	_ghost = PreviewHelper.create_marker(
 		scene,
 		"__HB_GhostFloor__",
-		Vector3(1.0, ht, 1.0),
+		Vector3(0.5, ht, 0.5),
 		Color(0.2, 0.9, 0.3, 0.4),
 		Vector3(0.0, floor_base_y - ht * 0.5, 0.0)
 	)
@@ -48,7 +48,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 		if _drag_start != null:
 			_update_ghost_rect(_drag_start, cell, floor_base_y)
 		elif _ghost != null and is_instance_valid(_ghost):
-			_ghost.size = Vector3(1.0, slab_thickness, 1.0)
+			_ghost.size = Vector3(0.5, slab_thickness, 0.5)
 			_ghost.position = cell
 
 		return EditorPlugin.AFTER_GUI_INPUT_PASS
@@ -68,7 +68,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 				_drag_start = null
 
 				if _ghost != null and is_instance_valid(_ghost):
-					_ghost.size = Vector3(1.0, slab_thickness, 1.0)
+					_ghost.size = Vector3(0.5, slab_thickness, 0.5)
 			return EditorPlugin.AFTER_GUI_INPUT_STOP
 
 	return EditorPlugin.AFTER_GUI_INPUT_PASS
@@ -81,15 +81,15 @@ func _update_ghost_rect(a: Vector3, b: Vector3, floor_base_y: float) -> void:
 		return
 
 	var bounds := SnapHelper.grid_bounds(a, b)
-	var cols := bounds.size.x
-	var rows := bounds.size.y
+	var cols := bounds.size.x * 0.5
+	var rows := bounds.size.y * 0.5
 
 	var ht := slab_thickness
 	_ghost.size = Vector3(cols, ht, rows)
 	_ghost.position = Vector3(
-		bounds.position.x + cols * 0.5,
+		bounds.position.x * 0.5 + cols * 0.5,
 		floor_base_y - ht * 0.5,
-		bounds.position.y + rows * 0.5
+		bounds.position.y * 0.5 + rows * 0.5
 	)
 
 
@@ -97,55 +97,40 @@ func _update_ghost_rect(a: Vector3, b: Vector3, floor_base_y: float) -> void:
 
 func _fill_floor_rect(a: Vector3, b: Vector3, floor_base_y: float, active_floor: int) -> void:
 	var bounds := SnapHelper.grid_bounds(a, b)
-	var min_x := bounds.position.x
-	var min_z := bounds.position.y
-	var cols := bounds.size.x
-	var rows := bounds.size.y
+	var min_x := bounds.position.x * 0.5
+	var min_z := bounds.position.y * 0.5
+	var cols := bounds.size.x * 0.5
+	var rows := bounds.size.y * 0.5
 
-	var floor_parent: Node3D = _plugin.get_or_create_parent_node("Floor_%d" % active_floor)
+	var floor_parent: Node3D = _plugin.get_or_create_floor_node(active_floor)
 	if floor_parent == null:
 		return
-
-	var slab_mesh := FloorMeshBuilder.build(cols, rows)
 
 	var ht := slab_thickness
 	var z_fighting := 0.001
 
-	var body := StaticBody3D.new()
-	body.name = "FloorSlab"
+	# HBFloorSlab is self-contained: it owns its mesh and collision as internal
+	# children. The designer only ever sees a single "HBFloorSlab_001" node.
+	var body := HBFloorSlab.new()
+	body.name = "HBFloorSlab_001"
 	body.position = Vector3(
 		min_x + cols * 0.5,
 		floor_base_y - ht * 0.5 + z_fighting,
 		min_z + rows * 0.5
 	)
-	body.set_meta("HB_FloorRect", Vector4(min_x, min_z, cols, rows))
+	body.cols = cols
+	body.rows = rows
+	body.thickness = ht
 
-	var tile := MeshInstance3D.new()
-	tile.mesh = slab_mesh
 	var dock = _plugin.dock
-	tile.set_surface_override_material(FloorMeshBuilder.SURFACE_TOP,
-		MaterialHelper.or_default(
-			dock.tile_top_material if dock != null else null, Color(0.8, 0.7, 0.5)))
-	tile.set_surface_override_material(FloorMeshBuilder.SURFACE_BOTTOM,
-		MaterialHelper.or_default(
-			dock.tile_bottom_material if dock != null else null, Color(0.6, 0.6, 0.6)))
-	tile.set_surface_override_material(FloorMeshBuilder.SURFACE_SIDES,
-		MaterialHelper.or_default(
-			dock.tile_sides_material if dock != null else null, Color(0.5, 0.5, 0.5)))
+	body.top_material = dock.tile_top_material if dock != null else null
+	body.bottom_material = dock.tile_bottom_material if dock != null else null
+	body.sides_material = dock.tile_sides_material if dock != null else null
 
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(cols, ht, rows)
-	shape.shape = box
-
-	floor_parent.add_child(body)
+	# force_readable_name = true so name collisions increment the trailing
+	# number (HBFloorSlab_002, …) instead of "@StaticBody3D@NN".
+	floor_parent.add_child(body, true)
 	body.owner = floor_parent.owner
-
-	body.add_child(tile)
-	tile.owner = floor_parent.owner
-
-	body.add_child(shape)
-	shape.owner = floor_parent.owner
 
 	var undo: EditorUndoRedoManager = _plugin.get_undo_redo()
 	undo.create_action("Fill Floor Rect")

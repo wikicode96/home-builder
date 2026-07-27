@@ -17,7 +17,7 @@ const SURFACE_SIDES := 2
 const _HALF_Y := 0.05  # half of 0.1m height
 
 
-static func build(cols: int = 1, rows: int = 1) -> ArrayMesh:
+static func build(cols: float = 1.0, rows: float = 1.0) -> ArrayMesh:
 	var half_x := cols * 0.5
 	var half_z := rows * 0.5
 
@@ -30,7 +30,7 @@ static func build(cols: int = 1, rows: int = 1) -> ArrayMesh:
 
 # ── Top face (Y = +_HALF_Y, normal = Vector3.UP) ─────────────────────────────
 
-static func _build_top(half_x: float, half_z: float, cols: int, rows: int) -> SurfaceTool:
+static func _build_top(half_x: float, half_z: float, cols: float, rows: float) -> SurfaceTool:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -49,7 +49,7 @@ static func _build_top(half_x: float, half_z: float, cols: int, rows: int) -> Su
 
 # ── Bottom face (Y = -_HALF_Y, normal = Vector3.DOWN) ────────────────────────
 
-static func _build_bottom(half_x: float, half_z: float, cols: int, rows: int) -> SurfaceTool:
+static func _build_bottom(half_x: float, half_z: float, cols: float, rows: float) -> SurfaceTool:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -68,7 +68,7 @@ static func _build_bottom(half_x: float, half_z: float, cols: int, rows: int) ->
 
 # ── Four side faces ──────────────────────────────────────────────────────────
 
-static func _build_sides(half_x: float, half_z: float, cols: int, rows: int) -> SurfaceTool:
+static func _build_sides(half_x: float, half_z: float, cols: float, rows: float) -> SurfaceTool:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 

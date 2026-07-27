@@ -11,7 +11,6 @@ static var module_length: float = 1.0
 const META_START := "HB_FenceStart"
 const META_END := "HB_FenceEnd"
 const META_AXIS := "HB_FenceAxis"
-const META_ASSET_PATH := "HB_FenceAssetPath"
 
 ## Only segments parallel to X or Z are supported (see _project_to_axis).
 enum Axis { NONE, X, Z }
@@ -122,58 +121,36 @@ func _place_fence(start: Vector3, end: Vector3, axis: Axis, floor_base_y: float)
 	if n_modules <= 0:
 		return
 
-	var fence_parent: Node3D = _plugin.get_or_create_parent_node("Fences_%d" % _plugin.active_floor)
+	var fence_parent: Node3D = _plugin.get_or_create_floor_node(_plugin.active_floor)
 	if fence_parent == null:
 		return
 
 	# The segment is placed at `start` and rotated so its local +X points
-	# toward `end`. Each module is then positioned at local x = (i + 0.5)
-	# without caring about the global axis.
+	# toward `end`. HBFence positions each module at local x = (i + 0.5) and
+	# owns them as internal children, so the designer sees one clean node.
 	var dir := (end - start).normalized()
 	var basis_x := dir
 	var basis_y := Vector3.UP
 	var basis_z := basis_y.cross(basis_x).normalized()
 
-	var segment := Node3D.new()
-	segment.name = "Fence"
+	var segment := HBFence.new()
+	segment.name = "HBFence_001"
 	segment.position = Vector3(start.x, floor_base_y, start.z)
 	segment.basis = Basis(basis_x, basis_y, basis_z)
 	segment.set_meta(META_START, start)
 	segment.set_meta(META_END, end)
 	segment.set_meta(META_AXIS, "X" if axis == Axis.X else "Z")
-	segment.set_meta(META_ASSET_PATH, asset_scene.resource_path)
+	segment.module_length = module_length
+	segment.module_count = n_modules
+	segment.asset_path = asset_scene.resource_path
 
-	fence_parent.add_child(segment)
+	# force_readable_name = true so name collisions increment the trailing
+	# number (HBFence_002, …) instead of "@Node3D@NN".
+	fence_parent.add_child(segment, true)
 	segment.owner = fence_parent.owner
-
-	for local in _enumerate_module_placements(n_modules):
-		var module := asset_scene.instantiate() as Node3D
-		module.transform = local
-		segment.add_child(module)
-		_set_owner_recursive(module, fence_parent.owner)
 
 	var undo: EditorUndoRedoManager = _plugin.get_undo_redo()
 	undo.create_action("Place Fence")
 	undo.add_do_method(fence_parent, &"add_child", segment)
 	undo.add_undo_method(fence_parent, &"remove_child", segment)
 	undo.commit_action(false)
-
-
-# ── Module enumeration ───────────────────────────────────────────────────────
-#
-# Single extension point: returns N local transforms aligned along X.
-# Posts, variable-length modules, corners and similar additions all go
-# here; the rest of the builder is agnostic.
-
-static func _enumerate_module_placements(n_modules: int) -> Array[Transform3D]:
-	var placements: Array[Transform3D] = []
-	for i in n_modules:
-		var x := (i + 0.5) * module_length
-		placements.append(Transform3D(Basis.IDENTITY, Vector3(x, 0.0, 0.0)))
-	return placements
-
-
-static func _set_owner_recursive(node: Node, owner: Node) -> void:
-	node.owner = owner
-	for child in node.get_children():
-		_set_owner_recursive(child, owner)

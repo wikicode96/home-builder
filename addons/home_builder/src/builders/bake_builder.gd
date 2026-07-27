@@ -144,7 +144,10 @@ static func _collect_geometry(node: Node,
 	# staircase ramp. Box/ConcavePolygon shapes are replaced by the visual mesh.
 	if node is CollisionShape3D and node.shape is ConvexPolygonShape3D:
 		convex_shapes.append(node)
-	for child in node.get_children():
+	# include_internal = true: HBWall (and the other typed nodes) keep their
+	# mesh and collision as internal children, which get_children() hides by
+	# default. Without this the bake would collect no wall geometry.
+	for child in node.get_children(true):
 		_collect_geometry(child, meshes, convex_shapes)
 
 
@@ -520,15 +523,16 @@ static func _set_owner_recursive(node: Node, owner: Node) -> void:
 		_set_owner_recursive(child, owner)
 
 
-## Returns true when the node is inside a Stairs_*, Fences_*, or Floor_*
-## subtree, so it gets skipped in LOD1 to reduce polygon count at distance.
+## Returns true when the node is inside an HBStairs, HBFence, or
+## HBFloorSlab, so it gets skipped in LOD1 to reduce polygon count at
+## distance. Checked by node TYPE rather than by container name — walls,
+## floor slabs, roof, stairs and fences are all siblings under the same
+## per-floor "Floor_%d" node, so the container name alone can no longer
+## tell them apart.
 static func _is_lod1_excluded(node: Node) -> bool:
 	var current := node.get_parent()
 	while current != null and is_instance_valid(current):
-		var current_name := String(current.name)
-		if current_name.begins_with("Stairs_") \
-				or current_name.begins_with("Fences_") \
-				or current_name.begins_with("Floor_"):
+		if current is HBStairs or current is HBFence or current is HBFloorSlab:
 			return true
 		current = current.get_parent()
 	return false
@@ -539,6 +543,10 @@ static func _is_lod1_excluded(node: Node) -> bool:
 ## so LOD1 walls are clean flat faces. Returns null for non-wall meshes.
 static func _get_simplified_wall_mesh(mi: MeshInstance3D) -> ArrayMesh:
 	var parent := mi.get_parent()
+	if parent is HBWall:
+		var wall: HBWall = parent
+		return WallMeshBuilder.build(wall.length, wall.height, wall.thickness)
+	# Legacy walls stored their dimensions as metadata on a plain StaticBody3D.
 	if parent is StaticBody3D and parent.has_meta(WallHelper.META_WALL_LENGTH):
 		var body: StaticBody3D = parent
 		var length := float(body.get_meta(WallHelper.META_WALL_LENGTH))
@@ -547,13 +555,13 @@ static func _get_simplified_wall_mesh(mi: MeshInstance3D) -> ArrayMesh:
 	return null
 
 
-## Returns true when the node is a step mesh inside a Stairs_* subtree.
-## Used to exclude stair visuals from the collision mesh — the ramp
+## Returns true when the node is a step mesh inside an HBStairs. Used to
+## exclude stair visuals from the collision mesh — the ramp
 ## ConvexPolygonShape3D handles walkability instead.
 static func _is_stairs_mesh(node: Node) -> bool:
 	var current := node.get_parent()
 	while current != null and is_instance_valid(current):
-		if String(current.name).begins_with("Stairs_"):
+		if current is HBStairs:
 			return true
 		current = current.get_parent()
 	return false

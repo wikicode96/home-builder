@@ -5,6 +5,9 @@ extends RefCounted
 static var height: float = 3.0
 static var thickness: float = 0.1
 
+## Name of the standalone junction-fill mesh this addon used to create
+## before walls fanned their own wedges. Kept only so rebuild_junctions()
+## can find and remove one left over in an old scene.
 const _FILL_NODE_NAME := "__HB_JunctionFills__"
 
 # Untyped: typing it as the plugin class would create a cyclic class_name
@@ -70,7 +73,7 @@ func handle_input(camera: Camera3D, event: InputEvent, floor_base_y: float) -> i
 # ── Placement ────────────────────────────────────────────────────────────────
 
 func place_wall(start: Vector3, end: Vector3, floor_base_y: float) -> void:
-	var wall_parent: Node3D = _plugin.get_or_create_parent_node("Walls_%d" % _plugin.active_floor)
+	var wall_parent: Node3D = _plugin.get_or_create_floor_node(_plugin.active_floor)
 	if wall_parent == null:
 		return
 
@@ -89,41 +92,27 @@ func place_wall(start: Vector3, end: Vector3, floor_base_y: float) -> void:
 	var basis_y := Vector3.UP
 	var basis_z := basis_y.cross(basis_x).normalized()
 
-	# StaticBody3D is the root — holds position, basis and collision
-	var body := StaticBody3D.new()
-	body.name = "Wall"
+	# HBWall is a self-contained StaticBody3D: it owns its mesh and collision
+	# as internal children and rebuilds them from these parameters. The level
+	# designer only ever sees a single "HBWall_001" node.
+	#
+	# Thickness/height are frozen at placement (copied into the node) so later
+	# dock edits don't retroactively rewrite walls that were built earlier.
+	var body := HBWall.new()
+	# Godot auto-increments the trailing number (HBWall_002, _003, …) whenever
+	# this name collides with an existing sibling.
+	body.name = "HBWall_001"
 	body.position = center
 	body.basis = Basis(basis_x, basis_y, basis_z)
+	body.length = length
+	body.height = height
+	body.thickness = thickness
+	apply_materials(body)
 
-	# Store wall length as metadata so OpeningBuilder can read it later,
-	# even after the collision shape is replaced by ConcavePolygonShape3D.
-	# Thickness/height are frozen at placement so later dock edits don't
-	# retroactively change this wall.
-	var wall_thickness := thickness
-	var wall_height := height
-	body.set_meta(WallHelper.META_WALL_LENGTH, length)
-	body.set_meta(WallHelper.META_WALL_THICKNESS, wall_thickness)
-	body.set_meta(WallHelper.META_WALL_HEIGHT, wall_height)
-
-	# Visual mesh as child
-	var wall := MeshInstance3D.new()
-	wall.mesh = WallMeshBuilder.build(length, wall_height, wall_thickness)
-	apply_materials(wall)
-
-	# Collision shape — BoxShape3D matches wall dimensions exactly
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(length, wall_height, wall_thickness)
-	shape.shape = box
-
-	wall_parent.add_child(body)
+	# force_readable_name = true so name collisions increment the trailing
+	# number (HBWall_002, _003, …) instead of falling back to "@StaticBody3D@NN".
+	wall_parent.add_child(body, true)
 	body.owner = wall_parent.owner
-
-	body.add_child(wall)
-	wall.owner = wall_parent.owner
-
-	body.add_child(shape)
-	shape.owner = wall_parent.owner
 
 	var undo: EditorUndoRedoManager = _plugin.get_undo_redo()
 	undo.create_action("Place Wall")
@@ -148,102 +137,66 @@ static func rebuild_junctions(wall_parent: Node3D) -> void:
 	if wall_parent == null:
 		return
 
+	# One-time migration: scenes saved before junction wedges existed may
+	# still carry the old standalone fill mesh. Each wall now covers its own
+	# slice of the gap directly, so drop the leftover node the first time
+	# any wall on this floor is touched.
+	_remove_legacy_fill_node(wall_parent)
+
 	var solved := WallJunctionSolver.solve(wall_parent)
 	for wall_body in solved.offsets:
-		_rebuild_wall_mesh(wall_body, solved.offsets[wall_body])
-	_rebuild_junction_fills(wall_parent, solved.fills)
+		if wall_body is HBWall:
+			var wall: HBWall = wall_body
+			wall.set_join_offsets(WallJunctionSolver.to_mesh_joins(solved.offsets[wall_body]))
 
 
-# ── Junction fill mesh — covers the gap polygon at X/Y/multi-wall nodes ──────
-
-static func _rebuild_junction_fills(wall_parent: Node3D, fills: Array) -> void:
-	var fill_node: MeshInstance3D = null
-	for child in wall_parent.get_children():
-		if child.name == _FILL_NODE_NAME and child is MeshInstance3D:
-			fill_node = child
-			break
-
-	if fills.is_empty():
-		if fill_node != null:
-			fill_node.queue_free()
+## Use case: [param wall] is being edited (gizmo drag). [param old_partners]
+## are whoever WallJunctionSolver.find_corner_partners found for [param wall]
+## BEFORE the edit started (captured by the caller at drag-begin, while the
+## wall was still at its old position/angle).
+##
+## Two explicit passes, matching how a person reasons about it instead of
+## trusting one opaque global solve:
+##  1. Blank the old partners' cap offsets — as if [param wall] had been
+##     removed from the scene entirely. Four walls in an X become three in a
+##     T once the edited one leaves; a plain L-corner partner just goes flat.
+##  2. Re-solve everyone (including [param wall] at its NEW position) from
+##     scratch. This both forms whatever junction the new position creates
+##     and re-solves the old partners against each other now that step 1's
+##     blank state is the starting point, not their stale pre-edit offsets.
+static func resolve_wall_edit(wall: HBWall, wall_parent: Node3D, old_partners: Array[HBWall]) -> void:
+	if wall_parent == null:
 		return
 
-	if fill_node == null:
-		fill_node = MeshInstance3D.new()
-		fill_node.name = _FILL_NODE_NAME
-		wall_parent.add_child(fill_node)
-		fill_node.owner = wall_parent.owner
-
-	# Position the fill node at the same Y centre as the walls so that
-	# local Y = ±height/2 aligns with the wall top and bottom in world.
-	var wall_centre_y := height * 0.5
-	for child in wall_parent.get_children():
-		if child is StaticBody3D:
-			wall_centre_y = child.position.y
-			break
-	fill_node.position = Vector3(0.0, wall_centre_y, 0.0)
-
-	fill_node.mesh = JunctionFillMeshBuilder.build(fills, height)
-
-	# Reuse the edge material from the first available wall.
-	if fill_node.get_surface_override_material(0) == null:
-		var mat := _find_wall_edge_material(wall_parent)
-		if mat != null:
-			fill_node.set_surface_override_material(0, mat)
-
-
-static func _find_wall_edge_material(wall_parent: Node3D) -> Material:
-	for child in wall_parent.get_children():
-		if not (child is StaticBody3D):
+	for partner in old_partners:
+		if partner == wall or not is_instance_valid(partner):
 			continue
-		for grandchild in child.get_children():
-			if not (grandchild is MeshInstance3D):
-				continue
-			var mat: Material = grandchild.get_surface_override_material(WallMeshBuilder.SURFACE_EDGES)
-			if mat != null:
-				return mat
-	return null
+		partner.set_join_offsets(WallMeshBuilder.JoinOffsets.new())
+
+	rebuild_junctions(wall_parent)
 
 
-static func _rebuild_wall_mesh(wall_body: StaticBody3D, off: WallJunctionSolver.Offsets) -> void:
-	var wall_len := WallHelper.get_wall_length(wall_body)
-	if wall_len <= 0.0:
-		return
+# ── Legacy junction fill cleanup ─────────────────────────────────────────────
+#
+# Superseded by per-wall wedges (WallJunctionSolver.solve() + WallMeshBuilder
+# fanning each affected end to the junction centroid) — kept only so scenes
+# saved before that change self-heal on their next edit.
 
-	var wall_height := WallHelper.get_wall_height(wall_body)
-	var wall_thickness := WallHelper.get_wall_thickness(wall_body)
-
-	var openings := OpeningBuilder.load_openings(wall_body)
-	var joins := WallJunctionSolver.to_mesh_joins(off)
-
-	var new_mesh := WallMeshBuilder.build_with_openings_and_joins(
-		wall_len, wall_height, wall_thickness, openings, joins)
-
-	var mesh_instance: MeshInstance3D = null
-	var collision_shape: CollisionShape3D = null
-	for child in wall_body.get_children():
-		if child is MeshInstance3D:
-			mesh_instance = child
-		if child is CollisionShape3D:
-			collision_shape = child
-	if mesh_instance == null:
-		return
-
-	mesh_instance.mesh = new_mesh
-	if collision_shape != null:
-		OpeningBuilder.update_collision_from_mesh(collision_shape, new_mesh)
+static func _remove_legacy_fill_node(wall_parent: Node3D) -> void:
+	for child in wall_parent.get_children():
+		if child.name == _FILL_NODE_NAME:
+			child.queue_free()
+			return
 
 
 # ── Materials ────────────────────────────────────────────────────────────────
 
-func apply_materials(wall: MeshInstance3D) -> void:
+## Copies the dock's currently-selected wall materials onto the node. They are
+## stored on the HBWall itself, so changing the dock afterwards leaves existing
+## walls untouched — and the designer can still override any slot per-wall from
+## the Inspector.
+func apply_materials(wall: HBWall) -> void:
 	var dock = _plugin.dock
-	wall.set_surface_override_material(WallMeshBuilder.SURFACE_FACE_A,
-		MaterialHelper.or_default(
-			dock.wall_face_a_material if dock != null else null, Color(0.9, 0.9, 0.85)))
-	wall.set_surface_override_material(WallMeshBuilder.SURFACE_FACE_B,
-		MaterialHelper.or_default(
-			dock.wall_face_b_material if dock != null else null, Color(0.85, 0.85, 0.8)))
-	wall.set_surface_override_material(WallMeshBuilder.SURFACE_EDGES,
-		MaterialHelper.or_default(
-			dock.wall_edges_material if dock != null else null, Color(0.7, 0.7, 0.65)))
+	wall.face_a_material = dock.wall_face_a_material if dock != null else null
+	wall.face_b_material = dock.wall_face_b_material if dock != null else null
+	wall.edges_material = dock.wall_edges_material if dock != null else null

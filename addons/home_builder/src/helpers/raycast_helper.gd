@@ -41,7 +41,9 @@ static func to_floor_plane(camera: Camera3D, screen_pos: Vector2, floor_base_y: 
 # ray-vs-AABB slab test there, then transform the hit back to world space.
 
 ## Returns the closest HitInfo among the walls under [param wall_parent],
-## or null when nothing is hit.
+## or null when nothing is hit. [param wall_parent] may also contain
+## non-wall siblings (floor slabs, roof, stairs, fences all live under the
+## same per-floor node) — only HBWall children are considered.
 static func to_walls(camera: Camera3D, screen_pos: Vector2, wall_parent: Node3D) -> HitInfo:
 	if wall_parent == null:
 		return null
@@ -54,7 +56,7 @@ static func to_walls(camera: Camera3D, screen_pos: Vector2, wall_parent: Node3D)
 	var best_hit: HitInfo = null
 
 	for child in wall_parent.get_children():
-		if not (child is StaticBody3D):
+		if not (child is HBWall):
 			continue
 		var body: StaticBody3D = child
 

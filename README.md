@@ -1,10 +1,10 @@
 # Home Builder
 
-A Godot 4 plugin (C#) for building structures directly in the scene editor by clicking in the 3D viewport.
+A Godot 4 plugin for building structures directly in the scene editor by clicking in the 3D viewport.
 
 ## Requirements & Installation
 
-Requires Godot 4.x with .NET (Mono) support. To install the plugin, copy the `addons` folder from this repository into your project's `addons` folder. Then enable it under **Project → Project Settings → Plugins**.
+Requires Godot 4.x. To install the plugin, copy the `addons` folder from this repository into your project's `addons` folder. Then enable it under **Project → Project Settings → Plugins**.
 
 ![house](./imgs/house1.png)
 
@@ -17,6 +17,19 @@ Requires Godot 4.x with .NET (Mono) support. To install the plugin, copy the `ad
 3. Build the structure floor by floor using the floor selector.
 4. Once the building is ready, use **Bake** mode to export it as an optimised scene.
 5. Instance the baked scene in your level.
+
+---
+
+## Editing with Gizmos
+
+Every placed element (walls, floor slabs, roofs, stairs) can be resized after the fact: select it and drag the handles shown in the 3D viewport, the same way Godot's own `CollisionShape3D` boxes work. Each handle keeps the opposite side fixed in place, so dragging one end only grows or shrinks that side.
+
+- Handles snap to the 0.5 m grid by default. **Hold Ctrl** while dragging to size continuously instead, ignoring the grid.
+- On a wall, **hold Shift** while dragging one of its two length handles to move that endpoint freely across the floor plane instead of stretching along the wall's existing direction — this lets you turn an axis-aligned wall diagonal after the fact instead of deleting and re-placing it.
+- Door and window openings stay put relative to whichever end of the wall you are *not* dragging — stretching a wall from one end adds or removes wall length entirely on that side, without shifting existing openings.
+- On stairs, the step-count handle always snaps to whole steps (Ctrl has no effect there, since a fractional step isn't meaningful).
+
+All gizmo edits go through the regular Godot undo/redo (Ctrl+Z / Ctrl+Y).
 
 ---
 
@@ -35,9 +48,10 @@ Hold and drag in the viewport to fill a rectangle of tiles. A single click place
 - Configurable: wall **height** and **thickness**, and materials for **face A**, **face B**, and **edges**.
 
 ### Doors & Windows
-With Doors or Windows mode active, click on an existing wall to open a cutout. The gap is carved into both the wall geometry and its collision shape.
+With Doors or Windows mode active, click on an existing wall to open a cutout. The gap is carved into both the wall geometry and its collision shape. Placement snaps to 0.5 m steps along the wall; hold **Ctrl** for free placement.
 - Doors: configurable width and height.
 - Windows: configurable width, height, and sill height.
+- Optionally assign a `PackedScene` as the door/window asset in the panel — it is then instantiated automatically at the opening's position (matching the wall's orientation) every time you place one.
 
 ### Stairs
 - First click: staircase base.
@@ -46,11 +60,21 @@ With Doors or Windows mode active, click on an existing wall to open a cutout. T
 - **Step height** is calculated automatically as `wall height / number of steps`, so the staircase always meets the upper floor exactly. More steps make them shorter; fewer steps make them taller.
 
 ### Roofs
-Hold and drag in the viewport to define the roof footprint on the active floor. Snapping is to half a tile (0.5 m) so the roof can align with wall outer faces, not just cell centres. The footprint is automatically extended outward by half the wall thickness on each side, so the eave covers the exterior face of perimeter walls. Available types:
+Hold and drag in the viewport to define the roof footprint on the active floor. Snapping is to half a tile (0.5 m) so the roof can align with wall outer faces, not just cell centres. The footprint is automatically extended outward by half the wall thickness on each side, so the roof reaches the exterior face of perimeter walls. Available types:
 - **Flat**
 - **Shed** — configurable: direction and pitch
 - **Gable** — configurable: direction and pitch
-- **Hip** — configurable: pitch. The ridge is automatically oriented along the longest side of the rectangle.
+- **Hip** — the ridge is automatically oriented along the longest side of the rectangle.
+
+Every type is also configurable by **eave** and **thickness**, and none of them has a horizontal base.
+
+**Eave** prolongs the slope faces outward past the footprint at the same pitch, so the roof overhangs the facade instead of dying flush with it. It is independent of width/depth/pitch: resize the roof with the gizmo and the same overhang is regenerated off the new edge. `0` gives the flush roof. Default is 0.4 m. On a gable it drives both the eave proper and the rake overhang over the gable ends; on a flat roof it simply widens the slab.
+
+**Thickness** makes the roof a solid instead of a single-sided skin: the slope faces become the soffit you see from below, a second shell is raised above them, and a band around the perimeter closes the two. It is measured perpendicular to the slope, so the ridge ends up slightly higher than the value itself. Default is 0.2 m.
+
+**No horizontal base** — the slopes are all there is — so the space below is yours to fill: leave the top storey's walls bare, add a floor slab and a staircase for an attic, or drop in a ceiling.
+
+Material slots are outer skin / soffit / perimeter band. Shed and gable roofs additionally have **end walls** — the shed's back wall and side triangles, the gable's two ends — which are real solids and therefore get the same three slots a wall does: face A (outward), face B (inward) and edge. They sit at the footprint edge with the roof flying over them, so they line up with the walls below; their thickness is an inspector-only property on the node (`end_thickness`, default 0.1 m) since it should just match the walls rather than be tuned per roof. Flat and hip roofs have no end walls, so that whole row disappears from the panel and those properties are hidden in the Inspector.
 
 ### Fences / Railings
 - First click: starting corner of the segment.
@@ -65,6 +89,8 @@ Hold and drag in the viewport to define the roof footprint on the active floor. 
 ## Multiple Floors
 
 The floor selector (▲ / ▼ next to the floor number) controls which level new elements are placed on. When moving up a floor, lower floors are automatically hidden in the editor to keep the workspace clean.
+
+Every element of a storey — walls, floor slab, roof, stairs, fences — is placed under a single `Floor_N` node, keeping the scene tree free of near-empty per-type containers.
 
 > Floor height equals the configured wall height.
 
