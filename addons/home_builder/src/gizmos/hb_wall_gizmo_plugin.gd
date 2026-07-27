@@ -58,6 +58,14 @@ var _drag_old_partners: Array[HBWall] = []
 ## Captured once per drag so repeated per-frame recomputation doesn't drift.
 var _drag_start_openings: Array[Dictionary] = []
 var _drag_start_length := 0.0
+## Local position of every externally-added child (door/window asset
+## instances placed by OpeningBuilder — internal Mesh/Collision children are
+## excluded automatically since get_children() defaults to
+## include_internal = false) at the start of the drag. These aren't tracked
+## by cx like openings are, so they'd otherwise stay put in the wall's local
+## frame while the wall's node recentres under them — same drift bug as the
+## openings themselves, just for the placed scene instead of the cut-out.
+var _drag_start_children: Dictionary = {}
 
 
 func _init(undo_redo: EditorUndoRedoManager) -> void:
@@ -218,8 +226,14 @@ func _set_handle_endpoint(wall: HBWall, handle_id: int, camera: Camera3D, screen
 ## Also clamps new_length upward if shrinking would push an opening past the
 ## dragged end (openings never scale or get shoved past the moving face).
 ## Returns the (possibly clamped) length to use.
+##
+## The same shift also gets applied to any door/window asset instance placed
+## in the opening (see _drag_start_children) — those live as plain child
+## nodes with their own local position.x, not as a cx inside wall.openings,
+## so they need moving explicitly or they'd drift exactly like the openings
+## used to before this fix.
 func _reposition_openings(wall: HBWall, anchor_frac: float, new_length: float) -> float:
-	if _drag_start_openings.is_empty():
+	if _drag_start_openings.is_empty() and _drag_start_children.is_empty():
 		return new_length
 
 	var clamped_length := new_length
@@ -237,12 +251,21 @@ func _reposition_openings(wall: HBWall, anchor_frac: float, new_length: float) -
 		clamped_length = maxf(clamped_length, min_length)
 
 	var delta := clamped_length - _drag_start_length
-	var new_openings: Array[Dictionary] = []
-	for d in _drag_start_openings:
-		var nd := d.duplicate()
-		nd["cx"] = d["cx"] + anchor_frac * delta
-		new_openings.append(nd)
-	wall.openings = new_openings
+
+	if not _drag_start_openings.is_empty():
+		var new_openings: Array[Dictionary] = []
+		for d in _drag_start_openings:
+			var nd := d.duplicate()
+			nd["cx"] = d["cx"] + anchor_frac * delta
+			new_openings.append(nd)
+		wall.openings = new_openings
+
+	var shift := anchor_frac * delta
+	for child in _drag_start_children:
+		if is_instance_valid(child):
+			var base: Vector3 = _drag_start_children[child]
+			child.position = Vector3(base.x + shift, base.y, base.z)
+
 	return clamped_length
 
 
@@ -256,6 +279,10 @@ func _begin_drag(wall: HBWall, handle_id: int) -> void:
 	_drag_start_basis = wall.basis
 	_drag_start_length = wall.length
 	_drag_start_openings = wall.openings.duplicate(true)
+	_drag_start_children.clear()
+	for child in wall.get_children():
+		if child is Node3D:
+			_drag_start_children[child] = child.position
 	_drag_old_partners = WallJunctionSolver.find_corner_partners(wall, wall.get_parent())
 
 	var axis: Vector3 = _AXES[handle_id]
@@ -282,6 +309,9 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 		wall.position = _drag_start_position
 		wall.basis = _drag_start_basis
 		wall.openings = _drag_start_openings.duplicate(true)
+		for child in _drag_start_children:
+			if is_instance_valid(child):
+				child.position = _drag_start_children[child]
 		# Cancelling puts the wall back exactly where it started, so a plain
 		# global rebuild is enough here — there's no "new position" for
 		# resolve_wall_edit's old-partners pass to matter.
@@ -308,10 +338,16 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	_undo_redo.add_do_property(wall, "position", new_position)
 	_undo_redo.add_do_property(wall, "basis", new_basis)
 	_undo_redo.add_do_property(wall, "openings", new_openings)
+	for child in _drag_start_children:
+		if is_instance_valid(child):
+			_undo_redo.add_do_property(child, "position", child.position)
 	_undo_redo.add_undo_property(wall, "openings", _drag_start_openings)
 	_undo_redo.add_undo_property(wall, "basis", _drag_start_basis)
 	_undo_redo.add_undo_property(wall, "position", _drag_start_position)
 	_undo_redo.add_undo_property(wall, prop, restore)
+	for child in _drag_start_children:
+		if is_instance_valid(child):
+			_undo_redo.add_undo_property(child, "position", _drag_start_children[child])
 	_undo_redo.commit_action(false)
 	WallBuilder.resolve_wall_edit(wall, wall_parent, _drag_old_partners)
 	_drag_handle_id = -1
