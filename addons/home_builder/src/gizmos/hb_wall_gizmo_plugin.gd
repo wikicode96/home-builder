@@ -47,6 +47,11 @@ var _drag_anchor_global := Vector3.ZERO
 var _drag_dir_global := Vector3.ZERO
 var _drag_start_position := Vector3.ZERO
 var _drag_start_basis := Basis.IDENTITY
+## Walls that formed a corner/T with the dragged wall BEFORE this drag
+## started (see WallJunctionSolver.find_corner_partners) — captured once in
+## _begin_drag so WallBuilder.resolve_wall_edit can reset them even after
+## the wall's new position no longer comes anywhere near them.
+var _drag_old_partners: Array[HBWall] = []
 
 
 func _init(undo_redo: EditorUndoRedoManager) -> void:
@@ -148,6 +153,7 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 		_drag_anchor_global, _drag_dir_global,
 		_SIGNS[handle_id], _ANCHOR_FRACS[handle_id], new_length)
 	wall.set(_PROPS[handle_id], new_length)
+	WallBuilder.resolve_wall_edit(wall, wall.get_parent(), _drag_old_partners)
 
 
 ## Moves a length handle's endpoint freely across the floor plane instead of
@@ -185,6 +191,7 @@ func _set_handle_endpoint(wall: HBWall, handle_id: int, camera: Camera3D, screen
 	wall.global_position = HBGizmoResizeMath.node_position(
 		_drag_anchor_global, new_dir, _SIGNS[handle_id], _ANCHOR_FRACS[handle_id], dist)
 	wall.length = dist
+	WallBuilder.resolve_wall_edit(wall, wall.get_parent(), _drag_old_partners)
 
 
 ## Captures the opposite face's world position (the anchor) and the drag
@@ -195,6 +202,7 @@ func _begin_drag(wall: HBWall, handle_id: int) -> void:
 	_drag_handle_id = handle_id
 	_drag_start_position = wall.position
 	_drag_start_basis = wall.basis
+	_drag_old_partners = WallJunctionSolver.find_corner_partners(wall, wall.get_parent())
 
 	var axis: Vector3 = _AXES[handle_id]
 	var sign: float = _SIGNS[handle_id]
@@ -214,10 +222,15 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 		return
 
 	var prop: String = _PROPS[handle_id]
+	var wall_parent := wall.get_parent()
 	if cancel:
 		wall.set(prop, restore)
 		wall.position = _drag_start_position
 		wall.basis = _drag_start_basis
+		# Cancelling puts the wall back exactly where it started, so a plain
+		# global rebuild is enough here — there's no "new position" for
+		# resolve_wall_edit's old-partners pass to matter.
+		WallBuilder.rebuild_junctions(wall_parent)
 		_drag_handle_id = -1
 		return
 
@@ -229,6 +242,11 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 		_drag_handle_id = -1
 		return
 
+	# rebuild_junctions itself isn't part of the undo/redo action (consistent
+	# with WallBuilder.place_wall, which doesn't record it either): it's a
+	# pure function of the walls' current geometry, so simply calling it
+	# again after the property undo/redo applies is enough to leave every
+	# wall's corners consistent with whichever state was just restored.
 	_undo_redo.create_action("Cambiar %s de %s" % [_NAMES[handle_id], wall.name])
 	_undo_redo.add_do_property(wall, prop, new_value)
 	_undo_redo.add_do_property(wall, "position", new_position)
@@ -237,4 +255,5 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	_undo_redo.add_undo_property(wall, "position", _drag_start_position)
 	_undo_redo.add_undo_property(wall, prop, restore)
 	_undo_redo.commit_action(false)
+	WallBuilder.resolve_wall_edit(wall, wall_parent, _drag_old_partners)
 	_drag_handle_id = -1

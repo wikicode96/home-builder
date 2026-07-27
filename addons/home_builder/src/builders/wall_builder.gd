@@ -142,6 +142,32 @@ static func rebuild_junctions(wall_parent: Node3D) -> void:
 	_rebuild_junction_fills(wall_parent, solved.fills)
 
 
+## Use case: [param wall] is being edited (gizmo drag). [param old_partners]
+## are whoever WallJunctionSolver.find_corner_partners found for [param wall]
+## BEFORE the edit started (captured by the caller at drag-begin, while the
+## wall was still at its old position/angle).
+##
+## Two explicit passes, matching how a person reasons about it instead of
+## trusting one opaque global solve:
+##  1. Blank the old partners' cap offsets — as if [param wall] had been
+##     removed from the scene entirely. Four walls in an X become three in a
+##     T once the edited one leaves; a plain L-corner partner just goes flat.
+##  2. Re-solve everyone (including [param wall] at its NEW position) from
+##     scratch. This both forms whatever junction the new position creates
+##     and re-solves the old partners against each other now that step 1's
+##     blank state is the starting point, not their stale pre-edit offsets.
+static func resolve_wall_edit(wall: HBWall, wall_parent: Node3D, old_partners: Array[HBWall]) -> void:
+	if wall_parent == null:
+		return
+
+	for partner in old_partners:
+		if partner == wall or not is_instance_valid(partner):
+			continue
+		partner.set_join_offsets(WallMeshBuilder.JoinOffsets.new())
+
+	rebuild_junctions(wall_parent)
+
+
 # ── Junction fill mesh — covers the gap polygon at X/Y/multi-wall nodes ──────
 
 static func _rebuild_junction_fills(wall_parent: Node3D, fills: Array) -> void:

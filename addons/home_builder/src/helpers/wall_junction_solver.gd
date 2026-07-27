@@ -89,6 +89,59 @@ class _HalfEdge:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
+## Returns every OTHER wall under [param wall_parent] that currently forms a
+## junction with one of [param wall]'s two endpoints — either by sharing
+## that exact point (L/X corner) or by [param wall]'s endpoint resting on
+## the middle of the other wall (a T, with [param wall] as the leg touching
+## the other wall's middle). Used by use-case code (e.g. the gizmo) to know,
+## BEFORE an edit starts, which neighbours need to be re-solved once
+## [param wall] no longer touches them.
+static func find_corner_partners(wall: HBWall, wall_parent: Node3D) -> Array[HBWall]:
+	var result: Array[HBWall] = []
+	if wall_parent == null or wall == null:
+		return result
+
+	var w_len := WallHelper.get_wall_length(wall)
+	if w_len <= 0.0:
+		return result
+	var w_tr := wall.global_transform
+	var w_axis := w_tr.basis.x
+	var endpoints := [
+		w_tr.origin - w_axis * (w_len * 0.5),
+		w_tr.origin + w_axis * (w_len * 0.5),
+	]
+
+	for child in wall_parent.get_children():
+		if child == wall or not (child is HBWall):
+			continue
+		var other: HBWall = child
+		var o_len := WallHelper.get_wall_length(other)
+		if o_len <= 0.0:
+			continue
+		var o_tr := other.global_transform
+		var o_axis := o_tr.basis.x
+		var o_d2 := Vector2(o_axis.x, o_axis.z)
+		if o_d2.length_squared() < 1e-8:
+			continue
+		o_d2 = o_d2.normalized()
+		var o_start := o_tr.origin - o_axis * (o_len * 0.5)
+		var o_end := o_tr.origin + o_axis * (o_len * 0.5)
+
+		for p in endpoints:
+			if _close_xz(p, o_start) or _close_xz(p, o_end):
+				result.append(other)
+				break
+			var rel := Vector2(p.x - o_start.x, p.z - o_start.z)
+			var t_along := rel.dot(o_d2)
+			var t_perp := rel.dot(Vector2(-o_d2.y, o_d2.x))
+			if absf(t_perp) <= _POS_TOLERANCE \
+					and t_along > _MIN_MID_DISTANCE and t_along < o_len - _MIN_MID_DISTANCE:
+				result.append(other)
+				break
+
+	return result
+
+
 ## Solves all junctions under [param wall_parent]. Returns per-wall cap
 ## offsets and a list of fill polygons (one per junction gap needing cover).
 ## [param wall_parent] may also contain non-wall siblings (floor slabs,
