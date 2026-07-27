@@ -52,6 +52,12 @@ var _drag_start_basis := Basis.IDENTITY
 ## _begin_drag so WallBuilder.resolve_wall_edit can reset them even after
 ## the wall's new position no longer comes anywhere near them.
 var _drag_old_partners: Array[HBWall] = []
+## Openings and length as they were before this drag touched them — used by
+## _reposition_openings to keep each opening's distance to the anchor face
+## fixed instead of letting it drift with the node's (moving) local origin.
+## Captured once per drag so repeated per-frame recomputation doesn't drift.
+var _drag_start_openings: Array[Dictionary] = []
+var _drag_start_length := 0.0
 
 
 func _init(undo_redo: EditorUndoRedoManager) -> void:
@@ -149,6 +155,9 @@ func _set_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 			_drag_anchor_global, _drag_dir_global, ray_from, ray_dir,
 			_GRID_STEP, _MIN_LENGTH[handle_id])
 
+	if _AXES[handle_id] == Vector3.RIGHT:
+		new_length = _reposition_openings(wall, _ANCHOR_FRACS[handle_id], new_length)
+
 	wall.global_position = HBGizmoResizeMath.node_position(
 		_drag_anchor_global, _drag_dir_global,
 		_SIGNS[handle_id], _ANCHOR_FRACS[handle_id], new_length)
@@ -182,6 +191,7 @@ func _set_handle_endpoint(wall: HBWall, handle_id: int, camera: Camera3D, screen
 	else:
 		new_dir = horiz.normalized()
 	dist = maxf(dist, _MIN_LENGTH[handle_id])
+	dist = _reposition_openings(wall, _ANCHOR_FRACS[handle_id], dist)
 
 	var basis_x := new_dir
 	var basis_y := Vector3.UP
@@ -194,6 +204,48 @@ func _set_handle_endpoint(wall: HBWall, handle_id: int, camera: Camera3D, screen
 	WallBuilder.resolve_wall_edit(wall, wall.get_parent(), _drag_old_partners)
 
 
+## Recomputes each opening's cx so its distance to the anchor face (the end
+## NOT being dragged) stays exactly fixed. Without this, cx (stored relative
+## to the wall's local origin, i.e. its center) would silently drift in world
+## space whenever length changes, because resizing re-centers the node to
+## keep the anchor face fixed — dragging one end would visibly shift every
+## opening instead of leaving the fixed side untouched and growing/shrinking
+## purely on the dragged side.
+##
+## Derivation: opening distance-to-anchor = cx0 - anchor_frac * L0 must equal
+## new_cx - anchor_frac * new_length, so new_cx = cx0 + anchor_frac * (new_length - L0).
+##
+## Also clamps new_length upward if shrinking would push an opening past the
+## dragged end (openings never scale or get shoved past the moving face).
+## Returns the (possibly clamped) length to use.
+func _reposition_openings(wall: HBWall, anchor_frac: float, new_length: float) -> float:
+	if _drag_start_openings.is_empty():
+		return new_length
+
+	var clamped_length := new_length
+	for d in _drag_start_openings:
+		var cx0: float = d["cx"]
+		var hw: float = d["w"] * 0.5
+		# Minimum length so this opening's edge on the dragged side still
+		# fits within the new wall bounds (its edge on the anchor side never
+		# moves, so it never constrains the minimum).
+		var min_length: float
+		if anchor_frac < 0.0:
+			min_length = cx0 + _drag_start_length * 0.5 + hw
+		else:
+			min_length = -cx0 + _drag_start_length * 0.5 + hw
+		clamped_length = maxf(clamped_length, min_length)
+
+	var delta := clamped_length - _drag_start_length
+	var new_openings: Array[Dictionary] = []
+	for d in _drag_start_openings:
+		var nd := d.duplicate()
+		nd["cx"] = d["cx"] + anchor_frac * delta
+		new_openings.append(nd)
+	wall.openings = new_openings
+	return clamped_length
+
+
 ## Captures the opposite face's world position (the anchor) and the drag
 ## axis's world direction, both from the wall's state right before the drag
 ## touches it — these stay constant for the whole drag even as the node's
@@ -202,6 +254,8 @@ func _begin_drag(wall: HBWall, handle_id: int) -> void:
 	_drag_handle_id = handle_id
 	_drag_start_position = wall.position
 	_drag_start_basis = wall.basis
+	_drag_start_length = wall.length
+	_drag_start_openings = wall.openings.duplicate(true)
 	_drag_old_partners = WallJunctionSolver.find_corner_partners(wall, wall.get_parent())
 
 	var axis: Vector3 = _AXES[handle_id]
@@ -227,6 +281,7 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 		wall.set(prop, restore)
 		wall.position = _drag_start_position
 		wall.basis = _drag_start_basis
+		wall.openings = _drag_start_openings.duplicate(true)
 		# Cancelling puts the wall back exactly where it started, so a plain
 		# global rebuild is enough here — there's no "new position" for
 		# resolve_wall_edit's old-partners pass to matter.
@@ -237,6 +292,7 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	var new_value = wall.get(prop)
 	var new_position := wall.position
 	var new_basis := wall.basis
+	var new_openings := wall.openings
 	if is_equal_approx(new_value, restore) and new_position.is_equal_approx(_drag_start_position) \
 			and new_basis.is_equal_approx(_drag_start_basis):
 		_drag_handle_id = -1
@@ -251,6 +307,8 @@ func _commit_handle(gizmo: EditorNode3DGizmo, handle_id: int, _secondary: bool,
 	_undo_redo.add_do_property(wall, prop, new_value)
 	_undo_redo.add_do_property(wall, "position", new_position)
 	_undo_redo.add_do_property(wall, "basis", new_basis)
+	_undo_redo.add_do_property(wall, "openings", new_openings)
+	_undo_redo.add_undo_property(wall, "openings", _drag_start_openings)
 	_undo_redo.add_undo_property(wall, "basis", _drag_start_basis)
 	_undo_redo.add_undo_property(wall, "position", _drag_start_position)
 	_undo_redo.add_undo_property(wall, prop, restore)
