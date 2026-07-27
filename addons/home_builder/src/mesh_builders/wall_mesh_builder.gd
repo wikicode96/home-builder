@@ -68,18 +68,33 @@ class Opening:
 ##   start_plus_z  — start cap corner at local Z = +thickness/2
 ##   end_minus_z   — end   cap corner at local Z = -thickness/2
 ##   end_plus_z    — end   cap corner at local Z = +thickness/2
+##
+## When 3+ walls meet at one end, that end also gets a wedge point (local
+## X/Z) — the junction gap's centroid — so a triangle can be fanned from
+## this wall's own two corners to the shared centre, covering that end's
+## slice of the gap without a separate junction-fill mesh.
 class JoinOffsets:
 	var start_minus_z: float
 	var start_plus_z: float
 	var end_minus_z: float
 	var end_plus_z: float
+	var has_start_wedge: bool
+	var start_wedge: Vector2
+	var has_end_wedge: bool
+	var end_wedge: Vector2
 
 	func _init(p_start_minus_z := 0.0, p_start_plus_z := 0.0,
-			p_end_minus_z := 0.0, p_end_plus_z := 0.0) -> void:
+			p_end_minus_z := 0.0, p_end_plus_z := 0.0,
+			p_has_start_wedge := false, p_start_wedge := Vector2.ZERO,
+			p_has_end_wedge := false, p_end_wedge := Vector2.ZERO) -> void:
 		start_minus_z = p_start_minus_z
 		start_plus_z = p_start_plus_z
 		end_minus_z = p_end_minus_z
 		end_plus_z = p_end_plus_z
+		has_start_wedge = p_has_start_wedge
+		start_wedge = p_start_wedge
+		has_end_wedge = p_has_end_wedge
+		end_wedge = p_end_wedge
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -134,7 +149,7 @@ static func build_with_openings_and_joins(length: float, height: float, thicknes
 	MeshHelper.add_surface(mesh, _build_face(hx, hy, ops, x_start_mz, x_end_mz, -hz, -1.0))
 	# Face B at z = +hz uses the +Z-side offsets.
 	MeshHelper.add_surface(mesh, _build_face(hx, hy, ops, x_start_pz, x_end_pz, hz, 1.0))
-	MeshHelper.add_surface(mesh, _build_edges(hx, hy, hz, ops, x_start_mz, x_start_pz, x_end_mz, x_end_pz))
+	MeshHelper.add_surface(mesh, _build_edges(hx, hy, hz, ops, x_start_mz, x_start_pz, x_end_mz, x_end_pz, clamped))
 	return mesh
 
 
@@ -184,6 +199,12 @@ static func _clamp_joins(j: JoinOffsets, length: float) -> JoinOffsets:
 		clampf(j.end_minus_z, min_each, max_each),
 		clampf(j.end_plus_z, min_each, max_each)
 	)
+	# Wedge points are absolute positions already resolved by the solver,
+	# not scalar trims — pass them through unclamped.
+	out.has_start_wedge = j.has_start_wedge
+	out.start_wedge = j.start_wedge
+	out.has_end_wedge = j.has_end_wedge
+	out.end_wedge = j.end_wedge
 
 	# Keep a tiny residual length on every side so each face quad has area.
 	var min_len := 0.01
@@ -294,7 +315,7 @@ static func _emit_face_quad(st: SurfaceTool,
 
 static func _build_edges(hx: float, hy: float, hz: float, ops: Array,
 		x_start_mz: float, x_start_pz: float,
-		x_end_mz: float, x_end_pz: float) -> SurfaceTool:
+		x_end_mz: float, x_end_pz: float, joins: JoinOffsets) -> SurfaceTool:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -333,6 +354,15 @@ static func _build_edges(hx: float, hy: float, hz: float, ops: Array,
 
 	# ── End cap (outer +X end, possibly tilted) ──────────────────────────────
 	_emit_end_cap(st, x_end_mz, x_end_pz, hy, hz)
+
+	# ── Junction wedges: this end's slice of a 3+-way junction gap, fanned
+	#    from this wall's own two corners to the shared centroid — see
+	#    WallJunctionSolver.solve(). Covers what a separate junction-fill
+	#    mesh used to.
+	if joins.has_start_wedge:
+		_emit_start_wedge(st, x_start_mz, x_start_pz, hy, hz, joins.start_wedge)
+	if joins.has_end_wedge:
+		_emit_end_wedge(st, x_end_mz, x_end_pz, hy, hz, joins.end_wedge)
 
 	# ── Opening frames ───────────────────────────────────────────────────────
 	var adjacent_epsilon := 0.001
@@ -467,3 +497,58 @@ static func _emit_end_cap(st: SurfaceTool,
 		Vector2(0, 0), Vector2(0, 1),
 		Vector2(1, 1), Vector2(1, 0)
 	)
+
+
+## This end's slice of a 3+-way junction gap: a triangle (top + bottom) from
+## the Start end's two corners to the junction centroid (in local X/Z).
+## _add_tri emits vertices with NO reordering (unlike MeshHelper.add_quad/
+## add_triangle, which convert a CCW-from-normal input into Godot's actual
+## CW-from-normal front-face order) — so the order below is already the
+## final, CW-as-viewed-from-the-normal-direction order confirmed empirically
+## in-editor (an initial derivation from the old JunctionFillMeshBuilder's
+## per-wall fan slice produced the mirrored, backface-culled result).
+static func _emit_start_wedge(st: SurfaceTool,
+		x_start_mz: float, x_start_pz: float, hy: float, hz: float,
+		wedge: Vector2) -> void:
+	var wedge_top := Vector3(wedge.x, hy, wedge.y)
+	var wedge_bottom := Vector3(wedge.x, -hy, wedge.y)
+	var mz_top := Vector3(x_start_mz, hy, -hz)
+	var pz_top := Vector3(x_start_pz, hy, hz)
+	var mz_bottom := Vector3(x_start_mz, -hy, -hz)
+	var pz_bottom := Vector3(x_start_pz, -hy, hz)
+
+	_add_tri(st, wedge_top, mz_top, pz_top, Vector3.UP)
+	_add_tri(st, wedge_bottom, pz_bottom, mz_bottom, Vector3.DOWN)
+
+
+## This end's slice of a 3+-way junction gap for the End end — mirror of the
+## Start case above (see its comment for the winding note).
+static func _emit_end_wedge(st: SurfaceTool,
+		x_end_mz: float, x_end_pz: float, hy: float, hz: float,
+		wedge: Vector2) -> void:
+	var wedge_top := Vector3(wedge.x, hy, wedge.y)
+	var wedge_bottom := Vector3(wedge.x, -hy, wedge.y)
+	var mz_top := Vector3(x_end_mz, hy, -hz)
+	var pz_top := Vector3(x_end_pz, hy, hz)
+	var mz_bottom := Vector3(x_end_mz, -hy, -hz)
+	var pz_bottom := Vector3(x_end_pz, -hy, hz)
+
+	_add_tri(st, wedge_top, pz_top, mz_top, Vector3.UP)
+	_add_tri(st, wedge_bottom, mz_bottom, pz_bottom, Vector3.DOWN)
+
+
+## Emits one flat-shaded triangle with fixed placeholder UVs, in the exact
+## vertex order given — no CCW-to-CW reordering, unlike MeshHelper.add_quad/
+## add_triangle. Callers must pass vertices already in Godot's native
+## CW-as-viewed-from-the-normal-direction front-face order.
+static func _add_tri(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3,
+		normal: Vector3) -> void:
+	st.set_normal(normal)
+	st.set_uv(Vector2(0.5, 0.5))
+	st.add_vertex(v0)
+	st.set_normal(normal)
+	st.set_uv(Vector2(0.0, 1.0))
+	st.add_vertex(v1)
+	st.set_normal(normal)
+	st.set_uv(Vector2(1.0, 0.0))
+	st.add_vertex(v2)

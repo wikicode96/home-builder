@@ -5,6 +5,9 @@ extends RefCounted
 static var height: float = 3.0
 static var thickness: float = 0.1
 
+## Name of the standalone junction-fill mesh this addon used to create
+## before walls fanned their own wedges. Kept only so rebuild_junctions()
+## can find and remove one left over in an old scene.
 const _FILL_NODE_NAME := "__HB_JunctionFills__"
 
 # Untyped: typing it as the plugin class would create a cyclic class_name
@@ -134,12 +137,17 @@ static func rebuild_junctions(wall_parent: Node3D) -> void:
 	if wall_parent == null:
 		return
 
+	# One-time migration: scenes saved before junction wedges existed may
+	# still carry the old standalone fill mesh. Each wall now covers its own
+	# slice of the gap directly, so drop the leftover node the first time
+	# any wall on this floor is touched.
+	_remove_legacy_fill_node(wall_parent)
+
 	var solved := WallJunctionSolver.solve(wall_parent)
 	for wall_body in solved.offsets:
 		if wall_body is HBWall:
 			var wall: HBWall = wall_body
 			wall.set_join_offsets(WallJunctionSolver.to_mesh_joins(solved.offsets[wall_body]))
-	_rebuild_junction_fills(wall_parent, solved.fills)
 
 
 ## Use case: [param wall] is being edited (gizmo drag). [param old_partners]
@@ -168,52 +176,17 @@ static func resolve_wall_edit(wall: HBWall, wall_parent: Node3D, old_partners: A
 	rebuild_junctions(wall_parent)
 
 
-# ── Junction fill mesh — covers the gap polygon at X/Y/multi-wall nodes ──────
+# ── Legacy junction fill cleanup ─────────────────────────────────────────────
+#
+# Superseded by per-wall wedges (WallJunctionSolver.solve() + WallMeshBuilder
+# fanning each affected end to the junction centroid) — kept only so scenes
+# saved before that change self-heal on their next edit.
 
-static func _rebuild_junction_fills(wall_parent: Node3D, fills: Array) -> void:
-	var fill_node: MeshInstance3D = null
+static func _remove_legacy_fill_node(wall_parent: Node3D) -> void:
 	for child in wall_parent.get_children():
-		if child.name == _FILL_NODE_NAME and child is MeshInstance3D:
-			fill_node = child
-			break
-
-	if fills.is_empty():
-		if fill_node != null:
-			fill_node.queue_free()
-		return
-
-	if fill_node == null:
-		fill_node = MeshInstance3D.new()
-		fill_node.name = _FILL_NODE_NAME
-		wall_parent.add_child(fill_node)
-		fill_node.owner = wall_parent.owner
-
-	# Position the fill node at the same Y centre as the walls so that
-	# local Y = ±height/2 aligns with the wall top and bottom in world.
-	var wall_centre_y := height * 0.5
-	for child in wall_parent.get_children():
-		if child is HBWall:
-			wall_centre_y = child.position.y
-			break
-	fill_node.position = Vector3(0.0, wall_centre_y, 0.0)
-
-	fill_node.mesh = JunctionFillMeshBuilder.build(fills, height)
-
-	# Reuse the edge material from the first available wall.
-	if fill_node.get_surface_override_material(0) == null:
-		var mat := _find_wall_edge_material(wall_parent)
-		if mat != null:
-			fill_node.set_surface_override_material(0, mat)
-
-
-static func _find_wall_edge_material(wall_parent: Node3D) -> Material:
-	for child in wall_parent.get_children():
-		if child is HBWall:
-			var wall: HBWall = child
-			var mat := wall.get_edge_material()
-			if mat != null:
-				return mat
-	return null
+		if child.name == _FILL_NODE_NAME:
+			child.queue_free()
+			return
 
 
 # ── Materials ────────────────────────────────────────────────────────────────

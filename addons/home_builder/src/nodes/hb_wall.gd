@@ -79,6 +79,10 @@ func set_join_offsets(joins: WallMeshBuilder.JoinOffsets) -> void:
 	set_meta(_META_JOINS, PackedFloat32Array([
 		joins.start_minus_z, joins.start_plus_z,
 		joins.end_minus_z, joins.end_plus_z,
+		1.0 if joins.has_start_wedge else 0.0,
+		joins.start_wedge.x, joins.start_wedge.y,
+		1.0 if joins.has_end_wedge else 0.0,
+		joins.end_wedge.x, joins.end_wedge.y,
 	]))
 	_rebuild()
 
@@ -204,4 +208,11 @@ func _joins_from_meta() -> WallMeshBuilder.JoinOffsets:
 	var j: PackedFloat32Array = get_meta(_META_JOINS)
 	if j.size() < 4:
 		return WallMeshBuilder.JoinOffsets.new()
-	return WallMeshBuilder.JoinOffsets.new(j[0], j[1], j[2], j[3])
+	# Scenes saved before junction wedges existed only have the first 4
+	# scalars — read them with no wedge rather than treat the whole array
+	# as invalid; the next rebuild_junctions() pass fills the rest in.
+	if j.size() < 10:
+		return WallMeshBuilder.JoinOffsets.new(j[0], j[1], j[2], j[3])
+	return WallMeshBuilder.JoinOffsets.new(j[0], j[1], j[2], j[3],
+		j[4] != 0.0, Vector2(j[5], j[6]),
+		j[7] != 0.0, Vector2(j[8], j[9]))
