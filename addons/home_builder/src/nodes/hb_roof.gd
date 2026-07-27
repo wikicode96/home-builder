@@ -200,5 +200,9 @@ func _apply_materials() -> void:
 			_:
 				material = sides_material
 				fallback = _DEFAULT_EDGE_TEXTURE
+		# Non-triplanar: a roof is the one element whose faces are sloped, and
+		# triplanar would blend two projections over each slope and show the
+		# texture twice. RoofMeshBuilder emits metre-scaled UVs (V measured
+		# along the slope) precisely so the mapping can come from them instead.
 		_mesh.set_surface_override_material(i,
-			MaterialHelper.or_default_textured(material, fallback))
+			MaterialHelper.or_default_textured(material, fallback, false))
