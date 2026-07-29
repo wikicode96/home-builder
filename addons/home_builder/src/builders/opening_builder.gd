@@ -149,11 +149,16 @@ func _cut_opening(wall_body: StaticBody3D, local_center: float, is_door: bool) -
 
 # ── Asset instancing ─────────────────────────────────────────────────────────
 
-## If the dock has a door/window scene assigned, instantiate it at the
-## opening's position with the wall's own basis (local +X = wall's +X, i.e.
-## the opening's width axis; local +Z = wall's +Z, its thickness axis). What
-## the scene actually contains (mesh, collision, scripts, pivot) is entirely
-## the game developer's responsibility — we just place it.
+## If the dock has a door/window scene assigned, places it at the opening's
+## position with the wall's own basis (local +X = wall's +X, i.e. the
+## opening's width axis; local +Z = wall's +Z, its thickness axis). What the
+## scene actually contains (mesh, collision, scripts, pivot) is entirely the
+## game developer's responsibility — we just place it.
+##
+## Doors are delegated to HBWall.set_door_scene so the wall's door_scenes
+## array — editable later from the Inspector to re-skin every door — stays
+## the single source of truth for what's instanced; windows don't have that
+## re-skinning feature yet, so they're still instanced directly here.
 func _place_asset(wall_body: StaticBody3D, opening: WallMeshBuilder.Opening, is_door: bool) -> void:
 	var dock = _plugin.dock
 	var asset_scene: PackedScene = (
@@ -162,16 +167,22 @@ func _place_asset(wall_body: StaticBody3D, opening: WallMeshBuilder.Opening, is_
 	if asset_scene == null:
 		return
 
+	if is_door:
+		var wall := wall_body as HBWall
+		if wall == null:
+			return
+		wall.set_door_scene(wall.openings.size() - 1, asset_scene)
+		return
+
 	var instance := asset_scene.instantiate() as Node3D
 	if instance == null:
 		push_warning("[HomeBuilder] Asset scene root is not a Node3D — skipped.")
 		return
 
 	var wall_h := WallHelper.get_wall_height(wall_body)
-	var anchor_y := opening.bottom_y if is_door else (opening.bottom_y + opening.height * 0.5)
-	var local_y := anchor_y - wall_h * 0.5
+	var local_y := opening.bottom_y + opening.height * 0.5 - wall_h * 0.5
 
-	instance.name = "Door_001" if is_door else "Window_001"
+	instance.name = "Window_001"
 
 	# Parented directly under the wall, so an identity local basis already
 	# means "same orientation as the wall" — its local +X lines up with the

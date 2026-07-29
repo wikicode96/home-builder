@@ -20,6 +20,11 @@ extends StaticBody3D
 ## needing to re-solve against its neighbours first.
 const _META_JOINS := "hb_joins"
 
+## Tags each door instance with the `openings` index it belongs to (saved with
+## the scene) so _sync_doors can find/replace the right child instead of
+## matching by name or position.
+const _META_OPENING_INDEX := "hb_opening_index"
+
 @export var length: float = 3.0:
 	set(value):
 		length = value
@@ -40,6 +45,16 @@ const _META_JOINS := "hb_joins"
 	set(value):
 		openings = value
 		_rebuild()
+
+## Door scene placed in each opening, parallel to `openings` by index (null
+## for windows, or a door opening with no asset assigned yet). Reassigning an
+## entry from the Inspector — e.g. to re-skin every door in the project by
+## dropping in a new scene — swaps that opening's instance in place without
+## touching the cut-out geometry.
+@export var door_scenes: Array[PackedScene] = []:
+	set(value):
+		door_scenes = value
+		_sync_doors()
 
 @export_group("Materials")
 @export var face_a_material: Material:
@@ -69,6 +84,7 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		set_meta("_edit_group_", true)
 	_rebuild()
+	_sync_doors()
 
 
 # ── Public API (used by the builders) ────────────────────────────────────────
@@ -100,6 +116,17 @@ func get_openings() -> Array:
 func add_opening(op: WallMeshBuilder.Opening) -> void:
 	openings.append({"cx": op.center_x, "w": op.width, "by": op.bottom_y, "h": op.height})
 	_rebuild()
+
+
+## Assigns (or clears, with null) the door scene for the opening at [param
+## index], growing door_scenes as needed, and syncs the instance immediately.
+## Called by OpeningBuilder right after cutting a new door opening; also safe
+## to call from a batch/re-skin script to swap every door in a wall at once.
+func set_door_scene(index: int, scene: PackedScene) -> void:
+	while door_scenes.size() <= index:
+		door_scenes.append(null)
+	door_scenes[index] = scene
+	_sync_doors()
 
 
 ## Edge material, or null — used by WallBuilder to tint junction-fill meshes
@@ -200,6 +227,59 @@ func _rebuild_collision(mesh: ArrayMesh) -> void:
 	var concave := ConcavePolygonShape3D.new()
 	concave.set_faces(vertices)
 	_shape.shape = concave
+
+
+# ── Door instances ───────────────────────────────────────────────────────────
+
+## Keeps the actual child instances in sync with door_scenes: creates the
+## ones that are missing, replaces the ones whose assigned scene changed, and
+## removes the ones reassigned to null. Instances are regular (non-internal,
+## owned) children — unlike Mesh/Collision — so each one can still be
+## selected and tweaked in the Scene dock (e.g. Door.cs's hinge/angle).
+func _sync_doors() -> void:
+	if not is_inside_tree():
+		return
+
+	for i in openings.size():
+		var desired: PackedScene = door_scenes[i] if i < door_scenes.size() else null
+		var existing := _find_door_instance(i)
+
+		if existing != null and (desired == null or existing.scene_file_path != desired.resource_path):
+			existing.queue_free()
+			existing = null
+
+		if desired != null and existing == null:
+			_instantiate_door(i, desired)
+
+
+func _find_door_instance(index: int) -> Node3D:
+	for child in get_children():
+		if child.has_meta(_META_OPENING_INDEX) and child.get_meta(_META_OPENING_INDEX) == index:
+			return child as Node3D
+	return null
+
+
+func _instantiate_door(index: int, scene: PackedScene) -> void:
+	var instance := scene.instantiate() as Node3D
+	if instance == null:
+		push_warning("[HomeBuilder] Door asset scene root is not a Node3D — skipped.")
+		return
+
+	var op := WallMeshBuilder.Opening.new(
+		openings[index]["cx"], openings[index]["w"], openings[index]["by"], openings[index]["h"])
+	var local_y := op.bottom_y - height * 0.5
+
+	instance.name = "Door_%d" % index
+	instance.set_meta(_META_OPENING_INDEX, index)
+
+	add_child(instance, false)
+	if Engine.is_editor_hint():
+		var root := get_tree().edited_scene_root
+		if root:
+			instance.owner = root
+
+	instance.position = Vector3(op.center_x, local_y, 0.0)
+	instance.basis = Basis.IDENTITY
 
 
 func _joins_from_meta() -> WallMeshBuilder.JoinOffsets:
